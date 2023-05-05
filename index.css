@@ -1,5 +1,20 @@
 .instructionElm {
     position: absolute;
-    width: 460px;
+    /* width: 460px; */
+    width: 452px;
+    /* pointer-events: none; */
 }
 
+/* .instructionElm.active {
+    pointer-events: all;
+} */
+
+.instructionLine.jump {
+    color: #ce3232;
+    background-color: #f0cdcd;
+}
+
+.instructionLine.control {
+    color: #3256ce;
+    background-color: #cecdf0;
+}

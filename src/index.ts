@@ -1,13 +1,14 @@
 import { FlowData, FlowRunner, isControlItem } from "./FlowRunner.js";
-import { Elm, Hitbox, ParentComponent, PrerenderCanvas, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
+import { Component, Elm, Hitbox, InputElm, ParentComponent, PrerenderCanvas, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 
 class Editor extends WorldElmWithComponents {
     private parentComponent = this.addComponent(new ParentComponent());
     private subscriptions = this.addComponent(new SubscriptionsComponent());
-    private draggingInstructionRectangle?: InstructionElm;
+    private draggingInstructionRectangle?: InstructionGroupEditor;
+    private draggingCamera = false;
 
-    private instructionElms: InstructionElm[] = [];
+    private instructionElms: InstructionGroupEditor[] = [];
 
     public _setEngine(engine: JaPNaAEngine2d): void {
         super._setEngine(engine);
@@ -22,27 +23,33 @@ class Editor extends WorldElmWithComponents {
             new RectangleM(this.engine.mouse.worldPos.x, this.engine.mouse.worldPos.y, 1, 1)
         );
         for (const collision of collisions) {
-            if (collision.elm instanceof InstructionElm) {
+            if (collision.elm instanceof InstructionGroupEditor) {
                 this.draggingInstructionRectangle = collision.elm;
-                break;
+                return;
             }
         }
+
+        // no hits
+        this.draggingCamera = true;
     }
 
     private mousemoveHandler(ev: MouseEvent) {
         if (this.draggingInstructionRectangle) {
             this.draggingInstructionRectangle.rect.x += ev.movementX;
             this.draggingInstructionRectangle.rect.y += ev.movementY;
+        } else if (this.draggingCamera) {
+            this.engine.camera.move(-ev.movementX, -ev.movementY);
         }
     }
 
     private mouseupHandler() {
         this.draggingInstructionRectangle = undefined;
+        this.draggingCamera = false;
     }
 
     private addRectangleHandler() {
         const newData = newInstructionData();
-        const newRectangle = new InstructionElm(newData);
+        const newRectangle = new InstructionGroupEditor(newData);
         newData.instructions.push("New instruction");
         newRectangle.rect.x = this.engine.mouse.worldPos.x;
         newRectangle.rect.y = this.engine.mouse.worldPos.y;
@@ -51,9 +58,9 @@ class Editor extends WorldElmWithComponents {
     }
 
     public setInstructions(instructionsData: InstructionData[]) {
-        const instructionToElmMap = new Map<InstructionData, InstructionElm>();
+        const instructionToElmMap = new Map<InstructionData, InstructionGroupEditor>();
         for (const instruction of instructionsData) {
-            const elm = new InstructionElm(instruction);
+            const elm = new InstructionGroupEditor(instruction);
             this.parentComponent.addChild(elm);
             instructionToElmMap.set(instruction, elm);
             this.instructionElms.push(elm);
@@ -67,7 +74,7 @@ class Editor extends WorldElmWithComponents {
     }
 
     public deserialize(data: EditorSaveData) {
-        const idElmMap = new Map<number, InstructionElm>();
+        const idElmMap = new Map<number, InstructionGroupEditor>();
         for (const elmData of data.elms) {
             const instructionData = newInstructionData();
             instructionData.instructions = elmData.instructions;
@@ -75,7 +82,7 @@ class Editor extends WorldElmWithComponents {
             instructionData.x = elmData.x;
             instructionData.y = elmData.y;
 
-            const elm = new InstructionElm(instructionData);
+            const elm = new InstructionGroupEditor(instructionData);
             idElmMap.set(elmData.id, elm);
             this.instructionElms.push(elm);
             this.parentComponent.addChild(elm);
@@ -127,15 +134,17 @@ class UIDGenerator {
     }
 }
 
-class InstructionElm extends WorldElm {
+class InstructionGroupEditor extends WorldElm {
     private static fontSize = 16;
     private static collisionType = Symbol();
 
     private rendered = false;
-    private children: InstructionElm[] = [];
+    private children: InstructionGroupEditor[] = [];
     private elm: Elm;
 
-    public collisionType = InstructionElm.collisionType;
+    private observer: MutationObserver;
+
+    public collisionType = InstructionGroupEditor.collisionType;
 
     constructor(private data: InstructionData) {
         super();
@@ -143,6 +152,9 @@ class InstructionElm extends WorldElm {
         this.rect.y = data.y;
 
         this.elm = new Elm().class("instructionElm").attribute("contenteditable", "true");
+        this.elm.on("input", () => this.updateHeight());
+
+        this.observer = new MutationObserver(this.mutationHandler.bind(this));
     }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
@@ -152,6 +164,7 @@ class InstructionElm extends WorldElm {
     }
 
     public remove(): void {
+        this.observer.disconnect();
         super.remove();
         this.elm.remove();
     }
@@ -172,7 +185,7 @@ class InstructionElm extends WorldElm {
         };
     }
 
-    public addChild(instructionRectangle: InstructionElm) {
+    public addChild(instructionRectangle: InstructionGroupEditor) {
         this.children.push(instructionRectangle);
     }
 
@@ -181,28 +194,7 @@ class InstructionElm extends WorldElm {
         const elm = this.elm.getHTMLElement();
 
         if (!this.rendered) {
-            const font = `${InstructionElm.fontSize}px monospace`;
-            elm.style.font = font;
-
-            const width = 460;
-            const lineHeight = Math.ceil(InstructionElm.fontSize * 1.25);
-
-            let y = 0;
-            for (const instruction of this.data.instructions) {
-                const text = JSON.stringify(instruction);
-                new Elm().append(text).appendTo(this.elm);
-                y += lineHeight;
-            }
-
-            for (const branch of this.data.branches) {
-                const text = JSON.stringify(branch);
-                new Elm().append(text).attribute("style", "color: #800").appendTo(this.elm);
-                y += lineHeight;
-            }
-
-            this.rect.width = width;
-            this.rect.height = elm.clientHeight;
-            this.rendered = true;
+            this.render();
         }
 
         X.fillStyle = "#ddd";
@@ -217,6 +209,102 @@ class InstructionElm extends WorldElm {
             X.lineTo(child.rect.centerX(), child.rect.y);
             X.stroke();
         }
+    }
+
+    private render() {
+        const elm = this.elm.getHTMLElement();
+        const font = `${InstructionGroupEditor.fontSize}px monospace`;
+        elm.style.font = font;
+
+        const width = 460;
+
+        for (const instruction of this.data.instructions) {
+            new InstructionLine(instruction).appendTo(this.elm);
+        }
+
+        for (const branch of this.data.branches) {
+            new InstructionLine(branch).appendTo(this.elm);
+        }
+
+        this.rect.width = width;
+        this.updateHeight();
+
+        this.rendered = true;
+
+        this.observer.observe(this.elm.getHTMLElement(), {
+            childList: true
+        });
+    }
+
+    private mutationHandler(changes: MutationRecord[]) {
+        for (const change of changes) {
+            if (change.addedNodes.length > 0) {
+                let emptyDiv = change.nextSibling;
+                if (emptyDiv instanceof HTMLDivElement && emptyDiv.innerText.trim() === "") {
+                    new NewInstructionLine(emptyDiv);
+                }
+                for (const emptyDiv of change.addedNodes) {
+                    if (emptyDiv instanceof HTMLDivElement && emptyDiv.innerText.trim() === "") {
+                        new NewInstructionLine(emptyDiv);
+                    }
+                }
+            }
+        }
+    }
+
+    private updateHeight() {
+        this.rect.height = this.elm.getHTMLElement().clientHeight;
+    }
+}
+
+class InstructionLine extends Component {
+    constructor(data: any) {
+        super("instructionLine");
+        
+        this.elm.append(JSON.stringify(data));
+
+        if (isControlItem(data)) {
+            if (data.ctrl === "branch" || data.ctrl === "jump") {
+                this.elm.class("jump");
+            } else {
+                this.elm.class("control");
+            }
+        }
+    }
+}
+
+class NewInstructionLine extends Component {
+    private select: Elm<"select">;
+
+    constructor(emptyDiv: HTMLDivElement) {
+        super("newInstructionLine");
+
+        this.elm.attribute("contenteditable", "false").append(
+            this.select = new Elm("select").class("typeSelect").append(
+                new Elm("option").append("Branch"),
+                new Elm("option").append("Input"),
+                new Elm("option").append("Jump"),
+                new Elm("option").append("End"),
+                new Elm("option").append("Variable"),
+                new Elm("option").append("Default"),
+                new Elm("option").attribute("selected", "selected").attribute("disabled", "disabled").attribute("hidden", "hidden")
+            ).attribute("style", "display: inline-block")
+        );
+
+        const emptyDivElm = new Elm(emptyDiv);
+        emptyDivElm.attribute("class", "instructionLine");
+        emptyDivElm.replaceContents(this.elm);
+        this.select.getHTMLElement().focus();
+
+        this.select.on("change", () => {
+            emptyDivElm.replaceContents(this.select.getHTMLElement().value + ":");
+            const range = document.createRange();
+            const selection = getSelection();
+            range.setStart(emptyDiv, 1);
+            range.collapse(true);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+        });
     }
 }
 
@@ -342,7 +430,10 @@ function constructInstructionData(flowData: FlowData): InstructionData[] {
 }
 
 fetch("/data/exampleFlow.json").then(e => e.json()).then((flowData: FlowData) => {
-    const engine = new JaPNaAEngine2d({ canvas: { alpha: true } });
+    const engine = new JaPNaAEngine2d({
+        canvas: { alpha: true },
+        htmlOverlay: { relativeToWorld: true }
+    });
     const editor = new Editor();
 
     engine.world.addElm(editor);
