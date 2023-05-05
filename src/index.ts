@@ -1,4 +1,4 @@
-import { FlowData, FlowRunner, isControlItem } from "./FlowRunner.js";
+import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, FlowData, FlowRunner, isControlItem } from "./FlowRunner.js";
 import { Component, Elm, Hitbox, InputElm, ParentComponent, PrerenderCanvas, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 
@@ -140,9 +140,10 @@ class InstructionGroupEditor extends WorldElm {
 
     private rendered = false;
     private children: InstructionGroupEditor[] = [];
+    private lines: InstructionLine[] = [];
+    private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
+    private activeEditable: Editable | null = null;
     private elm: Elm;
-
-    private observer: MutationObserver;
 
     public collisionType = InstructionGroupEditor.collisionType;
 
@@ -151,10 +152,33 @@ class InstructionGroupEditor extends WorldElm {
         this.rect.x = data.x;
         this.rect.y = data.y;
 
-        this.elm = new Elm().class("instructionElm").attribute("contenteditable", "true");
+        this.elm = new Elm().class("instructionElm");
+        this.elm.attribute("tabindex", "-1");
         this.elm.on("input", () => this.updateHeight());
+        document.addEventListener("selectionchange", e => {
+            if (!e.isTrusted) { return; } // prevent self-caused selection changes
 
-        this.observer = new MutationObserver(this.mutationHandler.bind(this));
+            // must be in this.elm
+            const selection = getSelection();
+            if (!selection || !isAncestor(selection.anchorNode || null, this.elm.getHTMLElement())) { return; }
+
+            const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"))
+            if (instructionLine) {
+                const instructionLineElm = this.htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
+                if (instructionLineElm) {
+                    const prevEditable = this.activeEditable;
+                    const newEditable = instructionLineElm.getEditableFromSelection(selection);
+
+                    if (prevEditable !== newEditable) {
+                        // restoreSelections = true;
+                        prevEditable?.deactivate();
+                        this.activeEditable = newEditable;
+                    }
+
+                    newEditable?.activate(selection);
+                }
+            }
+        });
     }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
@@ -164,7 +188,6 @@ class InstructionGroupEditor extends WorldElm {
     }
 
     public remove(): void {
-        this.observer.disconnect();
         super.remove();
         this.elm.remove();
     }
@@ -219,37 +242,23 @@ class InstructionGroupEditor extends WorldElm {
         const width = 460;
 
         for (const instruction of this.data.instructions) {
-            new InstructionLine(instruction).appendTo(this.elm);
+            this.addInstructionLine(instruction);
         }
 
         for (const branch of this.data.branches) {
-            new InstructionLine(branch).appendTo(this.elm);
+            this.addInstructionLine(branch);
         }
 
         this.rect.width = width;
         this.updateHeight();
 
         this.rendered = true;
-
-        this.observer.observe(this.elm.getHTMLElement(), {
-            childList: true
-        });
     }
 
-    private mutationHandler(changes: MutationRecord[]) {
-        for (const change of changes) {
-            if (change.addedNodes.length > 0) {
-                let emptyDiv = change.nextSibling;
-                if (emptyDiv instanceof HTMLDivElement && emptyDiv.innerText.trim() === "") {
-                    new NewInstructionLine(emptyDiv);
-                }
-                for (const emptyDiv of change.addedNodes) {
-                    if (emptyDiv instanceof HTMLDivElement && emptyDiv.innerText.trim() === "") {
-                        new NewInstructionLine(emptyDiv);
-                    }
-                }
-            }
-        }
+    private addInstructionLine(instruction: any) {
+        const instructionLine = new InstructionLine(instruction).appendTo(this.elm);
+        this.lines.push(instruction);
+        this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
     }
 
     private updateHeight() {
@@ -257,29 +266,226 @@ class InstructionGroupEditor extends WorldElm {
     }
 }
 
+function isAncestor(child: Node | null, ancestor: Node): boolean {
+    let curr = child;
+    while (curr) {
+        if (curr === ancestor) { return true; }
+        curr = curr.parentNode;
+    }
+    return false;
+}
+
+function getAncestorWhich(child: Node | null, test: (node: Node) => boolean): Node | null {
+    let curr = child;
+    while (curr) {
+        if (test(curr)) { return curr; }
+        curr = curr.parentNode;
+    }
+    return null;
+}
+
 class InstructionLine extends Component {
+    private view: InstructionLineView;
+
     constructor(data: any) {
         super("instructionLine");
-        
-        this.elm.append(JSON.stringify(data));
 
         if (isControlItem(data)) {
+            switch (data.ctrl) {
+                case "branch":
+                    this.view = new ControlBranchLine(data);
+                    break;
+                case "jump":
+                    this.view = new ControlJumpLine(data);
+                    break;
+                case "end":
+                    this.view = new ControlEndLine(data);
+                    break;
+                case "input":
+                    this.view = new ControlInputLine(data);
+                    break;
+                case "variable":
+                    this.view = new ControlVariableLine(data);
+                    break;
+                default:
+                    this.view = new JSONLine(data);
+            }
+
             if (data.ctrl === "branch" || data.ctrl === "jump") {
                 this.elm.class("jump");
             } else {
                 this.elm.class("control");
             }
+        } else {
+            this.view = new JSONLine(data);
+        }
+
+        this.elm.append(this.view);
+    }
+
+    public getEditableFromSelection(selection: Selection) {
+        return this.view.getEditableFromSelection(selection);
+    }
+}
+
+class InstructionLineView extends Component {
+    public spanToEditable = new Map<HTMLSpanElement, Editable>();
+
+    public getEditableFromSelection(selection: Selection): Editable | null {
+        const editable = getAncestorWhich(
+            selection.anchorNode, node => node instanceof HTMLSpanElement && node.classList.contains("editable")
+        ) as HTMLSpanElement | null;
+        if (editable) {
+            return this.spanToEditable.get(editable) || null;
+        }
+        return null;
+    }
+
+    protected createEditable(text: string | number): Editable {
+        const editable = new Editable(text.toString());
+        this.spanToEditable.set(editable.getHTMLElement(), editable);
+        return editable;
+    }
+}
+
+class JSONLine extends InstructionLineView {
+    constructor(private data: any) {
+        super("jsonLine");
+        this.elm.append(this.createEditable(JSON.stringify(data)));
+    }
+}
+
+class ControlBranchLine extends InstructionLineView {
+    private opSpan: Editable;
+    constructor(private data: ControlBranch) {
+        super("controlBranchLine");
+
+        this.elm.append(
+            "If ",
+            this.createEditable(data.v1),
+            " ",
+            this.opSpan = this.createEditable(data.op).class("op"),
+            " ",
+            this.createEditable(data.v2),
+            ", goto..."
+        );
+
+        if (data.op == "=") { this.opSpan.class("eq"); }
+    }
+}
+
+
+class ControlJumpLine extends InstructionLineView {
+    constructor(private data: ControlJump) {
+        super("controlJumpLine");
+        this.elm.append('Goto...');
+    }
+}
+
+
+class ControlEndLine extends InstructionLineView {
+    constructor(private data: ControlEnd) {
+        super("controlEndLine");
+        this.elm.append('End');
+    }
+}
+
+
+class ControlInputLine extends InstructionLineView {
+    constructor(private data: ControlInput) {
+        super("controlInputLine");
+        this.elm.append(this.createEditable(data.variable), ' <- choose from [', this.createEditable(data.options.join(", ")), ']');
+    }
+}
+
+
+class ControlVariableLine extends InstructionLineView {
+    constructor(private data: ControlVariable) {
+        super("controlVariableLine");
+        if (data.op === "=") {
+            this.elm.append(this.createEditable(data.v1), " <- ", this.createEditable(data.v2));
+        } else {
+            this.elm.append(this.createEditable(data.v1), " <- ", this.createEditable(`${data.v1} ${data.op} ${data.v2}`));
         }
     }
 }
 
-class NewInstructionLine extends Component {
+class Editable extends Elm<"span"> {
+    private activated?: {
+        cursor: Elm<"span">,
+        inputCapture: Elm<"textarea">,
+        position: number
+    };
+
+    constructor(initialText: string) {
+        super("span");
+        this.class("editable");
+        this.append(initialText);
+    }
+
+    public activate(selection: Selection) {
+        if (!(selection.anchorNode instanceof Text)) { return; }
+        let textarea: HTMLTextAreaElement;
+
+        if (this.activated) {
+            textarea = this.activated.inputCapture.getHTMLElement();
+            let curr: ChildNode | undefined | null = this.elm.firstChild;
+            let count = 0;
+            while (curr && curr !== selection.anchorNode) {
+                if (curr instanceof Text) {
+                    count += curr.textContent ? curr.textContent.length : 0;
+                }
+                curr = curr?.nextSibling;
+            }
+
+            this.activated.position = count + selection.focusOffset;
+        } else {
+            const inputCapture = new Elm("textarea").class("inputCapture")
+                .on("input", e => this.updateByInput())
+                .on("selectionchange", e => this.updateByInput());
+            const cursor = new Elm("span").class("cursor")
+                .append(inputCapture);
+
+            this.activated = { cursor, inputCapture, position: selection.anchorOffset };
+
+            textarea = this.activated!.inputCapture.getHTMLElement();
+            textarea.value = this.elm.innerText;
+        }
+
+        textarea.selectionStart = textarea.selectionEnd = this.activated.position;
+        this.updateByInput();
+        // this.cursor.attribute("")
+
+        // console.log(this.elm.innerText.slice(0, selection.anchorOffset) + "|" + this.elm.innerText.slice(selection.anchorOffset));
+    }
+
+    public updateByInput() {
+        if (!this.activated) { return; }
+        const textarea = this.activated.inputCapture.getHTMLElement();
+        const before = textarea.value.slice(0, textarea.selectionStart);
+        const after = textarea.value.slice(textarea.selectionStart);
+
+        this.replaceContents(before, this.activated.cursor, after);
+        textarea.focus();
+    }
+
+    public deactivate() {
+        if (this.activated) {
+            this.activated.cursor.remove();
+            this.activated = undefined;
+        }
+    }
+
+}
+
+
+class NewInstructionLine extends InstructionLineView {
     private select: Elm<"select">;
 
-    constructor(emptyDiv: HTMLDivElement) {
+    constructor(emptyDiv: Elm) {
         super("newInstructionLine");
 
-        this.elm.attribute("contenteditable", "false").append(
+        this.elm.append(
             this.select = new Elm("select").class("typeSelect").append(
                 new Elm("option").append("Branch"),
                 new Elm("option").append("Input"),
@@ -291,16 +497,14 @@ class NewInstructionLine extends Component {
             ).attribute("style", "display: inline-block")
         );
 
-        const emptyDivElm = new Elm(emptyDiv);
-        emptyDivElm.attribute("class", "instructionLine");
-        emptyDivElm.replaceContents(this.elm);
+        emptyDiv.replaceContents(this.elm);
         this.select.getHTMLElement().focus();
 
         this.select.on("change", () => {
-            emptyDivElm.replaceContents(this.select.getHTMLElement().value + ":");
+            emptyDiv.replaceContents(this.select.getHTMLElement().value + ":");
             const range = document.createRange();
             const selection = getSelection();
-            range.setStart(emptyDiv, 1);
+            range.setStart(emptyDiv.getHTMLElement(), 1);
             range.collapse(true);
             selection?.removeAllRanges();
             selection?.addRange(range);

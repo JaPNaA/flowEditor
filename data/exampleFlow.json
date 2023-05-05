@@ -9,6 +9,7 @@
         { "ctrl": "jump", "offset": 2 },
         "You chose b",
         "This is the end",
+        { "ctrl": "variable", "v1": "ended", "op": "+", "v2": 1 },
         { "ctrl": "end" },
         "This should never be reached"
     ]

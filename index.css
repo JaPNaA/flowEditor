@@ -9,6 +9,26 @@
     pointer-events: all;
 } */
 
+.instructionElm .editable .cursor {
+    position: absolute;
+    display: inline-block;
+    width: 2px;
+    background-color: #000000;
+    height: 1.25em;
+}
+
+.instructionElm .editable .inputCapture {
+    width: 480px;
+    height: 0;
+    opacity: 0;
+    resize: none;
+    pointer-events: none;
+}
+
+/* 
+.instructionElm:focus .editorCursor {
+} */
+
 .instructionLine.jump {
     color: #ce3232;
     background-color: #f0cdcd;
@@ -17,4 +37,18 @@
 .instructionLine.control {
     color: #3256ce;
     background-color: #cecdf0;
+}
+
+.instructionLine .controlBranchLine .op.eq::before {
+    content: "=";
+    /* sneakily convert '=' to '==' */
+}
+
+.instructionLine .editable {
+    display: inline-block;
+    white-space: pre;
+}
+
+.instructionLine [contenteditable] {
+    outline: none;
 }
