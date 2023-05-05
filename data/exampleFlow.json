@@ -1,0 +1,15 @@
+{
+    "meta": "Example",
+    "flow": [
+        "Output 1",
+        "Output 2",
+        { "ctrl": "input", "options": ["a", "b"], "variable": "choice" },
+        { "ctrl": "branch", "op": "=", "v1": "choice", "v2": 1, "offset": 3 },
+        "You chose a",
+        { "ctrl": "jump", "offset": 2 },
+        "You chose b",
+        "This is the end",
+        { "ctrl": "end" },
+        "This should never be reached"
+    ]
+}
