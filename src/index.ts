@@ -489,11 +489,14 @@ class TextareaUserInputCapture {
     private aboveLine: TextareaUserInputCaptureAreas = [];
     private belowLine: TextareaUserInputCaptureAreas = [];
     private changeHandler?: (pos: TextareaUserInputCursorPosition) => void;
-    private lastPosition: number = 0;
+
+    private lastSelectionStart: number = 0;
+    private lastSelectionEnd: number = 0;
+    private lastTextareaValue = "";
 
     constructor() {
-        this.inputCapture.on("input", () => this.changeHandler?.(this.getPosition()));
-        this.inputCapture.on("selectionchange", () => this.changeHandler?.(this.getPosition()));
+        this.inputCapture.on("input", () => this.onChange());
+        this.inputCapture.on("selectionchange", () => this.onChange());
     }
 
     public appendTo(parent: Elm<any>) {
@@ -522,15 +525,33 @@ class TextareaUserInputCapture {
         this.changeHandler = changeHandler;
     }
 
+    private onChange() {
+        const textarea = this.inputCapture.getHTMLElement();
+        if (textarea.selectionStart == this.lastSelectionStart &&
+            textarea.selectionEnd == this.lastSelectionEnd &&
+            textarea.value == this.lastTextareaValue) {
+            return;
+        }
+
+        const pos = this.getPosition();
+        if (this.changeHandler) {
+            this.changeHandler(pos);
+        }
+
+        this.lastTextareaValue = textarea.value;
+        this.lastSelectionStart = textarea.selectionStart;
+        this.lastSelectionEnd = textarea.selectionEnd;
+
+        setTimeout(() => this.setPosition(pos[1], pos[2]), 1);
+    }
+
     private generateTextareaText() {
         return "\n" + this.areasToString(this.aboveLine) + "\n" + this.areasToString(this.currentLine) + "\n" + this.areasToString(this.belowLine) + "\n";
     }
 
     private getPosition(): TextareaUserInputCursorPosition {
         let curr = this.inputCapture.getHTMLElement().selectionStart;
-        const lastPosition = this.lastPosition;
-        const movingLeft = curr < lastPosition;
-        this.lastPosition = curr;
+        const movingLeft = curr < this.lastSelectionStart;
 
         // \n
         if (curr <= 0) { return ["top", 0, 0]; }
@@ -581,6 +602,37 @@ class TextareaUserInputCapture {
 
         // \n
         return ["bottom", 0, 0];
+    }
+
+    /** Sets the cursor position on the current line */
+    public setPosition(editableIndex: number, characterIndex: number) {
+        let curr = 2; // 2 for \n at start and \n after above line
+        for (const area of this.aboveLine) {
+            if (typeof area === 'string') { curr += area.length; }
+            else { curr += area; }
+        }
+        let currEditable = 0;
+        for (const area of this.currentLine) {
+            if (typeof area === 'string') {
+                if (currEditable === editableIndex) {
+                    this.setTextareaCursorPositionIfNeeded(curr + characterIndex);
+                    return;
+                }
+                currEditable++;
+                curr += area.length;
+            } else {
+                curr += area;
+            }
+        }
+        console.warn("Tried to set position, but could not find position", editableIndex, characterIndex, this);
+    }
+
+    private setTextareaCursorPositionIfNeeded(index: number) {
+        const textarea = this.inputCapture.getHTMLElement();
+        if (this.lastSelectionEnd != index || this.lastSelectionStart != index) {
+            textarea.selectionStart = textarea.selectionEnd =
+                this.lastSelectionStart = this.lastSelectionEnd = index;
+        }
     }
 
     private areasToString(areas: TextareaUserInputCaptureAreas): string {
