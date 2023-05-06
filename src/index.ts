@@ -478,6 +478,116 @@ class Editable extends Elm<"span"> {
 
 }
 
+/** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
+type TextareaUserInputCaptureAreas = (string | number)[];
+/** Change of line. Then, (only for "up", "same", "down") offset on line given by which editiable, then character offset in editable */
+type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom", number, number];
+
+class TextareaUserInputCapture {
+    private inputCapture: Elm<"textarea"> = new Elm("textarea").class("inputCapture");
+    private currentLine: TextareaUserInputCaptureAreas = [];
+    private aboveLine: TextareaUserInputCaptureAreas = [];
+    private belowLine: TextareaUserInputCaptureAreas = [];
+    private changeHandler?: (pos: TextareaUserInputCursorPosition) => void;
+    private lastPosition: number = 0;
+
+    constructor() {
+        this.inputCapture.on("input", () => this.changeHandler?.(this.getPosition()));
+        this.inputCapture.on("selectionchange", () => this.changeHandler?.(this.getPosition()));
+    }
+
+    public appendTo(parent: Elm<any>) {
+        parent.append(this.inputCapture);
+    }
+
+    public focus() {
+        this.inputCapture.getHTMLElement().focus();
+    }
+
+    public setCurrentLine(areas: TextareaUserInputCaptureAreas) {
+        this.currentLine = areas;
+    }
+    public setAboveLine(areas: TextareaUserInputCaptureAreas) {
+        this.aboveLine = areas;
+    }
+    public setBelowLine(areas: TextareaUserInputCaptureAreas) {
+        this.belowLine = areas;
+    }
+
+    public update() {
+        this.inputCapture.getHTMLElement().value = this.generateTextareaText();
+    }
+
+    public setChangeHandler(changeHandler: (pos: TextareaUserInputCursorPosition) => void) {
+        this.changeHandler = changeHandler;
+    }
+
+    private generateTextareaText() {
+        return "\n" + this.areasToString(this.aboveLine) + "\n" + this.areasToString(this.currentLine) + "\n" + this.areasToString(this.belowLine) + "\n";
+    }
+
+    private getPosition(): TextareaUserInputCursorPosition {
+        let curr = this.inputCapture.getHTMLElement().selectionStart;
+        const lastPosition = this.lastPosition;
+        const movingLeft = curr < lastPosition;
+        this.lastPosition = curr;
+
+        // \n
+        if (curr <= 0) { return ["top", 0, 0]; }
+        curr--;
+
+        // aboveLine
+        for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
+            let editableIndex = -1;
+            let lastEditableSize = 0;
+
+            let maxEditableIndex = -1;
+            for (const area of areas) { if (typeof area === 'string') { maxEditableIndex++; } }
+
+            for (const area of areas) {
+                const isEditable = typeof area === "string";
+                let size: number;
+                if (isEditable) {
+                    size = area.length;
+                    editableIndex++;
+                } else {
+                    size = area;
+                }
+
+                if (isEditable ? curr <= size : curr < size) {
+                    if (isEditable) {
+                        return [posStr, editableIndex, curr];
+                    } else {
+                        // handle shifting to an editable
+                        if (movingLeft || editableIndex + 1 > maxEditableIndex) {
+                            return [posStr, Math.max(0, editableIndex), lastEditableSize];
+                        } else {
+                            return [posStr, Math.min(maxEditableIndex, editableIndex + 1), 0];
+                        }
+                    }
+                }
+
+                curr -= size;
+                if (isEditable) {
+                    lastEditableSize = size;
+                }
+            }
+
+            // catch cursor at end of line that ends with space
+            if (curr <= 0) { return [posStr, editableIndex, lastEditableSize]; }
+
+            curr--; // \n
+        }
+
+        // \n
+        return ["bottom", 0, 0];
+    }
+
+    private areasToString(areas: TextareaUserInputCaptureAreas): string {
+        return areas.map(e => typeof e === "string" ? e : " ".repeat(e)).join("");
+    }
+}
+
 
 class NewInstructionLine extends InstructionLineView {
     private select: Elm<"select">;
