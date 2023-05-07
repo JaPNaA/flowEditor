@@ -562,6 +562,10 @@ class Editable extends Elm<"span"> {
         return this.value;
     }
 
+    public setValue(value: string) {
+        this.value = value;
+    }
+
     public getCharacterOffset(selection: Selection) {
         let curr: ChildNode | undefined | null = this.elm.firstChild;
         let count = 0;
@@ -603,6 +607,8 @@ class TextareaUserInputCapture {
     private lastSelectionEnd: number = 0;
     private lastTextareaValue = "";
 
+    private activeEditable?: { editable: Editable; start: number; size: number; }
+
     constructor() {
         this.inputCapture.on("input", () => this.onChange());
         this.inputCapture.on("selectionchange", () => this.onChange());
@@ -642,8 +648,8 @@ class TextareaUserInputCapture {
             return;
         }
 
+        const changes = this.getChanges();
         const pos = this.getPosition();
-        console.log(pos);
         if (this.changeHandler) {
             this.changeHandler(pos);
         }
@@ -659,8 +665,46 @@ class TextareaUserInputCapture {
         return "\n" + this.areasToString(this.aboveLine) + "\n" + this.areasToString(this.currentLine) + "\n" + this.areasToString(this.belowLine) + "\n";
     }
 
+    private getChanges() {
+        let hadChange = false;
+        const currentValue = this.inputCapture.getHTMLElement().value;
+        let i;
+        for (i = 0; i < this.lastTextareaValue.length; i++) {
+            if (currentValue[i] !== this.lastTextareaValue[i]) {
+                hadChange = true;
+                break;
+            }
+        }
+
+        if (!hadChange) { return; } // no changes
+
+        const currentValueLen = currentValue.length;
+        const lastValueLen = this.lastTextareaValue.length;
+        const maxBackwardSearch = Math.min(currentValueLen - i, lastValueLen - i);
+        let j;
+        for (j = 1; j < maxBackwardSearch; j++) {
+            if (currentValue[currentValueLen - j] !== this.lastTextareaValue[lastValueLen - j]) {
+                break;
+            }
+        }
+
+        if (this.activeEditable) {
+            const newContent = currentValue.slice(
+                this.activeEditable!.start,
+                this.activeEditable!.start + this.activeEditable!.size - lastValueLen + currentValueLen
+            );
+            console.log({
+                added: currentValue.slice(i, currentValueLen - j),
+                deleted: this.lastTextareaValue.slice(i, lastValueLen - j),
+                newContent
+            });
+            this.activeEditable.editable.setValue(newContent);
+        }
+    }
+
     private getPosition(): TextareaUserInputCursorPosition {
-        let curr = this.inputCapture.getHTMLElement().selectionStart;
+        const initialOffset = this.inputCapture.getHTMLElement().selectionStart;
+        let curr = initialOffset;
         const movingLeft = curr < this.lastSelectionStart;
 
         // \n
@@ -691,6 +735,7 @@ class TextareaUserInputCapture {
 
                 if (isEditable ? curr <= size : curr < size) {
                     if (isEditable) {
+                        this.activeEditable = { editable: area, size: size, start: initialOffset - curr };
                         return [posStr, editableIndex, curr];
                     } else {
                         // handle shifting to an editable
