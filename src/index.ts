@@ -135,7 +135,7 @@ class UIDGenerator {
 }
 
 class EditorCursor extends Elm<"span"> {
-    public inputCapture = new TextareaUserInputCapture();
+    public inputCapture = new TextareaUserInputCapture(this);
 
     constructor() {
         super();
@@ -188,7 +188,7 @@ class InstructionGroupEditor extends WorldElm {
                         const characterOffset = newEditable.getCharacterOffset(selection);
                         this.setupInputCapture(index);
 
-                        newEditable.setActive(newEditable.getValue(), characterOffset, this.cursorElm);
+                        newEditable.setActive(characterOffset, this.cursorElm);
                         this.cursorElm.inputCapture.setPosition(newEditable, characterOffset);
                         this.cursorElm.inputCapture.focus();
                     }
@@ -216,7 +216,7 @@ class InstructionGroupEditor extends WorldElm {
             // pos[0] === 'same'
             const newEditable = this.lines[this.activeLine].getEditableFromIndex(pos[1]);
 
-            newEditable.setActive(newEditable.getValue(), pos[2], this.cursorElm);
+            newEditable.setActive(pos[2], this.cursorElm);
             this.cursorElm.inputCapture.focus();
         });
     }
@@ -614,7 +614,6 @@ class Editable extends Elm<"span"> {
     }
 
     public setValue(value: string) {
-        console.log(value);
         this.value = value;
     }
 
@@ -635,9 +634,9 @@ class Editable extends Elm<"span"> {
         return count;
     }
 
-    public setActive(value: string, offset: number, cursor: EditorCursor) {
-        const before = value.slice(0, offset);
-        const after = value.slice(offset);
+    public setActive(offset: number, cursor: EditorCursor) {
+        const before = this.value.slice(0, offset);
+        const after = this.value.slice(offset);
 
         this.replaceContents(before, cursor, after);
     }
@@ -646,7 +645,7 @@ class Editable extends Elm<"span"> {
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
 type TextareaUserInputCaptureAreas = (Editable | number)[];
 /** Change of line. Then, (only for "up", "same", "down") offset on line given by which editiable, then character offset in editable */
-type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom", number, number];
+type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom", number, number, Editable?];
 
 class TextareaUserInputCapture {
     private inputCapture: Elm<"textarea"> = new Elm("textarea").class("inputCapture");
@@ -659,9 +658,7 @@ class TextareaUserInputCapture {
     private lastSelectionEnd: number = 0;
     private lastTextareaValue = "";
 
-    private activeEditable?: { editable: Editable; start: number; size: number; }
-
-    constructor() {
+    constructor(private cursor: EditorCursor) {
         this.inputCapture.on("input", () => this.onChange());
         this.inputCapture.on("selectionchange", () => this.onChange());
     }
@@ -702,7 +699,7 @@ class TextareaUserInputCapture {
         if (textarea.selectionStart == this.lastSelectionStart &&
             textarea.selectionEnd == this.lastSelectionEnd) { return; }
 
-        const pos = this.getPosition();
+        const pos = this.getPosition(textarea.selectionStart);
         if (this.changeHandler) {
             this.changeHandler(pos);
         }
@@ -741,23 +738,24 @@ class TextareaUserInputCapture {
             }
         }
 
-        if (this.activeEditable) {
+        const [_posStr, editableIndex, characterIndex, editable] = this.getPosition(this.lastSelectionStart);
+        if (editable) {
             const newContent = currentValue.slice(
-                this.activeEditable!.start,
-                this.activeEditable!.start + this.activeEditable!.size - lastValueLen + currentValueLen
+                this.lastSelectionStart - characterIndex,
+                this.lastSelectionStart - characterIndex + editable.getValue().length - lastValueLen + currentValueLen
             );
             console.log({
                 added: currentValue.slice(i, currentValueLen - j),
                 deleted: this.lastTextareaValue.slice(i, lastValueLen - j),
                 newContent
             });
-            this.activeEditable.editable.setValue(newContent);
+            editable.setValue(newContent);
+            editable.setActive(characterIndex, this.cursor);
         }
     }
 
-    private getPosition(): TextareaUserInputCursorPosition {
-        const initialOffset = this.inputCapture.getHTMLElement().selectionStart;
-        let curr = initialOffset;
+    private getPosition(cursorOffset: number): TextareaUserInputCursorPosition {
+        let curr = cursorOffset;
         const movingLeft = curr < this.lastSelectionStart;
 
         // \n
@@ -767,16 +765,19 @@ class TextareaUserInputCapture {
         let previousLinePos: 'up' | 'same' | 'down' = 'up'; // not 'top' to prevent a 'two-line' jump being recognized as a jump to top
         let previousLineLastEditableIndex = 0;
         let previousLineLastCharacterOffset = 0;
+        let previousLineLastEditable;
 
         // aboveLine
         for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
             let editableIndex = -1;
             let lastEditableSize = 0;
+            let lastEditable: Editable | undefined;
 
             let maxEditableIndex = -1;
             for (const area of areas) { if (area instanceof Editable) { maxEditableIndex++; } }
 
-            for (const area of areas) {
+            for (let i = 0; i < areas.length; i++) {
+                const area = areas[i];
                 const isEditable = area instanceof Editable;
                 let size: number;
                 if (isEditable) {
@@ -788,21 +789,28 @@ class TextareaUserInputCapture {
 
                 if (isEditable ? curr <= size : curr < size) {
                     if (isEditable) {
-                        this.activeEditable = { editable: area, size: size, start: initialOffset - curr };
-                        return [posStr, editableIndex, curr];
+                        return [posStr, editableIndex, curr, area];
                     } else {
                         // handle shifting to an editable
                         if (movingLeft) {
                             if (editableIndex < 0) {
-                                return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset];
+                                return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset, previousLineLastEditable];
                             } else {
-                                return [posStr, editableIndex, lastEditableSize];
+                                return [posStr, editableIndex, lastEditableSize, lastEditable];
                             }
                         } else {
                             if (editableIndex + 1 > maxEditableIndex) {
-                                return [posStr, editableIndex, lastEditableSize];
+                                return [posStr, editableIndex, lastEditableSize, lastEditable];
                             } else {
-                                return [posStr, Math.min(maxEditableIndex, editableIndex + 1), 0];
+                                let nextEditableIndex = editableIndex;
+                                for (let j = 0; j < areas.length; j++) {
+                                    const nextArea = areas[j];
+                                    if (nextArea instanceof Editable) {
+                                        nextEditableIndex++;
+                                        return [posStr, nextEditableIndex, 0, nextArea];
+                                    }
+                                }
+                                // return [posStr, Math.min(maxEditableIndex, editableIndex + 1), 0];
                             }
                         }
                     }
@@ -811,15 +819,17 @@ class TextareaUserInputCapture {
                 curr -= size;
                 if (isEditable) {
                     lastEditableSize = size;
+                    lastEditable = area;
                 }
             }
 
             previousLinePos = posStr;
             previousLineLastEditableIndex = editableIndex;
             previousLineLastCharacterOffset = lastEditableSize;
+            previousLineLastEditable = lastEditable;
 
             // catch cursor at end of line that ends with space
-            if (curr <= 0) { return [posStr, Math.max(0, editableIndex), lastEditableSize]; }
+            if (curr <= 0) { return [posStr, Math.max(0, editableIndex), lastEditableSize, lastEditable]; }
 
             curr--; // \n
         }
