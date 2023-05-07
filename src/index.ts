@@ -175,6 +175,7 @@ class InstructionGroupEditor extends WorldElm {
             const selection = getSelection();
             if (!selection || !isAncestor(selection.anchorNode || null, this.elm.getHTMLElement())) { return; }
             if (isAncestor(selection.anchorNode || null, this.cursorElm.getHTMLElement())) { return; }
+            console.log(selection.anchorNode);
 
             const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"))
             if (instructionLine) {
@@ -184,11 +185,11 @@ class InstructionGroupEditor extends WorldElm {
                     this.activeLine = index;
                     const newEditable = instructionLineElm.getEditableFromSelection(selection);
                     if (newEditable) {
-                        this.setupInputCapture(index);
                         const characterOffset = newEditable.getCharacterOffset(selection);
+                        this.setupInputCapture(index);
 
                         newEditable.setActive(newEditable.getValue(), characterOffset, this.cursorElm);
-                        this.cursorElm.inputCapture.setPosition(0, characterOffset);
+                        this.cursorElm.inputCapture.setPosition(newEditable, characterOffset);
                         this.cursorElm.inputCapture.focus();
                     }
                 }
@@ -401,12 +402,31 @@ class InstructionLineView extends Component {
     public editables: Editable[] = [];
 
     public getEditableFromSelection(selection: Selection): Editable | null {
-        const editable = getAncestorWhich(
-            selection.anchorNode, node => node instanceof HTMLSpanElement && node.classList.contains("editable")
-        ) as HTMLSpanElement | null;
-        if (editable) {
-            return this.spanToEditable.get(editable) || null;
+        const thisElm = this.elm.getHTMLElement();
+        let directChild = getAncestorWhich(
+            selection.anchorNode, node => node.parentElement === thisElm
+        ) as Node | Element | null;
+
+        // search backwards
+        let curr = directChild;
+        while (curr) {
+            const editable = this.spanToEditable.get(curr as HTMLSpanElement);
+            curr = curr.previousSibling;
+            if (editable) {
+                return editable;
+            }
         }
+
+        // search forwards
+        curr = directChild;
+        while (curr) {
+            const editable = this.spanToEditable.get(curr as HTMLSpanElement);
+            curr = curr.nextSibling;
+            if (editable) {
+                return editable;
+            }
+        }
+
         return null;
     }
 
@@ -552,7 +572,11 @@ class Editable extends Elm<"span"> {
             curr = curr?.nextSibling;
         }
 
-        return count + selection.focusOffset;
+        count += selection.focusOffset;
+        if (count > this.value.length) {
+            return this.value.length;
+        }
+        return count;
     }
 
     public setActive(value: string, offset: number, cursor: EditorCursor) {
@@ -672,18 +696,14 @@ class TextareaUserInputCapture {
                         // handle shifting to an editable
                         if (movingLeft) {
                             if (editableIndex < 0) {
-                                console.log("a");
                                 return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset];
                             } else {
-                                console.log("b");
                                 return [posStr, editableIndex, lastEditableSize];
                             }
                         } else {
                             if (editableIndex + 1 > maxEditableIndex) {
-                                console.log("c");
                                 return [posStr, editableIndex, lastEditableSize];
                             } else {
-                                console.log("d");
                                 return [posStr, Math.min(maxEditableIndex, editableIndex + 1), 0];
                             }
                         }
@@ -711,7 +731,7 @@ class TextareaUserInputCapture {
     }
 
     /** Sets the cursor position on the current line */
-    public setPosition(editableIndex: number, characterIndex: number) {
+    public setPosition(editableOrIndex: number | Editable, characterIndex: number) {
         let curr = 2; // 2 for \n at start and \n after above line
         for (const area of this.aboveLine) {
             if (area instanceof Editable) { curr += area.getValue().length; }
@@ -720,7 +740,8 @@ class TextareaUserInputCapture {
         let currEditable = 0;
         for (const area of this.currentLine) {
             if (area instanceof Editable) {
-                if (currEditable === editableIndex) {
+                if (editableOrIndex instanceof Editable ?
+                    area === editableOrIndex : currEditable == editableOrIndex) {
                     this.setTextareaCursorPositionIfNeeded(curr + characterIndex);
                     return;
                 }
@@ -730,7 +751,7 @@ class TextareaUserInputCapture {
                 curr += area;
             }
         }
-        console.warn("Tried to set position, but could not find position", editableIndex, characterIndex, this);
+        console.warn("Tried to set position, but could not find position", editableOrIndex, characterIndex, this);
     }
 
     private setTextareaCursorPositionIfNeeded(index: number) {
