@@ -261,8 +261,8 @@ class InstructionGroupEditor extends WorldElm {
 
         return {
             id: uidGen.getId(this),
-            instructions: this.data.instructions,
-            branches: this.data.branches,
+            instructions: this.lines.map(e => e.serialize()),
+            branches: [],
             children: childrenUids,
             x: this.rect.x,
             y: this.rect.y
@@ -384,6 +384,10 @@ class InstructionLine extends Component {
         this.elm.append(this.view);
     }
 
+    public serialize() {
+        return this.view.serialize();
+    }
+
     public getEditableFromSelection(selection: Selection) {
         return this.view.getEditableFromSelection(selection);
     }
@@ -430,6 +434,10 @@ class InstructionLineView extends Component {
         return null;
     }
 
+    public serialize(): any {
+        throw new Error("Abstract method not implemented");
+    }
+
     public getAreas(): TextareaUserInputCaptureAreas {
         return [];
     }
@@ -447,6 +455,10 @@ class JSONLine extends InstructionLineView {
     constructor(private data: any) {
         super("jsonLine");
         this.elm.append(this.editable = this.createEditable(JSON.stringify(data)));
+    }
+
+    public serialize(): any {
+        return JSON.parse(this.editable.getValue());
     }
 
     public getAreas(): TextareaUserInputCaptureAreas {
@@ -475,6 +487,23 @@ class ControlBranchLine extends InstructionLineView {
         if (data.op == "=") { this.opSpan.class("eq"); }
     }
 
+    public serialize(): ControlBranch {
+        let v1: string | number = this.v1Span.getValue();
+        let v1Float = parseFloat(v1);
+        let v2: string | number = this.v2Span.getValue();
+        let v2Float = parseFloat(v2);
+        let op = this.opSpan.getValue();
+
+        if (!isNaN(v1Float)) { v1 = v1Float; }
+        if (!isNaN(v2Float)) { v2 = v2Float; }
+        if (op !== '=' && op !== '<' && op != '<=') { throw new Error("Invalid"); }
+        return {
+            ctrl: "branch",
+            op, v1, v2,
+            offset: this.data.offset
+        };
+    }
+
     public getAreas(): TextareaUserInputCaptureAreas {
         return [3, this.v1Span, 1, this.opSpan, 1, this.v2Span];
     }
@@ -489,6 +518,10 @@ class ControlJumpLine extends InstructionLineView {
         this.elm.append('Goto...', this.editable);
     }
 
+    public serialize(): ControlJump {
+        return { ctrl: 'jump', offset: this.data.offset };
+    }
+
     public getAreas(): TextareaUserInputCaptureAreas {
         return [7, this.editable];
     }
@@ -501,6 +534,11 @@ class ControlEndLine extends InstructionLineView {
     constructor(private data: ControlEnd) {
         super("controlEndLine");
         this.elm.append('End', this.editable);
+    }
+
+
+    public serialize(): ControlEnd {
+        return { ctrl: 'end' };
     }
 
     public getAreas(): TextareaUserInputCaptureAreas {
@@ -523,6 +561,14 @@ class ControlInputLine extends InstructionLineView {
         );
     }
 
+    public serialize(): ControlInput {
+        return {
+            ctrl: 'input',
+            options: this.choicesSpan.getValue().split(",").map(e => e.trim()),
+            variable: this.variableSpan.getValue()
+        };
+    }
+
     public getAreas(): TextareaUserInputCaptureAreas {
         return [this.variableSpan, 17, this.choicesSpan];
     }
@@ -541,6 +587,11 @@ class ControlVariableLine extends InstructionLineView {
                 data.v2 : `${data.v1} ${data.op} ${data.v2}`
         );
         this.elm.append(this.variableSpan, " <- ", this.expressionSpan);
+    }
+
+    public serialize(): ControlVariable {
+        console.warn("control variable serialize not implemented");
+        return this.data;
     }
 
     public getAreas(): TextareaUserInputCaptureAreas {
@@ -563,6 +614,7 @@ class Editable extends Elm<"span"> {
     }
 
     public setValue(value: string) {
+        console.log(value);
         this.value = value;
     }
 
@@ -633,7 +685,7 @@ class TextareaUserInputCapture {
     }
 
     public update() {
-        this.inputCapture.getHTMLElement().value = this.generateTextareaText();
+        this.inputCapture.getHTMLElement().value = this.lastTextareaValue = this.generateTextareaText();
     }
 
     public setChangeHandler(changeHandler: (pos: TextareaUserInputCursorPosition) => void) {
@@ -642,19 +694,19 @@ class TextareaUserInputCapture {
 
     private onChange() {
         const textarea = this.inputCapture.getHTMLElement();
-        if (textarea.selectionStart == this.lastSelectionStart &&
-            textarea.selectionEnd == this.lastSelectionEnd &&
-            textarea.value == this.lastTextareaValue) {
-            return;
+        if (textarea.value !== this.lastTextareaValue) {
+            this.getChanges();
+            this.lastTextareaValue = textarea.value;
         }
 
-        const changes = this.getChanges();
+        if (textarea.selectionStart == this.lastSelectionStart &&
+            textarea.selectionEnd == this.lastSelectionEnd) { return; }
+
         const pos = this.getPosition();
         if (this.changeHandler) {
             this.changeHandler(pos);
         }
 
-        this.lastTextareaValue = textarea.value;
         this.lastSelectionStart = textarea.selectionStart;
         this.lastSelectionEnd = textarea.selectionEnd;
 
@@ -666,6 +718,7 @@ class TextareaUserInputCapture {
     }
 
     private getChanges() {
+        console.log("get changes");
         let hadChange = false;
         const currentValue = this.inputCapture.getHTMLElement().value;
         let i;
@@ -989,10 +1042,10 @@ fetch("/data/exampleFlow.json").then(e => e.json()).then((flowData: FlowData) =>
 
     console.log(engine.world);
 
-    const runner = new FlowRunner(flowData);
-    while (runner.isActive()) {
-        runner.runOne();
-        console.log(runner.getOutput());
-    }
+    // const runner = new FlowRunner(flowData);
+    // while (runner.isActive()) {
+    //     runner.runOne();
+    //     console.log(runner.getOutput());
+    // }
 });
 

@@ -146,7 +146,7 @@ export interface ControlBranch {
 export interface ControlInput {
     ctrl: "input";
     options: any[];
-    variable: "string";
+    variable: string;
 }
 
 export interface ControlJump {
