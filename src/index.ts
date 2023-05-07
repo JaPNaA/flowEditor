@@ -134,6 +134,16 @@ class UIDGenerator {
     }
 }
 
+class EditorCursor extends Elm<"span"> {
+    public inputCapture = new TextareaUserInputCapture();
+
+    constructor() {
+        super();
+        this.class("cursor");
+        this.inputCapture.appendTo(this);
+    }
+}
+
 class InstructionGroupEditor extends WorldElm {
     private static fontSize = 16;
     private static collisionType = Symbol();
@@ -142,8 +152,10 @@ class InstructionGroupEditor extends WorldElm {
     private children: InstructionGroupEditor[] = [];
     private lines: InstructionLine[] = [];
     private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
-    private activeEditable: Editable | null = null;
+    private activeLine: number = -1;
     private elm: Elm;
+
+    private cursorElm = new EditorCursor();
 
     public collisionType = InstructionGroupEditor.collisionType;
 
@@ -155,30 +167,78 @@ class InstructionGroupEditor extends WorldElm {
         this.elm = new Elm().class("instructionElm");
         this.elm.attribute("tabindex", "-1");
         this.elm.on("input", () => this.updateHeight());
+
         document.addEventListener("selectionchange", e => {
             if (!e.isTrusted) { return; } // prevent self-caused selection changes
 
             // must be in this.elm
             const selection = getSelection();
             if (!selection || !isAncestor(selection.anchorNode || null, this.elm.getHTMLElement())) { return; }
+            if (isAncestor(selection.anchorNode || null, this.cursorElm.getHTMLElement())) { return; }
 
             const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"))
             if (instructionLine) {
                 const instructionLineElm = this.htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
                 if (instructionLineElm) {
-                    const prevEditable = this.activeEditable;
+                    const index = this.lines.indexOf(instructionLineElm);
+                    this.activeLine = index;
                     const newEditable = instructionLineElm.getEditableFromSelection(selection);
+                    if (newEditable) {
+                        this.setupInputCapture(index);
+                        const characterOffset = newEditable.getCharacterOffset(selection);
 
-                    if (prevEditable !== newEditable) {
-                        // restoreSelections = true;
-                        prevEditable?.deactivate();
-                        this.activeEditable = newEditable;
+                        newEditable.setActive(newEditable.getValue(), characterOffset, this.cursorElm);
+                        this.cursorElm.inputCapture.setPosition(0, characterOffset);
+                        this.cursorElm.inputCapture.focus();
                     }
-
-                    newEditable?.activate(selection);
                 }
             }
         });
+
+        this.cursorElm.inputCapture.setChangeHandler(pos => {
+            if (this.activeLine < 0) { return; }
+            if (pos[0] === "up") {
+                this.activeLine--;
+                if (this.activeLine < 0) { this.activeLine = 0; }
+                this.setupInputCapture(this.activeLine);
+            }
+            if (pos[0] === "down") {
+                this.activeLine++;
+                if (this.activeLine >= this.lines.length) {
+                    this.activeLine = this.lines.length - 1;
+                }
+                this.setupInputCapture(this.activeLine);
+            }
+            if (pos[0] === "top") { this.activeLine = 0; this.setupInputCapture(this.activeLine); }
+            if (pos[0] === "bottom") { this.activeLine = this.lines.length - 1; this.setupInputCapture(this.activeLine); }
+
+            // pos[0] === 'same'
+            const newEditable = this.lines[this.activeLine].getEditableFromIndex(pos[1]);
+
+            newEditable.setActive(newEditable.getValue(), pos[2], this.cursorElm);
+            this.cursorElm.inputCapture.focus();
+        });
+    }
+
+    private setupInputCapture(line: number) {
+        if (line - 1 >= 0) {
+            this.cursorElm.inputCapture.setAboveLine(this.lines[line - 1].getAreas());
+        } else {
+            this.cursorElm.inputCapture.setAboveLine([]);
+        }
+        if (line >= 0) {
+            this.cursorElm.inputCapture.setCurrentLine(this.lines[line].getAreas());
+        } else {
+            this.cursorElm.inputCapture.setCurrentLine([]);
+        }
+        if (line + 1 < this.lines.length) {
+            this.cursorElm.inputCapture.setBelowLine(this.lines[line + 1].getAreas());
+        } else {
+            this.cursorElm.inputCapture.setBelowLine([]);
+        }
+
+        this.cursorElm.inputCapture.update();
+        this.cursorElm.inputCapture.focus();
     }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
@@ -257,7 +317,7 @@ class InstructionGroupEditor extends WorldElm {
 
     private addInstructionLine(instruction: any) {
         const instructionLine = new InstructionLine(instruction).appendTo(this.elm);
-        this.lines.push(instruction);
+        this.lines.push(instructionLine);
         this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
     }
 
@@ -326,10 +386,19 @@ class InstructionLine extends Component {
     public getEditableFromSelection(selection: Selection) {
         return this.view.getEditableFromSelection(selection);
     }
+
+    public getEditableFromIndex(index: number) {
+        return this.view.editables[index];
+    }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return this.view.getAreas();
+    }
 }
 
 class InstructionLineView extends Component {
     public spanToEditable = new Map<HTMLSpanElement, Editable>();
+    public editables: Editable[] = [];
 
     public getEditableFromSelection(selection: Selection): Editable | null {
         const editable = getAncestorWhich(
@@ -341,145 +410,161 @@ class InstructionLineView extends Component {
         return null;
     }
 
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [];
+    }
+
     protected createEditable(text: string | number): Editable {
         const editable = new Editable(text.toString());
         this.spanToEditable.set(editable.getHTMLElement(), editable);
+        this.editables.push(editable);
         return editable;
     }
 }
 
 class JSONLine extends InstructionLineView {
+    private editable: Editable;
     constructor(private data: any) {
         super("jsonLine");
-        this.elm.append(this.createEditable(JSON.stringify(data)));
+        this.elm.append(this.editable = this.createEditable(JSON.stringify(data)));
+    }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [this.editable];
     }
 }
 
 class ControlBranchLine extends InstructionLineView {
     private opSpan: Editable;
+    private v1Span: Editable;
+    private v2Span: Editable;
+
     constructor(private data: ControlBranch) {
         super("controlBranchLine");
 
         this.elm.append(
             "If ",
-            this.createEditable(data.v1),
+            this.v1Span = this.createEditable(data.v1),
             " ",
             this.opSpan = this.createEditable(data.op).class("op"),
             " ",
-            this.createEditable(data.v2),
+            this.v2Span = this.createEditable(data.v2),
             ", goto..."
         );
 
         if (data.op == "=") { this.opSpan.class("eq"); }
     }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [3, this.v1Span, 1, this.opSpan, 1, this.v2Span];
+    }
 }
 
 
 class ControlJumpLine extends InstructionLineView {
+    private editable = this.createEditable('');
+
     constructor(private data: ControlJump) {
         super("controlJumpLine");
-        this.elm.append('Goto...');
+        this.elm.append('Goto...', this.editable);
+    }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [7, this.editable];
     }
 }
 
 
 class ControlEndLine extends InstructionLineView {
+    private editable = this.createEditable('');
+
     constructor(private data: ControlEnd) {
         super("controlEndLine");
-        this.elm.append('End');
+        this.elm.append('End', this.editable);
+    }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [3, this.editable];
     }
 }
 
 
 class ControlInputLine extends InstructionLineView {
+    private variableSpan: Editable;
+    private choicesSpan: Editable;
+
     constructor(private data: ControlInput) {
         super("controlInputLine");
-        this.elm.append(this.createEditable(data.variable), ' <- choose from [', this.createEditable(data.options.join(", ")), ']');
+        this.elm.append(
+            this.variableSpan = this.createEditable(data.variable),
+            ' <- choose from [',
+            this.choicesSpan = this.createEditable(data.options.join(", ")),
+            ']'
+        );
+    }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [this.variableSpan, 17, this.choicesSpan];
     }
 }
 
 
 class ControlVariableLine extends InstructionLineView {
+    private variableSpan: Editable;
+    private expressionSpan: Editable;
+
     constructor(private data: ControlVariable) {
         super("controlVariableLine");
-        if (data.op === "=") {
-            this.elm.append(this.createEditable(data.v1), " <- ", this.createEditable(data.v2));
-        } else {
-            this.elm.append(this.createEditable(data.v1), " <- ", this.createEditable(`${data.v1} ${data.op} ${data.v2}`));
-        }
+        this.variableSpan = this.createEditable(data.v1);
+        this.expressionSpan = this.createEditable(
+            data.op === "=" ?
+                data.v2 : `${data.v1} ${data.op} ${data.v2}`
+        );
+        this.elm.append(this.variableSpan, " <- ", this.expressionSpan);
+    }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [this.variableSpan, 4, this.expressionSpan];
     }
 }
 
 class Editable extends Elm<"span"> {
-    private activated?: {
-        cursor: Elm<"span">,
-        inputCapture: Elm<"textarea">,
-        position: number
-    };
+    private value: string;
 
     constructor(initialText: string) {
         super("span");
         this.class("editable");
         this.append(initialText);
+        this.value = initialText;
     }
 
-    public activate(selection: Selection) {
-        if (!(selection.anchorNode instanceof Text)) { return; }
-        let textarea: HTMLTextAreaElement;
+    public getValue(): string {
+        return this.value;
+    }
 
-        if (this.activated) {
-            textarea = this.activated.inputCapture.getHTMLElement();
-            let curr: ChildNode | undefined | null = this.elm.firstChild;
-            let count = 0;
-            while (curr && curr !== selection.anchorNode) {
-                if (curr instanceof Text) {
-                    count += curr.textContent ? curr.textContent.length : 0;
-                }
-                curr = curr?.nextSibling;
+    public getCharacterOffset(selection: Selection) {
+        let curr: ChildNode | undefined | null = this.elm.firstChild;
+        let count = 0;
+        while (curr && curr !== selection.anchorNode) {
+            if (curr instanceof Text) {
+                count += curr.textContent ? curr.textContent.length : 0;
             }
-
-            this.activated.position = count + selection.focusOffset;
-        } else {
-            const inputCapture = new Elm("textarea").class("inputCapture")
-                .on("input", e => this.updateByInput())
-                .on("selectionchange", e => this.updateByInput());
-            const cursor = new Elm("span").class("cursor")
-                .append(inputCapture);
-
-            this.activated = { cursor, inputCapture, position: selection.anchorOffset };
-
-            textarea = this.activated!.inputCapture.getHTMLElement();
-            textarea.value = this.elm.innerText;
+            curr = curr?.nextSibling;
         }
 
-        textarea.selectionStart = textarea.selectionEnd = this.activated.position;
-        this.updateByInput();
-        // this.cursor.attribute("")
-
-        // console.log(this.elm.innerText.slice(0, selection.anchorOffset) + "|" + this.elm.innerText.slice(selection.anchorOffset));
+        return count + selection.focusOffset;
     }
 
-    public updateByInput() {
-        if (!this.activated) { return; }
-        const textarea = this.activated.inputCapture.getHTMLElement();
-        const before = textarea.value.slice(0, textarea.selectionStart);
-        const after = textarea.value.slice(textarea.selectionStart);
+    public setActive(value: string, offset: number, cursor: EditorCursor) {
+        const before = value.slice(0, offset);
+        const after = value.slice(offset);
 
-        this.replaceContents(before, this.activated.cursor, after);
-        textarea.focus();
+        this.replaceContents(before, cursor, after);
     }
-
-    public deactivate() {
-        if (this.activated) {
-            this.activated.cursor.remove();
-            this.activated = undefined;
-        }
-    }
-
 }
 
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
-type TextareaUserInputCaptureAreas = (string | number)[];
+type TextareaUserInputCaptureAreas = (Editable | number)[];
 /** Change of line. Then, (only for "up", "same", "down") offset on line given by which editiable, then character offset in editable */
 type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom", number, number];
 
@@ -534,6 +619,7 @@ class TextareaUserInputCapture {
         }
 
         const pos = this.getPosition();
+        console.log(pos);
         if (this.changeHandler) {
             this.changeHandler(pos);
         }
@@ -557,19 +643,23 @@ class TextareaUserInputCapture {
         if (curr <= 0) { return ["top", 0, 0]; }
         curr--;
 
+        let previousLinePos: 'up' | 'same' | 'down' = 'up'; // not 'top' to prevent a 'two-line' jump being recognized as a jump to top
+        let previousLineLastEditableIndex = 0;
+        let previousLineLastCharacterOffset = 0;
+
         // aboveLine
         for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
             let editableIndex = -1;
             let lastEditableSize = 0;
 
             let maxEditableIndex = -1;
-            for (const area of areas) { if (typeof area === 'string') { maxEditableIndex++; } }
+            for (const area of areas) { if (area instanceof Editable) { maxEditableIndex++; } }
 
             for (const area of areas) {
-                const isEditable = typeof area === "string";
+                const isEditable = area instanceof Editable;
                 let size: number;
                 if (isEditable) {
-                    size = area.length;
+                    size = area.getValue().length;
                     editableIndex++;
                 } else {
                     size = area;
@@ -580,10 +670,22 @@ class TextareaUserInputCapture {
                         return [posStr, editableIndex, curr];
                     } else {
                         // handle shifting to an editable
-                        if (movingLeft || editableIndex + 1 > maxEditableIndex) {
-                            return [posStr, Math.max(0, editableIndex), lastEditableSize];
+                        if (movingLeft) {
+                            if (editableIndex < 0) {
+                                console.log("a");
+                                return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset];
+                            } else {
+                                console.log("b");
+                                return [posStr, editableIndex, lastEditableSize];
+                            }
                         } else {
-                            return [posStr, Math.min(maxEditableIndex, editableIndex + 1), 0];
+                            if (editableIndex + 1 > maxEditableIndex) {
+                                console.log("c");
+                                return [posStr, editableIndex, lastEditableSize];
+                            } else {
+                                console.log("d");
+                                return [posStr, Math.min(maxEditableIndex, editableIndex + 1), 0];
+                            }
                         }
                     }
                 }
@@ -594,8 +696,12 @@ class TextareaUserInputCapture {
                 }
             }
 
+            previousLinePos = posStr;
+            previousLineLastEditableIndex = editableIndex;
+            previousLineLastCharacterOffset = lastEditableSize;
+
             // catch cursor at end of line that ends with space
-            if (curr <= 0) { return [posStr, editableIndex, lastEditableSize]; }
+            if (curr <= 0) { return [posStr, Math.max(0, editableIndex), lastEditableSize]; }
 
             curr--; // \n
         }
@@ -608,18 +714,18 @@ class TextareaUserInputCapture {
     public setPosition(editableIndex: number, characterIndex: number) {
         let curr = 2; // 2 for \n at start and \n after above line
         for (const area of this.aboveLine) {
-            if (typeof area === 'string') { curr += area.length; }
+            if (area instanceof Editable) { curr += area.getValue().length; }
             else { curr += area; }
         }
         let currEditable = 0;
         for (const area of this.currentLine) {
-            if (typeof area === 'string') {
+            if (area instanceof Editable) {
                 if (currEditable === editableIndex) {
                     this.setTextareaCursorPositionIfNeeded(curr + characterIndex);
                     return;
                 }
                 currEditable++;
-                curr += area.length;
+                curr += area.getValue().length;
             } else {
                 curr += area;
             }
@@ -636,7 +742,7 @@ class TextareaUserInputCapture {
     }
 
     private areasToString(areas: TextareaUserInputCaptureAreas): string {
-        return areas.map(e => typeof e === "string" ? e : " ".repeat(e)).join("");
+        return areas.map(e => e instanceof Editable ? e.getValue() : " ".repeat(e)).join("");
     }
 }
 
