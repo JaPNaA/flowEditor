@@ -140,7 +140,6 @@ class EditorCursor extends Elm<"span"> {
     constructor() {
         super();
         this.class("cursor");
-        this.inputCapture.appendTo(this);
     }
 }
 
@@ -167,6 +166,7 @@ class InstructionGroupEditor extends WorldElm {
         this.elm = new Elm().class("instructionElm");
         this.elm.attribute("tabindex", "-1");
         this.elm.on("input", () => this.updateHeight());
+        this.cursorElm.inputCapture.appendTo(this.elm);
 
         document.addEventListener("selectionchange", e => {
             if (!e.isTrusted) { return; } // prevent self-caused selection changes
@@ -175,7 +175,6 @@ class InstructionGroupEditor extends WorldElm {
             const selection = getSelection();
             if (!selection || !isAncestor(selection.anchorNode || null, this.elm.getHTMLElement())) { return; }
             if (isAncestor(selection.anchorNode || null, this.cursorElm.getHTMLElement())) { return; }
-            console.log(selection.anchorNode);
 
             const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"))
             if (instructionLine) {
@@ -217,6 +216,9 @@ class InstructionGroupEditor extends WorldElm {
             const newEditable = this.lines[this.activeLine].getEditableFromIndex(pos[1]);
 
             newEditable.setActive(pos[2], this.cursorElm);
+
+            const cursorElm = this.cursorElm.getHTMLElement();
+            this.cursorElm.inputCapture.setStyleTop(cursorElm.offsetTop + cursorElm.offsetHeight);
             this.cursorElm.inputCapture.focus();
         });
     }
@@ -649,6 +651,7 @@ type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom
 
 class TextareaUserInputCapture {
     private inputCapture: Elm<"textarea"> = new Elm("textarea").class("inputCapture");
+    private textarea: HTMLTextAreaElement;
     private currentLine: TextareaUserInputCaptureAreas = [];
     private aboveLine: TextareaUserInputCaptureAreas = [];
     private belowLine: TextareaUserInputCaptureAreas = [];
@@ -659,8 +662,28 @@ class TextareaUserInputCapture {
     private lastTextareaValue = "";
 
     constructor(private cursor: EditorCursor) {
+        this.textarea = this.inputCapture.getHTMLElement();
         this.inputCapture.on("input", () => this.onChange());
         this.inputCapture.on("selectionchange", () => this.onChange());
+
+        // chrome support
+        // from https://stackoverflow.com/a/53999418
+        this.inputCapture.on('keydown', () => setTimeout(() => this.checkCursorPosition(), 1));
+        this.inputCapture.on('input', () => this.checkCursorPosition()); // Other input events
+        this.inputCapture.on('paste', () => this.checkCursorPosition()); // Clipboard actions
+        this.inputCapture.on('cut', () => this.checkCursorPosition());
+        this.inputCapture.on('select', () => this.checkCursorPosition()); // Some browsers support this event
+        this.inputCapture.on('selectstart', () => this.checkCursorPosition()); // Some browsers support this event
+    }
+
+    private checkCursorPosition() {
+        if (this.textarea.selectionStart !== this.lastSelectionStart || this.textarea.selectionEnd !== this.lastSelectionEnd) {
+            this.onChange();
+        }
+    }
+
+    public setStyleTop(y: number) {
+        this.inputCapture.getHTMLElement().style.top = y + "px";
     }
 
     public appendTo(parent: Elm<any>) {
@@ -668,7 +691,7 @@ class TextareaUserInputCapture {
     }
 
     public focus() {
-        this.inputCapture.getHTMLElement().focus();
+        this.textarea.focus();
     }
 
     public setCurrentLine(areas: TextareaUserInputCaptureAreas) {
@@ -682,7 +705,7 @@ class TextareaUserInputCapture {
     }
 
     public update() {
-        this.inputCapture.getHTMLElement().value = this.lastTextareaValue = this.generateTextareaText();
+        this.textarea.value = this.lastTextareaValue = this.generateTextareaText();
     }
 
     public setChangeHandler(changeHandler: (pos: TextareaUserInputCursorPosition) => void) {
@@ -690,34 +713,32 @@ class TextareaUserInputCapture {
     }
 
     private onChange() {
-        const textarea = this.inputCapture.getHTMLElement();
-        if (textarea.value !== this.lastTextareaValue) {
+        if (this.textarea.value !== this.lastTextareaValue) {
             this.getChanges();
-            this.lastTextareaValue = textarea.value;
+            this.lastTextareaValue = this.textarea.value;
         }
 
-        if (textarea.selectionStart == this.lastSelectionStart &&
-            textarea.selectionEnd == this.lastSelectionEnd) { return; }
+        if (this.textarea.selectionStart == this.lastSelectionStart &&
+            this.textarea.selectionEnd == this.lastSelectionEnd) { return; }
 
-        const pos = this.getPosition(textarea.selectionStart);
+        const pos = this.getPosition(this.textarea.selectionStart);
         if (this.changeHandler) {
             this.changeHandler(pos);
         }
 
-        this.lastSelectionStart = textarea.selectionStart;
-        this.lastSelectionEnd = textarea.selectionEnd;
+        this.lastSelectionStart = this.textarea.selectionStart;
+        this.lastSelectionEnd = this.textarea.selectionEnd;
 
         setTimeout(() => this.setPosition(pos[1], pos[2]), 1);
     }
 
     private generateTextareaText() {
-        return "\n" + this.areasToString(this.aboveLine) + "\n" + this.areasToString(this.currentLine) + "\n" + this.areasToString(this.belowLine) + "\n";
+        return "\n " + this.areasToString(this.aboveLine) + "\n " + this.areasToString(this.currentLine) + "\n " + this.areasToString(this.belowLine) + "\n";
     }
 
     private getChanges() {
-        console.log("get changes");
         let hadChange = false;
-        const currentValue = this.inputCapture.getHTMLElement().value;
+        const currentValue = this.textarea.value;
         let i;
         for (i = 0; i < this.lastTextareaValue.length; i++) {
             if (currentValue[i] !== this.lastTextareaValue[i]) {
@@ -775,6 +796,19 @@ class TextareaUserInputCapture {
 
             let maxEditableIndex = -1;
             for (const area of areas) { if (area instanceof Editable) { maxEditableIndex++; } }
+
+            // extra space in front of line to capture moves to start of line
+            if (curr <= 0) {
+                // return first editable
+                for (let i = 0; i < areas.length; i++) {
+                    const area = areas[i];
+                    if (area instanceof Editable) {
+                        return [posStr, 0, 0, area];
+                    }
+                }
+                return [posStr, 0, 0];
+            }
+            curr--;
 
             for (let i = 0; i < areas.length; i++) {
                 const area = areas[i];
@@ -840,7 +874,7 @@ class TextareaUserInputCapture {
 
     /** Sets the cursor position on the current line */
     public setPosition(editableOrIndex: number | Editable, characterIndex: number) {
-        let curr = 2; // 2 for \n at start and \n after above line
+        let curr = 4; // 4 for '\n ' at start and after above line
         for (const area of this.aboveLine) {
             if (area instanceof Editable) { curr += area.getValue().length; }
             else { curr += area; }
@@ -863,9 +897,8 @@ class TextareaUserInputCapture {
     }
 
     private setTextareaCursorPositionIfNeeded(index: number) {
-        const textarea = this.inputCapture.getHTMLElement();
         if (this.lastSelectionEnd != index || this.lastSelectionStart != index) {
-            textarea.selectionStart = textarea.selectionEnd =
+            this.textarea.selectionStart = this.textarea.selectionEnd =
                 this.lastSelectionStart = this.lastSelectionEnd = index;
         }
     }

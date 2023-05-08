@@ -17,10 +17,17 @@
     height: 1.25em;
 }
 
-.instructionElm .editable .inputCapture {
+.instructionElm .inputCapture {
+    position: absolute;
     width: 480px;
-    height: 0;
-    opacity: 0;
+    height: 1px;
+    opacity: 0.2;
+    font: inherit;
+    transform: scaleY(0.001);
+    left: -1ch;
+    margin: 0;
+    border: 0;
+    padding: 0;
     resize: none;
     pointer-events: none;
 }
