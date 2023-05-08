@@ -185,65 +185,78 @@ class InstructionGroupEditor extends WorldElm {
                     const newEditable = instructionLineElm.getEditableFromSelection(selection);
                     if (newEditable) {
                         const characterOffset = newEditable.getCharacterOffset(selection);
-                        this.setupInputCapture(index);
+                        this.updateInputCapture();
 
                         newEditable.setActive(characterOffset, this.cursorElm);
-                        this.cursorElm.inputCapture.setPosition(newEditable, characterOffset);
+                        this.cursorElm.inputCapture.setPositionOnCurrentLine(newEditable, characterOffset);
                         this.cursorElm.inputCapture.focus();
                     }
                 }
             }
         });
 
-        this.cursorElm.inputCapture.setChangeHandler(pos => {
-            if (this.activeLine < 0) { return; }
-            if (pos[0] === "up") {
-                this.activeLine--;
-                if (this.activeLine < 0) { this.activeLine = 0; }
-                this.setupInputCapture(this.activeLine);
-            }
-            if (pos[0] === "down") {
-                this.activeLine++;
-                if (this.activeLine >= this.lines.length) {
-                    this.activeLine = this.lines.length - 1;
-                }
-                this.setupInputCapture(this.activeLine);
-            }
-            if (pos[0] === "top") { this.activeLine = 0; this.setupInputCapture(this.activeLine); }
-            if (pos[0] === "bottom") { this.activeLine = this.lines.length - 1; this.setupInputCapture(this.activeLine); }
-
-            // pos[0] === 'same'
-            const newEditable = this.lines[this.activeLine].getEditableFromIndex(pos[1]);
-
-            newEditable.setActive(pos[2], this.cursorElm);
-
-            const cursorElm = this.cursorElm.getHTMLElement();
-            this.cursorElm.inputCapture.setStyleTop(cursorElm.offsetTop + cursorElm.offsetHeight);
-            this.cursorElm.inputCapture.focus();
-        });
+        this.cursorElm.inputCapture.setChangeHandler(this.updateCursorPosition.bind(this));
 
         this.cursorElm.inputCapture.onInput.subscribe(ev => {
             if (ev.added.includes("\n")) {
-                this.addInstructionLine("");
                 this.activeLine++;
-                this.setupInputCapture(this.activeLine);
+                const instructionLine = this.insertNewInstructionLine(this.activeLine);
+                this.updateInputCapture();
+                instructionLine.getEditableFromIndex(0).setActive(0, this.cursorElm);
+                this.cursorElm.inputCapture.setPositionOnCurrentLine(0, 0);
             }
         });
     }
 
-    private setupInputCapture(line: number) {
-        if (line - 1 >= 0) {
-            this.cursorElm.inputCapture.setAboveLine(this.lines[line - 1].getAreas());
+    private updateCursorPosition(pos: TextareaUserInputCursorPosition) {
+        if (this.activeLine < 0) { return; }
+        if (pos[0] === "up") {
+            this.activeLine--;
+            if (this.activeLine < 0) { this.activeLine = 0; }
+            this.updateInputCapture();
+        }
+        if (pos[0] === "down") {
+            this.activeLine++;
+            if (this.activeLine >= this.lines.length) {
+                this.activeLine = this.lines.length - 1;
+            }
+            this.updateInputCapture();
+        }
+        if (pos[0] === "top") { this.activeLine = 0; this.updateInputCapture(); }
+        if (pos[0] === "bottom") { this.activeLine = this.lines.length - 1; this.updateInputCapture(); }
+
+        // pos[0] === 'same'
+        this.activateEditableOnActiveLine(pos[3], pos[2]);
+    }
+
+    public activeSelectedEditable() {
+        const pos = this.cursorElm.inputCapture.getCurrentPosition();
+        this.activateEditableOnActiveLine(pos[3], pos[2]);
+    }
+
+    private activateEditableOnActiveLine(editable: Editable | undefined, characterOffset: number) {
+        if (!editable) { console.warn("No editable specified"); return; }
+
+        editable.setActive(characterOffset, this.cursorElm);
+
+        const cursorElm = this.cursorElm.getHTMLElement();
+        this.cursorElm.inputCapture.setStyleTop(cursorElm.offsetTop + cursorElm.offsetHeight);
+        this.cursorElm.inputCapture.focus();
+    }
+
+    public updateInputCapture() {
+        if (this.activeLine - 1 >= 0) {
+            this.cursorElm.inputCapture.setAboveLine(this.lines[this.activeLine - 1].getAreas());
         } else {
             this.cursorElm.inputCapture.setAboveLine([]);
         }
-        if (line >= 0) {
-            this.cursorElm.inputCapture.setCurrentLine(this.lines[line].getAreas());
+        if (this.activeLine >= 0) {
+            this.cursorElm.inputCapture.setCurrentLine(this.lines[this.activeLine].getAreas());
         } else {
             this.cursorElm.inputCapture.setCurrentLine([]);
         }
-        if (line + 1 < this.lines.length) {
-            this.cursorElm.inputCapture.setBelowLine(this.lines[line + 1].getAreas());
+        if (this.activeLine + 1 < this.lines.length) {
+            this.cursorElm.inputCapture.setBelowLine(this.lines[this.activeLine + 1].getAreas());
         } else {
             this.cursorElm.inputCapture.setBelowLine([]);
         }
@@ -327,9 +340,25 @@ class InstructionGroupEditor extends WorldElm {
     }
 
     private addInstructionLine(instruction: any) {
-        const instructionLine = new InstructionLine(instruction).appendTo(this.elm);
+        const instructionLine = InstructionLine.fromInstruction(instruction).appendTo(this.elm);
+        instructionLine._setParent(this);
         this.lines.push(instructionLine);
         this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
+    }
+
+    private insertNewInstructionLine(position: number) {
+        const instructionLine = new InstructionLine(new NewInstructionLine(this));
+
+        if (position < this.lines.length) {
+            this.elm.getHTMLElement().insertBefore(instructionLine.elm.getHTMLElement(), this.lines[position].elm.getHTMLElement());
+        } else {
+            this.elm.append(instructionLine);
+        }
+        instructionLine._setParent(this);
+        this.lines.splice(position, 0, instructionLine);
+        this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
+
+        return instructionLine;
     }
 
     private updateHeight() {
@@ -356,42 +385,56 @@ function getAncestorWhich(child: Node | null, test: (node: Node) => boolean): No
 }
 
 class InstructionLine extends Component {
-    private view: InstructionLineView;
+    private parent!: InstructionGroupEditor;
 
-    constructor(data: any) {
+    constructor(private view: InstructionLineView) {
         super("instructionLine");
+        this.view._setParent(this);
+        this.elm.append(this.view);
+    }
 
-        if (isControlItem(data)) {
-            switch (data.ctrl) {
-                case "branch":
-                    this.view = new ControlBranchLine(data);
-                    break;
-                case "jump":
-                    this.view = new ControlJumpLine(data);
-                    break;
-                case "end":
-                    this.view = new ControlEndLine(data);
-                    break;
-                case "input":
-                    this.view = new ControlInputLine(data);
-                    break;
-                case "variable":
-                    this.view = new ControlVariableLine(data);
-                    break;
-                default:
-                    this.view = new JSONLine(data);
-            }
+    public _setParent(parent: InstructionGroupEditor) {
+        this.parent = parent;
+    }
 
-            if (data.ctrl === "branch" || data.ctrl === "jump") {
-                this.elm.class("jump");
-            } else {
-                this.elm.class("control");
-            }
-        } else {
-            this.view = new JSONLine(data);
+    public static fromInstruction(data: any): InstructionLine {
+        if (!isControlItem(data)) {
+            return new InstructionLine(new JSONLine(data));
         }
 
-        this.elm.append(this.view);
+        let view;
+        switch (data.ctrl) {
+            case "branch":
+                view = new ControlBranchLine(data);
+                break;
+            case "jump":
+                view = new ControlJumpLine(data);
+                break;
+            case "end":
+                view = new ControlEndLine(data);
+                break;
+            case "input":
+                view = new ControlInputLine(data);
+                break;
+            case "variable":
+                view = new ControlVariableLine(data);
+                break;
+            default:
+                view = new JSONLine(data);
+        }
+
+        const newLine = new InstructionLine(view);
+
+        return newLine;
+    }
+
+    public changeView(view: InstructionLineView) {
+        this.view._setParent(this);
+        this.view = view;
+        this.elm.replaceContents(view);
+
+        this.parent.updateInputCapture();
+        this.parent.activeSelectedEditable();
     }
 
     public serialize() {
@@ -412,8 +455,12 @@ class InstructionLine extends Component {
 }
 
 class InstructionLineView extends Component {
+    protected parent!: InstructionLine;
+
     public spanToEditable = new Map<HTMLSpanElement, Editable>();
     public editables: Editable[] = [];
+
+    public _setParent(parent: InstructionLine) { this.parent = parent; }
 
     public getEditableFromSelection(selection: Selection): Editable | null {
         const thisElm = this.elm.getHTMLElement();
@@ -492,7 +539,7 @@ class ControlBranchLine extends InstructionLineView {
             " ",
             this.v2Span = this.createEditable(data.v2),
             ", goto..."
-        );
+        ).class("jump");
 
         if (data.op == "=") { this.opSpan.class("eq"); }
     }
@@ -525,7 +572,7 @@ class ControlJumpLine extends InstructionLineView {
 
     constructor(private data: ControlJump) {
         super("controlJumpLine");
-        this.elm.append('Goto...', this.editable);
+        this.elm.append('Goto...', this.editable).class("jump");
     }
 
     public serialize(): ControlJump {
@@ -543,7 +590,7 @@ class ControlEndLine extends InstructionLineView {
 
     constructor(private data: ControlEnd) {
         super("controlEndLine");
-        this.elm.append('End', this.editable);
+        this.elm.append('End', this.editable).class("control");
     }
 
 
@@ -568,7 +615,7 @@ class ControlInputLine extends InstructionLineView {
             ' <- choose from [',
             this.choicesSpan = this.createEditable(data.options.join(", ")),
             ']'
-        );
+        ).class("control");
     }
 
     public serialize(): ControlInput {
@@ -596,7 +643,7 @@ class ControlVariableLine extends InstructionLineView {
             data.op === "=" ?
                 data.v2 : `${data.v1} ${data.op} ${data.v2}`
         );
-        this.elm.append(this.variableSpan, " <- ", this.expressionSpan);
+        this.elm.append(this.variableSpan, " <- ", this.expressionSpan).class("control");
     }
 
     public serialize(): ControlVariable {
@@ -611,6 +658,7 @@ class ControlVariableLine extends InstructionLineView {
 
 class Editable extends Elm<"span"> {
     private value: string;
+    public onChange = new EventBus<UserInputEvent>();
 
     constructor(initialText: string) {
         super("span");
@@ -628,6 +676,7 @@ class Editable extends Elm<"span"> {
     }
 
     public checkInput(event: UserInputEvent) {
+        this.onChange.send(event);
         if (event.added.includes("\n")) {
             event.reject();
         }
@@ -746,6 +795,10 @@ class TextareaUserInputCapture {
         this.changeHandler = changeHandler;
     }
 
+    public getCurrentPosition() {
+        return this.getPosition(this.lastSelectionStart);
+    }
+
     private onChange() {
         if (this.textarea.value !== this.lastTextareaValue) {
             this.getChanges();
@@ -763,7 +816,7 @@ class TextareaUserInputCapture {
         this.lastSelectionStart = this.textarea.selectionStart;
         this.lastSelectionEnd = this.textarea.selectionEnd;
 
-        setTimeout(() => this.setPosition(pos[1], pos[2]), 1);
+        setTimeout(() => this.setPositionOnCurrentLine(pos[1], pos[2]), 1);
     }
 
     private generateTextareaText() {
@@ -914,7 +967,7 @@ class TextareaUserInputCapture {
     }
 
     /** Sets the cursor position on the current line */
-    public setPosition(editableOrIndex: number | Editable, characterIndex: number) {
+    public setPositionOnCurrentLine(editableOrIndex: number | Editable, characterIndex: number) {
         let curr = 4; // 4 for '\n ' at start and after above line
         for (const area of this.aboveLine) {
             if (area instanceof Editable) { curr += area.getValue().length; }
@@ -951,35 +1004,65 @@ class TextareaUserInputCapture {
 
 
 class NewInstructionLine extends InstructionLineView {
-    private select: Elm<"select">;
+    private editable: Editable;
 
-    constructor(emptyDiv: Elm) {
+    constructor(group: InstructionGroupEditor) {
         super("newInstructionLine");
 
         this.elm.append(
-            this.select = new Elm("select").class("typeSelect").append(
-                new Elm("option").append("Branch"),
-                new Elm("option").append("Input"),
-                new Elm("option").append("Jump"),
-                new Elm("option").append("End"),
-                new Elm("option").append("Variable"),
-                new Elm("option").append("Default"),
-                new Elm("option").attribute("selected", "selected").attribute("disabled", "disabled").attribute("hidden", "hidden")
-            ).attribute("style", "display: inline-block")
+            this.editable = this.createEditable("Press one of [ibjved]...")
         );
 
-        emptyDiv.replaceContents(this.elm);
-        this.select.getHTMLElement().focus();
+        this.editable.onChange.subscribe(changes => {
+            changes.reject(); // prevent updating
+            let newView;
+            switch (changes.added[0].toLowerCase()) {
+                case "b":
+                    newView = new ControlBranchLine({
+                        ctrl: "branch",
+                        offset: 1,
+                        op: "<",
+                        v1: "v1",
+                        v2: "v2"
+                    });
+                    break;
+                case "i":
+                    newView = new ControlInputLine({
+                        ctrl: "input",
+                        options: ["option"],
+                        variable: "choice"
+                    });
+                    break;
+                case "j":
+                    newView = new ControlJumpLine({
+                        ctrl: "jump",
+                        offset: 1
+                    });
+                    break;
+                case "e":
+                    newView = new ControlEndLine({ ctrl: "end" });
+                    break;
+                case "v":
+                    newView = new ControlVariableLine({
+                        ctrl: "variable",
+                        op: "=",
+                        v1: "v1",
+                        v2: "v2"
+                    });
+                    break;
+                case "d":
+                    newView = new JSONLine("");
+                    break;
+                default:
+                    return;
+            }
 
-        this.select.on("change", () => {
-            emptyDiv.replaceContents(this.select.getHTMLElement().value + ":");
-            const range = document.createRange();
-            const selection = getSelection();
-            range.setStart(emptyDiv.getHTMLElement(), 1);
-            range.collapse(true);
-            selection?.removeAllRanges();
-            selection?.addRange(range);
+            this.parent.changeView(newView);
         });
+    }
+
+    public getAreas(): TextareaUserInputCaptureAreas {
+        return [this.editable];
     }
 }
 
