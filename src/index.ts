@@ -1,5 +1,5 @@
 import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, FlowData, FlowRunner, isControlItem } from "./FlowRunner.js";
-import { Component, Elm, Hitbox, InputElm, ParentComponent, PrerenderCanvas, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
+import { Component, Elm, EventBus, Hitbox, InputElm, ParentComponent, PrerenderCanvas, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 
 class Editor extends WorldElmWithComponents {
@@ -220,6 +220,14 @@ class InstructionGroupEditor extends WorldElm {
             const cursorElm = this.cursorElm.getHTMLElement();
             this.cursorElm.inputCapture.setStyleTop(cursorElm.offsetTop + cursorElm.offsetHeight);
             this.cursorElm.inputCapture.focus();
+        });
+
+        this.cursorElm.inputCapture.onInput.subscribe(ev => {
+            if (ev.added.includes("\n")) {
+                this.addInstructionLine("");
+                this.activeLine++;
+                this.setupInputCapture(this.activeLine);
+            }
         });
     }
 
@@ -619,6 +627,12 @@ class Editable extends Elm<"span"> {
         this.value = value;
     }
 
+    public checkInput(event: UserInputEvent) {
+        if (event.added.includes("\n")) {
+            event.reject();
+        }
+    }
+
     public getCharacterOffset(selection: Selection) {
         let curr: ChildNode | undefined | null = this.elm.firstChild;
         let count = 0;
@@ -644,12 +658,32 @@ class Editable extends Elm<"span"> {
     }
 }
 
+class UserInputEvent {
+    private rejected = false;
+
+    constructor(
+        public readonly added: string,
+        public readonly removed: string,
+        public readonly newContent: string
+    ) { }
+
+    public reject() {
+        this.rejected = true;
+    }
+
+    public isRejected() {
+        return this.rejected;
+    }
+}
+
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
 type TextareaUserInputCaptureAreas = (Editable | number)[];
 /** Change of line. Then, (only for "up", "same", "down") offset on line given by which editiable, then character offset in editable */
 type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom", number, number, Editable?];
 
 class TextareaUserInputCapture {
+    public onInput = new EventBus<UserInputEvent>();
+
     private inputCapture: Elm<"textarea"> = new Elm("textarea").class("inputCapture");
     private textarea: HTMLTextAreaElement;
     private currentLine: TextareaUserInputCaptureAreas = [];
@@ -751,9 +785,9 @@ class TextareaUserInputCapture {
 
         const currentValueLen = currentValue.length;
         const lastValueLen = this.lastTextareaValue.length;
-        const maxBackwardSearch = Math.min(currentValueLen - i, lastValueLen - i);
+        const maxBackwardSearch = Math.min(currentValueLen, lastValueLen) - i;
         let j;
-        for (j = 1; j < maxBackwardSearch; j++) {
+        for (j = 1; j <= maxBackwardSearch; j++) {
             if (currentValue[currentValueLen - j] !== this.lastTextareaValue[lastValueLen - j]) {
                 break;
             }
@@ -765,13 +799,20 @@ class TextareaUserInputCapture {
                 this.lastSelectionStart - characterIndex,
                 this.lastSelectionStart - characterIndex + editable.getValue().length - lastValueLen + currentValueLen
             );
-            console.log({
-                added: currentValue.slice(i, currentValueLen - j),
-                deleted: this.lastTextareaValue.slice(i, lastValueLen - j),
+            const event = new UserInputEvent(
+                currentValue.slice(i, 1 - j), // added
+                this.lastTextareaValue.slice(i, 1 - j), // deleted
                 newContent
-            });
-            editable.setValue(newContent);
-            editable.setActive(characterIndex, this.cursor);
+            );
+            this.onInput.send(event);
+            editable.checkInput(event);
+            if (!event.isRejected()) {
+                editable.setValue(newContent);
+                editable.setActive(characterIndex, this.cursor);
+            } else {
+                this.update();
+                this.textarea.selectionStart = this.textarea.selectionEnd = this.lastSelectionStart;
+            }
         }
     }
 
