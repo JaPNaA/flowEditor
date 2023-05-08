@@ -21,7 +21,7 @@
     position: absolute;
     width: 480px;
     height: 1px;
-    opacity: 0.2;
+    opacity: 0;
     font: inherit;
     transform: scaleY(0.001);
     left: -1ch;
