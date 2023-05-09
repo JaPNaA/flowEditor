@@ -1,5 +1,5 @@
 import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, FlowData, FlowRunner, isControlItem } from "./FlowRunner.js";
-import { Component, Elm, EventBus, Hitbox, InputElm, ParentComponent, PrerenderCanvas, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
+import { Component, Elm, EventBus, Hitbox, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 
 class Editor extends WorldElmWithComponents {
@@ -226,16 +226,21 @@ class InstructionGroupEditor extends WorldElm {
         if (pos[0] === "bottom") { this.activeLine = this.lines.length - 1; this.updateInputCapture(); }
 
         // pos[0] === 'same'
-        this.activateEditableOnActiveLine(pos[3], pos[2]);
+        this.activateEditableOnActiveLine(pos[1], pos[2], pos[3]);
     }
 
-    public activeSelectedEditable() {
+    public setCursorPositionStartOfCurrentLine() {
+        this.cursorElm.inputCapture.setPositionOnCurrentLine(0, 0);
         const pos = this.cursorElm.inputCapture.getCurrentPosition();
-        this.activateEditableOnActiveLine(pos[3], pos[2]);
+        this.activateEditableOnActiveLine(0, 0, pos[3]);
     }
 
-    private activateEditableOnActiveLine(editable: Editable | undefined, characterOffset: number) {
-        if (!editable) { console.warn("No editable specified"); return; }
+    private activateEditableOnActiveLine(editableIndex: number, characterOffset: number, editable_: Editable | undefined) {
+        let editable = editable_;
+        if (!editable_) {
+            editable = this.lines[this.activeLine].getEditableFromIndex(editableIndex);
+        }
+        if (!editable) { throw new Error("Editable not found"); }
 
         editable.setActive(characterOffset, this.cursorElm);
 
@@ -434,7 +439,7 @@ class InstructionLine extends Component {
         this.elm.replaceContents(view);
 
         this.parent.updateInputCapture();
-        this.parent.activeSelectedEditable();
+        this.parent.setCursorPositionStartOfCurrentLine();
     }
 
     public serialize() {
@@ -789,6 +794,7 @@ class TextareaUserInputCapture {
 
     public update() {
         this.textarea.value = this.lastTextareaValue = this.generateTextareaText();
+        this.lastSelectionStart = this.lastSelectionEnd = -1;
     }
 
     public setChangeHandler(changeHandler: (pos: TextareaUserInputCursorPosition) => void) {
@@ -820,7 +826,7 @@ class TextareaUserInputCapture {
     }
 
     private generateTextareaText() {
-        return "\n " + this.areasToString(this.aboveLine) + "\n " + this.areasToString(this.currentLine) + "\n " + this.areasToString(this.belowLine) + "\n";
+        return "\n  " + this.areasToString(this.aboveLine) + "\n  " + this.areasToString(this.currentLine) + "\n  " + this.areasToString(this.belowLine) + "\n";
     }
 
     private getChanges() {
@@ -859,12 +865,13 @@ class TextareaUserInputCapture {
             );
             this.onInput.send(event);
             editable.checkInput(event);
-            if (!event.isRejected()) {
+            if (event.isRejected()) {
+                const lastSelectionStart = this.lastSelectionStart;
+                this.update();
+                this.setTextareaCursorPositionIfNeeded(lastSelectionStart);
+            } else {
                 editable.setValue(newContent);
                 editable.setActive(characterIndex, this.cursor);
-            } else {
-                this.update();
-                this.textarea.selectionStart = this.textarea.selectionEnd = this.lastSelectionStart;
             }
         }
     }
@@ -880,7 +887,14 @@ class TextareaUserInputCapture {
         let previousLinePos: 'up' | 'same' | 'down' = 'up'; // not 'top' to prevent a 'two-line' jump being recognized as a jump to top
         let previousLineLastEditableIndex = 0;
         let previousLineLastCharacterOffset = 0;
-        let previousLineLastEditable;
+        let previousLineLastEditable: Editable | undefined;
+        for (let i = this.aboveLine.length - 1; i >= 0; i--) {
+            const area = this.aboveLine[i];
+            if (area instanceof Editable) {
+                previousLineLastEditable = area;
+                break;
+            }
+        }
 
         // aboveLine
         for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
@@ -891,7 +905,7 @@ class TextareaUserInputCapture {
             let maxEditableIndex = -1;
             for (const area of areas) { if (area instanceof Editable) { maxEditableIndex++; } }
 
-            // extra space in front of line to capture moves to start of line
+            // first extra space in front of line to capture moves to start of line
             if (curr <= 0) {
                 // return first editable
                 for (let i = 0; i < areas.length; i++) {
@@ -901,6 +915,12 @@ class TextareaUserInputCapture {
                     }
                 }
                 return [posStr, 0, 0];
+            }
+            curr--;
+
+            // second extra space in front of line to capture moves to the previous line by moving left
+            if (curr <= 0) {
+                return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset, previousLineLastEditable];
             }
             curr--;
 
@@ -968,7 +988,7 @@ class TextareaUserInputCapture {
 
     /** Sets the cursor position on the current line */
     public setPositionOnCurrentLine(editableOrIndex: number | Editable, characterIndex: number) {
-        let curr = 4; // 4 for '\n ' at start and after above line
+        let curr = 6; // 6 for '\n  ' at start and after above line
         for (const area of this.aboveLine) {
             if (area instanceof Editable) { curr += area.getValue().length; }
             else { curr += area; }
