@@ -49,12 +49,12 @@ class Editor extends WorldElmWithComponents {
 
     private addRectangleHandler() {
         const newData = newInstructionData();
-        const newRectangle = new InstructionGroupEditor(newData);
-        newData.instructions.push("New instruction");
-        newRectangle.rect.x = this.engine.mouse.worldPos.x;
-        newRectangle.rect.y = this.engine.mouse.worldPos.y;
-        this.parentComponent.addChild(newRectangle);
-        this.instructionElms.push(newRectangle);
+        const newEditor = new InstructionGroupEditor(newData);
+        newEditor.rect.x = this.engine.mouse.worldPos.x;
+        newEditor.rect.y = this.engine.mouse.worldPos.y;
+        this.parentComponent.addChild(newEditor);
+        this.instructionElms.push(newEditor);
+        newEditor.insertNewInstructionLine(0);
     }
 
     public setInstructions(instructionsData: InstructionData[]) {
@@ -209,6 +209,7 @@ class InstructionGroupEditor extends WorldElm {
     }
 
     private updateCursorPosition(pos: TextareaUserInputCursorPosition) {
+        console.log(pos);
         if (this.activeLine < 0) { return; }
         if (pos[0] === "up") {
             this.activeLine--;
@@ -351,7 +352,7 @@ class InstructionGroupEditor extends WorldElm {
         this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
     }
 
-    private insertNewInstructionLine(position: number) {
+    public insertNewInstructionLine(position: number) {
         const instructionLine = new InstructionLine(new NewInstructionLine(this));
 
         if (position < this.lines.length) {
@@ -832,47 +833,87 @@ class TextareaUserInputCapture {
     private getChanges() {
         let hadChange = false;
         const currentValue = this.textarea.value;
-        let i;
-        for (i = 0; i < this.lastTextareaValue.length; i++) {
-            if (currentValue[i] !== this.lastTextareaValue[i]) {
+        let sameToIndex;
+        for (sameToIndex = 0; sameToIndex < this.lastTextareaValue.length; sameToIndex++) {
+            if (currentValue[sameToIndex] !== this.lastTextareaValue[sameToIndex]) {
                 hadChange = true;
                 break;
             }
         }
+        let sameToIndexMin;
+        for (sameToIndexMin = sameToIndex - 1;
+            sameToIndexMin >= 0 && currentValue[sameToIndexMin] == currentValue[sameToIndexMin - 1];
+            sameToIndexMin--) { }
 
         if (!hadChange) { return; } // no changes
 
         const currentValueLen = currentValue.length;
         const lastValueLen = this.lastTextareaValue.length;
-        const maxBackwardSearch = Math.min(currentValueLen, lastValueLen) - i;
-        let j;
-        for (j = 1; j <= maxBackwardSearch; j++) {
-            if (currentValue[currentValueLen - j] !== this.lastTextareaValue[lastValueLen - j]) {
+        const maxBackwardSearch = Math.min(currentValueLen, lastValueLen) - sameToIndex;
+        let sameToIndexRev;
+        for (sameToIndexRev = 1; sameToIndexRev <= maxBackwardSearch; sameToIndexRev++) {
+            if (currentValue[currentValueLen - sameToIndexRev] !== this.lastTextareaValue[lastValueLen - sameToIndexRev]) {
                 break;
             }
         }
 
-        const [_posStr, editableIndex, characterIndex, editable] = this.getPosition(this.lastSelectionStart);
-        if (editable) {
-            const newContent = currentValue.slice(
-                this.lastSelectionStart - characterIndex,
-                this.lastSelectionStart - characterIndex + editable.getValue().length - lastValueLen + currentValueLen
-            );
-            const event = new UserInputEvent(
-                currentValue.slice(i, 1 - j), // added
-                this.lastTextareaValue.slice(i, 1 - j), // deleted
-                newContent
-            );
-            this.onInput.send(event);
-            editable.checkInput(event);
-            if (event.isRejected()) {
-                const lastSelectionStart = this.lastSelectionStart;
-                this.update();
-                this.setTextareaCursorPositionIfNeeded(lastSelectionStart);
-            } else {
-                editable.setValue(newContent);
-                editable.setActive(characterIndex, this.cursor);
+        //! currently least problematic solution. Bugs when there are three or more editables with just spaces.
+        const insertPosition = this.lastSelectionStart <= (sameToIndex + sameToIndexMin) / 2 ? sameToIndexMin : sameToIndex;
+        // const insertPosition = this.lastSelectionStart <= sameToIndex && this.lastSelectionStart >= sameToIndexMin ? this.lastSelectionStart : sameToIndex;
+        // const insertPosition = Math.min(Math.max(sameToIndexMin, this.lastSelectionStart), sameToIndex);
+        const pos = this.getPositionNoCorrection(insertPosition);
+
+        if (pos === null) {
+            this.resetChanges(currentValueLen - lastValueLen);
+            return;
+        }
+
+        if (currentValueLen < lastValueLen) { // deletion; make sure not deleting spaces (in the same editable)
+            const originalPosition = insertPosition + lastValueLen - currentValueLen;
+            const originalPos = this.getPositionNoCorrection(originalPosition);
+            if (!originalPos || originalPos[0] !== pos[0] || originalPos[1] !== pos[1]) {
+                this.resetChanges(currentValueLen - lastValueLen);
+                return;
             }
+        }
+
+        const [_posStr, editableIndex, characterIndex, editable] = pos;
+        if (!editable) { this.resetChanges(0); return; }
+
+        const newContent = currentValue.slice(
+            insertPosition - characterIndex,
+            insertPosition - characterIndex + editable.getValue().length - lastValueLen + currentValueLen
+        );
+        const event = new UserInputEvent(
+            currentValue.slice(sameToIndex, 1 - sameToIndexRev), // added
+            this.lastTextareaValue.slice(sameToIndex, 1 - sameToIndexRev), // deleted
+            newContent
+        );
+        this.onInput.send(event);
+        editable.checkInput(event);
+        if (event.isRejected()) {
+            this.resetChanges(0);
+        } else {
+            editable.setValue(newContent);
+            const cursorPos = this.getPosition(this.textarea.selectionStart);
+            editable.setActive(cursorPos[2], this.cursor);
+        }
+    }
+
+    private resetChanges(cursorDelta: number) {
+        const lastSelectionStart = this.lastSelectionStart;
+        this.update();
+
+        if (cursorDelta) {
+            this.lastSelectionStart = lastSelectionStart; // so getPosition gets relative movement data
+            const cursorPos = this.getPosition(lastSelectionStart + cursorDelta);
+            console.log(cursorPos);
+            this.setPositionOnCurrentLine(cursorPos[1], cursorPos[2]);
+            if (cursorPos && cursorPos[3]) {
+                cursorPos[3].setActive(cursorPos[2], this.cursor);
+            }
+        } else {
+            this.setTextareaCursorPositionIfNeeded(lastSelectionStart);
         }
     }
 
@@ -900,7 +941,7 @@ class TextareaUserInputCapture {
             }
         }
 
-        // aboveLine
+        // aboveLine, currentLine, belowLine
         for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
             let editableIndex = -1;
             let lastEditableSize = 0;
@@ -955,7 +996,7 @@ class TextareaUserInputCapture {
                                 return [posStr, editableIndex, lastEditableSize, lastEditable];
                             } else {
                                 let nextEditableIndex = editableIndex;
-                                for (let j = 0; j < areas.length; j++) {
+                                for (let j = i + 1; j < areas.length; j++) {
                                     const nextArea = areas[j];
                                     if (nextArea instanceof Editable) {
                                         nextEditableIndex++;
@@ -988,6 +1029,62 @@ class TextareaUserInputCapture {
 
         // \n
         return ["bottom", 0, 0];
+    }
+
+    private getPositionNoCorrection(cursorOffset: number): TextareaUserInputCursorPosition | null {
+        let curr = cursorOffset;
+
+        // \n
+        if (curr <= 0) { return null; }
+        curr--;
+
+        // aboveLine, currentLine, belowLine
+        for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
+            let editableIndex = -1;
+
+            // first extra space in front of line to capture moves to start of line
+            if (curr <= 0) {
+                return null;
+            }
+            curr--;
+
+            // second extra space in front of line to capture moves to the previous line by moving left
+            if (curr <= 0) {
+                return null;
+            }
+            curr--;
+
+            for (let i = 0; i < areas.length; i++) {
+                const area = areas[i];
+                const isEditable = area instanceof Editable;
+                let size: number;
+                if (isEditable) {
+                    size = area.getValue().length;
+                    editableIndex++;
+                } else {
+                    size = area;
+                }
+
+                if (isEditable ? curr <= size : curr < size) {
+                    if (isEditable) {
+                        return [posStr, editableIndex, curr, area];
+                    } else {
+                        // out of bounds
+                        return null
+                    }
+                }
+
+                curr -= size;
+            }
+
+            // catch cursor at end of line that ends with space
+            if (curr <= 0) { return null; }
+
+            curr--; // \n
+        }
+
+        // \n
+        return null;
     }
 
     /** Sets the cursor position on the current line */
@@ -1040,7 +1137,7 @@ class NewInstructionLine extends InstructionLineView {
         this.editable.onChange.subscribe(changes => {
             changes.reject(); // prevent updating
             let newView;
-            switch (changes.added[0].toLowerCase()) {
+            switch (changes.added && changes.added[0].toLowerCase()) {
                 case "b":
                     newView = new ControlBranchLine({
                         ctrl: "branch",
