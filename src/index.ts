@@ -888,7 +888,11 @@ class TextareaUserInputCapture {
         let previousLineLastEditableIndex = 0;
         let previousLineLastCharacterOffset = 0;
         let previousLineLastEditable: Editable | undefined;
-        for (let i = this.aboveLine.length - 1; i >= 0; i--) {
+        // find the first element of 'up' (first element and not last, since the
+        // initial values are only used when going 'up' into the first 'space' area,
+        // in which case the cursor should jump to the first editable instead
+        // of the last.)
+        for (let i = 0; i < this.aboveLine.length; i++) {
             const area = this.aboveLine[i];
             if (area instanceof Editable) {
                 previousLineLastEditable = area;
