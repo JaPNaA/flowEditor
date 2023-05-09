@@ -59,6 +59,7 @@
 .instructionLine .editable {
     display: inline-block;
     white-space: pre;
+    height: 1em;
 }
 
 .instructionLine [contenteditable] {
