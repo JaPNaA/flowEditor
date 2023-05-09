@@ -199,17 +199,35 @@ class InstructionGroupEditor extends WorldElm {
 
         this.cursorElm.inputCapture.onInput.subscribe(ev => {
             if (ev.added.includes("\n")) {
-                this.activeLine++;
-                const instructionLine = this.insertNewInstructionLine(this.activeLine);
+                this.insertLineAndUpdateCursor(this.activeLine + 1);
+            }
+        });
+
+        this.cursorElm.inputCapture.onLineDelete.subscribe(ev => {
+            console.log(ev);
+            let targetLine = this.activeLine;
+            if (ev.isNextLine) { targetLine++ }
+            if (ev.isInsert) {
+                this.insertLineAndUpdateCursor(targetLine);
+            } else {
+                this.removeInstructionLine(targetLine);
                 this.updateInputCapture();
+                const instructionLine = this.lines[this.activeLine];
                 instructionLine.getEditableFromIndex(0).setActive(0, this.cursorElm);
                 this.cursorElm.inputCapture.setPositionOnCurrentLine(0, 0);
             }
         });
     }
 
+    private insertLineAndUpdateCursor(position: number) {
+        this.activeLine = position;
+        const instructionLine = this.insertNewInstructionLine(this.activeLine);
+        this.updateInputCapture();
+        instructionLine.getEditableFromIndex(0).setActive(0, this.cursorElm);
+        this.cursorElm.inputCapture.setPositionOnCurrentLine(0, 0);
+    }
+
     private updateCursorPosition(pos: TextareaUserInputCursorPosition) {
-        console.log(pos);
         if (this.activeLine < 0) { return; }
         if (pos[0] === "up") {
             this.activeLine--;
@@ -365,6 +383,15 @@ class InstructionGroupEditor extends WorldElm {
         this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
 
         return instructionLine;
+    }
+
+    public removeInstructionLine(positon: number) {
+        const lines = this.lines.splice(positon, 1);
+        if (lines.length < 0) { throw new Error("Invalid position"); }
+        for (const line of lines) {
+            this.htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
+            line.elm.remove();
+        }
     }
 
     private updateHeight() {
@@ -713,14 +740,8 @@ class Editable extends Elm<"span"> {
     }
 }
 
-class UserInputEvent {
+abstract class RejectableEvent {
     private rejected = false;
-
-    constructor(
-        public readonly added: string,
-        public readonly removed: string,
-        public readonly newContent: string
-    ) { }
 
     public reject() {
         this.rejected = true;
@@ -731,13 +752,34 @@ class UserInputEvent {
     }
 }
 
+class UserInputEvent extends RejectableEvent {
+    constructor(
+        public readonly added: string,
+        public readonly removed: string,
+        public readonly newContent: string
+    ) { super(); }
+}
+
+class LineOperationEvent extends RejectableEvent {
+    constructor(
+        /** Is the operation on the current line or next line? */
+        public readonly isNextLine: boolean,
+        /** Is the operation an insertion or deletion? */
+        public readonly isInsert: boolean
+    ) { super(); }
+}
+
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
 type TextareaUserInputCaptureAreas = (Editable | number)[];
 /** Change of line. Then, (only for "up", "same", "down") offset on line given by which editiable, then character offset in editable */
 type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom", number, number, Editable?];
 
 class TextareaUserInputCapture {
+    /** Fired when an editable is edited */
     public onInput = new EventBus<UserInputEvent>();
+
+    /** Fired when a line deletion is requested by the user. Event handlers must setup the input capture again, unless the event is rejected. */
+    public onLineDelete = new EventBus<LineOperationEvent>();
 
     private inputCapture: Elm<"textarea"> = new Elm("textarea").class("inputCapture");
     private textarea: HTMLTextAreaElement;
@@ -831,6 +873,115 @@ class TextareaUserInputCapture {
     }
 
     private getChanges() {
+        // better algorithm: getPosition, but scanning for changes. To be implemented.
+
+        const that = this;
+        const currentValue = this.textarea.value;
+        const lastValue = this.lastTextareaValue;
+        const deltaLength = currentValue.length - lastValue.length;
+
+        let currI = 0;
+        let lastI = 0;
+
+        // \n
+        if (currentValue[currI++] !== lastValue[lastI++]) { console.log('a'); return null; }
+
+        // aboveLine, currentLine, belowLine
+        for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
+            let editableIndex = -1;
+
+            // first extra space in front of line to capture moves to start of line
+            if (currentValue[currI++] !== lastValue[lastI++]) {
+                // enter at end of line
+                applyLineOperation(true, true);
+                return;
+            }
+
+            // second extra space in front of line to capture moves to the previous line by moving left
+            if (currentValue[currI++] !== lastValue[lastI++]) {
+                // backspace at start of line
+                applyLineOperation(false, false);
+                return;
+            }
+
+            let seenEditable = false;
+            for (let i = 0; i < areas.length; i++) {
+                const area = areas[i];
+                const isEditable = area instanceof Editable;
+                if (isEditable) {
+                    seenEditable = true;
+                    const value = area.getValue();
+                    for (let j = 0; j < value.length; j++) {
+                        if (currentValue[currI++] !== lastValue[lastI++]) {
+                            applyChange(
+                                area,
+                                lastValue.slice(currI - 1 - j, currI - 1 - j + value.length),
+                                currentValue.slice(currI - j - 1, currI - j - 1 + value.length + deltaLength)
+                            );
+                            currI += deltaLength;
+                            return;
+                        }
+                    }
+                    if (deltaLength > 0 && currentValue[currI] !== lastValue[lastI]) {
+                        // insert after editable
+                        applyChange(area,
+                            lastValue.slice(currI - value.length, currI),
+                            currentValue.slice(currI - value.length, currI + deltaLength)
+                        );
+                        currI += deltaLength;
+                        return;
+                    }
+                } else {
+                    for (let j = 0; j < area; j++) {
+                        if (currentValue[currI++] !== lastValue[lastI++]) {
+                            if (!seenEditable) {
+                                // backspace on the first space
+                                applyLineOperation(false, false);
+                                return;
+                            } else {
+                                this.resetChanges(deltaLength);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (currentValue[currI++] !== lastValue[lastI++]) {
+                // delete at end of line
+                applyLineOperation(true, false);
+                return;
+            }
+        }
+
+        function applyChange(editable: Editable, original: string, newContent: string) {
+            const diff = that.singleDiff(original, newContent);
+            console.log(diff);
+            if (!diff) { return; }
+
+            const event = new UserInputEvent(diff.added, diff.removed, newContent);
+            that.onInput.send(event);
+            editable.checkInput(event);
+            if (event.isRejected()) {
+                that.resetChanges(0);
+            } else {
+                editable.setValue(newContent);
+                const cursorPos = that.getPosition(that.textarea.selectionStart);
+                editable.setActive(cursorPos[2], that.cursor);
+            }
+        }
+
+        function applyLineOperation(isNextLine: boolean, isInsert: boolean) {
+            const event = new LineOperationEvent(isNextLine, isInsert);
+            that.onLineDelete.send(event);
+            if (event.isRejected()) {
+                that.resetChanges(0);
+            }
+        }
+    }
+
+    /** Diffs a string with a single difference (added/removed/replaced substring). */
+    private singleDiff(original: string, current: string): { added: string, removed: string } | null {
         let hadChange = false;
         const currentValue = this.textarea.value;
         let sameToIndex;
@@ -840,12 +991,8 @@ class TextareaUserInputCapture {
                 break;
             }
         }
-        let sameToIndexMin;
-        for (sameToIndexMin = sameToIndex - 1;
-            sameToIndexMin >= 0 && currentValue[sameToIndexMin] == currentValue[sameToIndexMin - 1];
-            sameToIndexMin--) { }
 
-        if (!hadChange) { return; } // no changes
+        if (!hadChange) { return null; } // no changes
 
         const currentValueLen = currentValue.length;
         const lastValueLen = this.lastTextareaValue.length;
@@ -857,47 +1004,10 @@ class TextareaUserInputCapture {
             }
         }
 
-        //! currently least problematic solution. Bugs when there are three or more editables with just spaces.
-        const insertPosition = this.lastSelectionStart <= (sameToIndex + sameToIndexMin) / 2 ? sameToIndexMin : sameToIndex;
-        // const insertPosition = this.lastSelectionStart <= sameToIndex && this.lastSelectionStart >= sameToIndexMin ? this.lastSelectionStart : sameToIndex;
-        // const insertPosition = Math.min(Math.max(sameToIndexMin, this.lastSelectionStart), sameToIndex);
-        const pos = this.getPositionNoCorrection(insertPosition);
-
-        if (pos === null) {
-            this.resetChanges(currentValueLen - lastValueLen);
-            return;
-        }
-
-        if (currentValueLen < lastValueLen) { // deletion; make sure not deleting spaces (in the same editable)
-            const originalPosition = insertPosition + lastValueLen - currentValueLen;
-            const originalPos = this.getPositionNoCorrection(originalPosition);
-            if (!originalPos || originalPos[0] !== pos[0] || originalPos[1] !== pos[1]) {
-                this.resetChanges(currentValueLen - lastValueLen);
-                return;
-            }
-        }
-
-        const [_posStr, editableIndex, characterIndex, editable] = pos;
-        if (!editable) { this.resetChanges(0); return; }
-
-        const newContent = currentValue.slice(
-            insertPosition - characterIndex,
-            insertPosition - characterIndex + editable.getValue().length - lastValueLen + currentValueLen
-        );
-        const event = new UserInputEvent(
-            currentValue.slice(sameToIndex, 1 - sameToIndexRev), // added
-            this.lastTextareaValue.slice(sameToIndex, 1 - sameToIndexRev), // deleted
-            newContent
-        );
-        this.onInput.send(event);
-        editable.checkInput(event);
-        if (event.isRejected()) {
-            this.resetChanges(0);
-        } else {
-            editable.setValue(newContent);
-            const cursorPos = this.getPosition(this.textarea.selectionStart);
-            editable.setActive(cursorPos[2], this.cursor);
-        }
+        return {
+            added: currentValue.slice(sameToIndex, 1 - sameToIndexRev),
+            removed: this.lastTextareaValue.slice(sameToIndex, 1 - sameToIndexRev)
+        };
     }
 
     private resetChanges(cursorDelta: number) {
@@ -1031,62 +1141,6 @@ class TextareaUserInputCapture {
         return ["bottom", 0, 0];
     }
 
-    private getPositionNoCorrection(cursorOffset: number): TextareaUserInputCursorPosition | null {
-        let curr = cursorOffset;
-
-        // \n
-        if (curr <= 0) { return null; }
-        curr--;
-
-        // aboveLine, currentLine, belowLine
-        for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
-            let editableIndex = -1;
-
-            // first extra space in front of line to capture moves to start of line
-            if (curr <= 0) {
-                return null;
-            }
-            curr--;
-
-            // second extra space in front of line to capture moves to the previous line by moving left
-            if (curr <= 0) {
-                return null;
-            }
-            curr--;
-
-            for (let i = 0; i < areas.length; i++) {
-                const area = areas[i];
-                const isEditable = area instanceof Editable;
-                let size: number;
-                if (isEditable) {
-                    size = area.getValue().length;
-                    editableIndex++;
-                } else {
-                    size = area;
-                }
-
-                if (isEditable ? curr <= size : curr < size) {
-                    if (isEditable) {
-                        return [posStr, editableIndex, curr, area];
-                    } else {
-                        // out of bounds
-                        return null
-                    }
-                }
-
-                curr -= size;
-            }
-
-            // catch cursor at end of line that ends with space
-            if (curr <= 0) { return null; }
-
-            curr--; // \n
-        }
-
-        // \n
-        return null;
-    }
-
     /** Sets the cursor position on the current line */
     public setPositionOnCurrentLine(editableOrIndex: number | Editable, characterIndex: number) {
         let curr = 6; // 6 for '\n  ' at start and after above line
@@ -1119,7 +1173,7 @@ class TextareaUserInputCapture {
     }
 
     private areasToString(areas: TextareaUserInputCaptureAreas): string {
-        return areas.map(e => e instanceof Editable ? e.getValue() : " ".repeat(e)).join("");
+        return areas.map(e => e instanceof Editable ? e.getValue() : "\x7f".repeat(e)).join("");
     }
 }
 
