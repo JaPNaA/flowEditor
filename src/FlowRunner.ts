@@ -35,6 +35,7 @@ export class FlowRunner {
             throw new Error("Cannot input choice at non-choice instruction");
         }
         this.variables.set(item.variable, choice);
+        this.instructionPointer++;
     }
 
     public runOne() {
@@ -56,7 +57,6 @@ export class FlowRunner {
         switch (item.ctrl) {
             case "input":
                 this.output = { type: "input", choices: item.options };
-                this.instructionPointer++;
                 break;
             case "jump":
                 this.instructionPointer += item.offset;
@@ -104,7 +104,7 @@ export class FlowRunner {
         if (typeof v === "number") {
             return v;
         } else {
-            return this.variables.get("v") || 0;
+            return this.variables.get(v) || 0;
         }
     }
 }
