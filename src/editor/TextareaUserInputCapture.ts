@@ -190,7 +190,6 @@ export class TextareaUserInputCapture {
 
         function applyChange(editable: Editable, original: string, newContent: string) {
             const diff = that.singleDiff(original, newContent);
-            console.log(original, newContent, diff);
             if (!diff) { return; }
 
             const event = new UserInputEvent(diff.added, diff.removed, newContent);
