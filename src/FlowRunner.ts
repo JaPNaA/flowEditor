@@ -94,6 +94,9 @@ export class FlowRunner {
                     this.instructionPointer++;
                 }
                 break;
+            case "nop":
+                this.instructionPointer++;
+                break;
         }
     }
 
@@ -126,11 +129,12 @@ interface FlowRunnerOutputEnd {
 export class FlowRunException extends Error { };
 
 export interface FlowData {
-    meta: any;
+    meta?: any;
+    editorData?: any;
     flow: (ControlItem | any)[];
 }
 
-export type ControlItem = ControlBranch | ControlInput | ControlJump | ControlEnd | ControlVariable;
+export type ControlItem = ControlBranch | ControlInput | ControlJump | ControlEnd | ControlVariable | ControlNop;
 export function isControlItem(item: any): item is ControlItem {
     return typeof item.ctrl === "string";
 }
@@ -163,4 +167,8 @@ export interface ControlVariable {
     op: "=" | "+" | "*";
     v1: string;
     v2: string | number;
+}
+
+export interface ControlNop {
+    ctrl: "nop";
 }

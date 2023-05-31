@@ -19,7 +19,7 @@ export interface FlowData {
 }
 
 // Controls are objects defined by having a .ctrl string attribute
-type ControlItem = ControlBranch | ControlInput | ControlJump | ControlEnd | ControlVariable;
+type ControlItem = ControlBranch | ControlInput | ControlJump | ControlEnd | ControlVariable | ControlNop;
 function isControlItem(item: any): item is ControlItem {
     return typeof item.ctrl === "string";
 }
@@ -52,5 +52,9 @@ interface ControlVariable {
     op: "=" | "+" | "*";
     v1: string;
     v2: string | number;
+}
+
+export interface ControlNop {
+    ctrl: "nop";
 }
 ```
