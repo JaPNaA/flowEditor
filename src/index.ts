@@ -1,8 +1,16 @@
 import { ExecuterContainer } from "./executer/ExecuterContainer.js";
 import { EditorContainer } from "./editor/EditorContainer.js";
 
-const executer = new ExecuterContainer();
-executer.appendTo(document.body);
+export const appHooks = {
+    getCompiledFlowFromEditor() {
+        return editorContainer.compile();
+    },
 
-const editor = new EditorContainer();
-editor.appendTo(document.body);
+    deleteAndReloadRequested: false
+};
+
+const executerContainer = new ExecuterContainer();
+executerContainer.appendTo(document.body);
+
+const editorContainer = new EditorContainer();
+editorContainer.appendTo(document.body);

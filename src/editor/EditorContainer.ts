@@ -1,4 +1,5 @@
-import { FlowData, FlowRunner } from "../FlowRunner.js";
+import { FlowData } from "../FlowRunner.js";
+import { appHooks } from "../index.js";
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Editor } from "./Editor.js";
 import { InstructionData, constructInstructionData } from "./flowToInstructionData.js";
@@ -27,21 +28,17 @@ export class EditorContainer extends Component {
         });
 
         addEventListener("beforeunload", () => {
-            localStorage['flowEditorSave'] = JSON.stringify(this.editor.serialize());
+            if (appHooks.deleteAndReloadRequested) {
+                localStorage['flowEditorSave'] = "";
+            } else {
+                localStorage['flowEditorSave'] = JSON.stringify(this.editor.serialize());
+            }
         });
 
         console.log(this.engine.world);
+    }
 
-        this.elm.on("keydown", e => {
-            if (e.ctrlKey && e.key === "Enter") {
-                const compiled = this.editor.compile();
-                console.log(compiled);
-                const runner = new FlowRunner({ flow: compiled });
-                while (runner.isActive()) {
-                    runner.runOne();
-                    console.log(runner.getOutput());
-                }
-            }
-        });
+    public compile() {
+        return this.editor.compile();
     }
 }
