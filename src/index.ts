@@ -8,7 +8,7 @@ class Editor extends WorldElmWithComponents {
     private draggingInstructionRectangle?: InstructionGroupEditor;
     private draggingCamera = false;
 
-    private instructionElms: InstructionGroupEditor[] = [];
+    private groupEditors: InstructionGroupEditor[] = [];
 
     public childFocused = new EventBus<InstructionGroupEditor>();
 
@@ -17,7 +17,7 @@ class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.mouse.onMousedown, this.mousedownHandler);
         this.subscriptions.subscribe(this.engine.mouse.onMousemove, this.mousemoveHandler);
         this.subscriptions.subscribe(this.engine.mouse.onMouseup, this.mouseupHandler);
-        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addRectangleHandler);
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addGroupHandler);
     }
 
     private mousedownHandler() {
@@ -49,13 +49,13 @@ class Editor extends WorldElmWithComponents {
         this.draggingCamera = false;
     }
 
-    private addRectangleHandler() {
+    private addGroupHandler() {
         const newData = newInstructionData();
         const newEditor = new InstructionGroupEditor(this, newData);
         newEditor.rect.x = this.engine.mouse.worldPos.x;
         newEditor.rect.y = this.engine.mouse.worldPos.y;
         this.parentComponent.addChild(newEditor);
-        this.instructionElms.push(newEditor);
+        this.groupEditors.push(newEditor);
         newEditor.insertNewInstructionLine(0);
     }
 
@@ -69,7 +69,7 @@ class Editor extends WorldElmWithComponents {
             const elm = new InstructionGroupEditor(this, instruction);
             this.parentComponent.addChild(elm);
             instructionToElmMap.set(instruction, elm);
-            this.instructionElms.push(elm);
+            this.groupEditors.push(elm);
         }
 
         for (const [instruction, elm] of instructionToElmMap) {
@@ -90,7 +90,7 @@ class Editor extends WorldElmWithComponents {
 
             const elm = new InstructionGroupEditor(this, instructionData);
             idElmMap.set(elmData.id, elm);
-            this.instructionElms.push(elm);
+            this.groupEditors.push(elm);
             this.parentComponent.addChild(elm);
         }
 
@@ -104,10 +104,46 @@ class Editor extends WorldElmWithComponents {
     public serialize(): EditorSaveData {
         const uidGen = new UIDGenerator();
         const elms = [];
-        for (const elm of this.instructionElms) {
-            elms.push(elm.serialize(uidGen));
+        for (const groupEditor of this.groupEditors) {
+            elms.push(groupEditor.serialize(uidGen));
         }
         return { elms: elms };
+    }
+
+    public compile() {
+        const startIndicies = new Map<InstructionGroupEditor, number>();
+
+        const compiled: any[] = [];
+        const groupLines: InstructionLine[][] = [];
+        let index = 0;
+
+        for (const group of this.groupEditors) {
+            startIndicies.set(group, index);
+            const lines = group.getLines();
+            groupLines.push(lines);
+            index += lines.length;
+        }
+
+        index = 0;
+        for (const group of groupLines) {
+            for (const line of group) {
+                if (line.isBranch()) {
+                    const target = line.getBranchTarget();
+                    if (target) {
+                        compiled.push(line.exportWithBranchOffset(startIndicies.get(target)! - index));
+                    } else {
+                        compiled.push({ ctrl: "nop" });
+                        console.warn("NOP inserted in place of branch");
+                    }
+                } else {
+                    compiled.push(line.export());
+                }
+
+                index++;
+            }
+        }
+
+        return compiled;
     }
 }
 
@@ -313,14 +349,29 @@ class InstructionGroupEditor extends WorldElm {
             childrenUids.push(uidGen.getId(child));
         }
 
+        const instructions = [];
+        const branches = [];
+
+        for (const line of this.lines) {
+            if (line.isBranch()) {
+                branches.push(line.serialize());
+            } else {
+                instructions.push(line.serialize());
+            }
+        }
+
         return {
             id: uidGen.getId(this),
-            instructions: this.lines.map(e => e.serialize()),
-            branches: [],
+            instructions: instructions,
+            branches: branches,
             children: childrenUids,
             x: this.rect.x,
             y: this.rect.y
         };
+    }
+
+    public getLines() {
+        return this.lines;
     }
 
     public addBranchTarget(instructionRectangle: InstructionGroupEditor) {
@@ -374,8 +425,10 @@ class InstructionGroupEditor extends WorldElm {
             this.addInstructionLine(instruction);
         }
 
+        let index = 0;
         for (const branch of this.data.branches) {
-            this.addInstructionLine(branch);
+            const line = this.addInstructionLine(branch);
+            line.setBranchTargetDown(this.branchTargets[index++]);
         }
 
         this.rect.width = width;
@@ -389,6 +442,7 @@ class InstructionGroupEditor extends WorldElm {
         instructionLine._setParent(this);
         this.lines.push(instructionLine);
         this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
+        return instructionLine;
     }
 
     public insertNewInstructionLine(position: number) {
@@ -490,8 +544,28 @@ class InstructionLine extends Component {
         return this.view instanceof BranchInstructionLineView;
     }
 
-    public setBranchTarget(target: InstructionGroupEditor) {
+    public getBranchTarget() {
+        if (!(this.view instanceof BranchInstructionLineView)) { throw new Error("Not a branch"); }
+        return this.view.branchTarget;
+    }
+
+    public exportWithBranchOffset(branchOffset: number) {
+        if (!(this.view instanceof BranchInstructionLineView)) { throw new Error("Not a branch"); }
+        this.view.branchOffset = branchOffset;
+        return this.view.serialize();
+    }
+
+    public export() {
+        return this.view.serialize();
+    }
+
+    public setBranchTargetUp(target: InstructionGroupEditor) {
         this.parent.setBranchTarget(this, target);
+    }
+
+    public setBranchTargetDown(target: InstructionGroupEditor) {
+        if (!(this.view instanceof BranchInstructionLineView)) { throw new Error("Not a branch"); }
+        this.view.branchTarget = target;
     }
 
     public changeView(view: InstructionLineView) {
@@ -573,21 +647,22 @@ abstract class InstructionLineView extends Component {
 
 abstract class BranchInstructionLineView extends InstructionLineView {
     public branchTarget?: InstructionGroupEditor;
+    public branchOffset: number = 0;
 
     constructor(name: string) {
         super(name);
         this.elm.append(new Elm().class("branchConnect").on("click", () => {
             this.parent.requestSelectInstructionGroup()
-            .then(editor => {
-                if (editor) {
-                    this.setBranchTarget(editor);
-                }
-            });
+                .then(editor => {
+                    if (editor) {
+                        this.setBranchTarget(editor);
+                    }
+                });
         }));
     }
 
     private setBranchTarget(editor: InstructionGroupEditor) {
-        this.parent.setBranchTarget(editor);
+        this.parent.setBranchTargetUp(editor);
         this.branchTarget = editor;
     }
 }
@@ -644,7 +719,7 @@ class ControlBranchLine extends BranchInstructionLineView {
         return {
             ctrl: "branch",
             op, v1, v2,
-            offset: this.data.offset
+            offset: this.branchOffset
         };
     }
 
@@ -663,7 +738,7 @@ class ControlJumpLine extends BranchInstructionLineView {
     }
 
     public serialize(): ControlJump {
-        return { ctrl: 'jump', offset: this.data.offset };
+        return { ctrl: 'jump', offset: this.branchOffset };
     }
 
     public getAreas(): TextareaUserInputCaptureAreas {
@@ -1441,10 +1516,16 @@ fetch("/data/exampleFlow.json").then(e => e.json()).then((flowData: FlowData) =>
 
     console.log(engine.world);
 
-    // const runner = new FlowRunner(flowData);
-    // while (runner.isActive()) {
-    //     runner.runOne();
-    //     console.log(runner.getOutput());
-    // }
+    addEventListener("keydown", e => {
+        if (e.ctrlKey && e.key === "Enter") {
+            const compiled = editor.compile();
+            console.log(compiled);
+            const runner = new FlowRunner({ flow: compiled });
+            while (runner.isActive()) {
+                runner.runOne();
+                console.log(runner.getOutput());
+            }
+        }
+    })
 });
 

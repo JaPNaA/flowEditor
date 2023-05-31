@@ -62,6 +62,16 @@
     height: 1em;
 }
 
+.instructionLine .branchConnect {
+    cursor: pointer;
+    position: absolute;
+    right: 8px;
+}
+
+.instructionLine .branchConnect::before {
+    content: "[>]";
+}
+
 .instructionLine [contenteditable] {
     outline: none;
 }
