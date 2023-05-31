@@ -22,7 +22,7 @@
     width: 480px;
     height: 1px;
     opacity: 0;
-    font: inherit;
+    font: inherit, monospace;
     transform: scaleY(0.001);
     left: -2ch;
     margin: 0;

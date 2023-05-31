@@ -956,7 +956,7 @@ class TextareaUserInputCapture {
 
         function applyChange(editable: Editable, original: string, newContent: string) {
             const diff = that.singleDiff(original, newContent);
-            console.log(diff);
+            console.log(original, newContent, diff);
             if (!diff) { return; }
 
             const event = new UserInputEvent(diff.added, diff.removed, newContent);
@@ -981,12 +981,12 @@ class TextareaUserInputCapture {
     }
 
     /** Diffs a string with a single difference (added/removed/replaced substring). */
-    private singleDiff(original: string, current: string): { added: string, removed: string } | null {
+    private singleDiff(original: string, currentValue: string): { added: string, removed: string } | null {
         let hadChange = false;
-        const currentValue = this.textarea.value;
         let sameToIndex;
-        for (sameToIndex = 0; sameToIndex < this.lastTextareaValue.length; sameToIndex++) {
-            if (currentValue[sameToIndex] !== this.lastTextareaValue[sameToIndex]) {
+        const maxLength = Math.max(original.length, currentValue.length);
+        for (sameToIndex = 0; sameToIndex < maxLength; sameToIndex++) {
+            if (currentValue[sameToIndex] !== original[sameToIndex]) {
                 hadChange = true;
                 break;
             }
@@ -995,18 +995,18 @@ class TextareaUserInputCapture {
         if (!hadChange) { return null; } // no changes
 
         const currentValueLen = currentValue.length;
-        const lastValueLen = this.lastTextareaValue.length;
+        const lastValueLen = original.length;
         const maxBackwardSearch = Math.min(currentValueLen, lastValueLen) - sameToIndex;
         let sameToIndexRev;
         for (sameToIndexRev = 1; sameToIndexRev <= maxBackwardSearch; sameToIndexRev++) {
-            if (currentValue[currentValueLen - sameToIndexRev] !== this.lastTextareaValue[lastValueLen - sameToIndexRev]) {
+            if (currentValue[currentValueLen - sameToIndexRev] !== original[lastValueLen - sameToIndexRev]) {
                 break;
             }
         }
 
         return {
             added: currentValue.slice(sameToIndex, 1 - sameToIndexRev),
-            removed: this.lastTextareaValue.slice(sameToIndex, 1 - sameToIndexRev)
+            removed: original.slice(sameToIndex, 1 - sameToIndexRev)
         };
     }
 
@@ -1173,7 +1173,7 @@ class TextareaUserInputCapture {
     }
 
     private areasToString(areas: TextareaUserInputCaptureAreas): string {
-        return areas.map(e => e instanceof Editable ? e.getValue() : "\x7f".repeat(e)).join("");
+        return areas.map(e => e instanceof Editable ? e.getValue() : "\xa0".repeat(e)).join("");
     }
 }
 
