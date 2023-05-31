@@ -10,6 +10,8 @@ class Editor extends WorldElmWithComponents {
 
     private instructionElms: InstructionGroupEditor[] = [];
 
+    public childFocused = new EventBus<InstructionGroupEditor>();
+
     public _setEngine(engine: JaPNaAEngine2d): void {
         super._setEngine(engine);
         this.subscriptions.subscribe(this.engine.mouse.onMousedown, this.mousedownHandler);
@@ -49,7 +51,7 @@ class Editor extends WorldElmWithComponents {
 
     private addRectangleHandler() {
         const newData = newInstructionData();
-        const newEditor = new InstructionGroupEditor(newData);
+        const newEditor = new InstructionGroupEditor(this, newData);
         newEditor.rect.x = this.engine.mouse.worldPos.x;
         newEditor.rect.y = this.engine.mouse.worldPos.y;
         this.parentComponent.addChild(newEditor);
@@ -57,10 +59,14 @@ class Editor extends WorldElmWithComponents {
         newEditor.insertNewInstructionLine(0);
     }
 
+    public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
+        return this.childFocused.promise();
+    }
+
     public setInstructions(instructionsData: InstructionData[]) {
         const instructionToElmMap = new Map<InstructionData, InstructionGroupEditor>();
         for (const instruction of instructionsData) {
-            const elm = new InstructionGroupEditor(instruction);
+            const elm = new InstructionGroupEditor(this, instruction);
             this.parentComponent.addChild(elm);
             instructionToElmMap.set(instruction, elm);
             this.instructionElms.push(elm);
@@ -68,7 +74,7 @@ class Editor extends WorldElmWithComponents {
 
         for (const [instruction, elm] of instructionToElmMap) {
             for (const child of instruction.children) {
-                elm.addChild(instructionToElmMap.get(child)!);
+                elm.addBranchTarget(instructionToElmMap.get(child)!);
             }
         }
     }
@@ -82,7 +88,7 @@ class Editor extends WorldElmWithComponents {
             instructionData.x = elmData.x;
             instructionData.y = elmData.y;
 
-            const elm = new InstructionGroupEditor(instructionData);
+            const elm = new InstructionGroupEditor(this, instructionData);
             idElmMap.set(elmData.id, elm);
             this.instructionElms.push(elm);
             this.parentComponent.addChild(elm);
@@ -90,7 +96,7 @@ class Editor extends WorldElmWithComponents {
 
         for (const elmData of data.elms) {
             for (const child of elmData.children) {
-                idElmMap.get(elmData.id)!.addChild(idElmMap.get(child)!);
+                idElmMap.get(elmData.id)!.addBranchTarget(idElmMap.get(child)!);
             }
         }
     }
@@ -148,7 +154,7 @@ class InstructionGroupEditor extends WorldElm {
     private static collisionType = Symbol();
 
     private rendered = false;
-    private children: InstructionGroupEditor[] = [];
+    private branchTargets: InstructionGroupEditor[] = [];
     private lines: InstructionLine[] = [];
     private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
     private activeLine: number = -1;
@@ -158,7 +164,7 @@ class InstructionGroupEditor extends WorldElm {
 
     public collisionType = InstructionGroupEditor.collisionType;
 
-    constructor(private data: InstructionData) {
+    constructor(public readonly parentEditor: Editor, private data: InstructionData) {
         super();
         this.rect.x = data.x;
         this.rect.y = data.y;
@@ -175,6 +181,8 @@ class InstructionGroupEditor extends WorldElm {
             const selection = getSelection();
             if (!selection || !isAncestor(selection.anchorNode || null, this.elm.getHTMLElement())) { return; }
             if (isAncestor(selection.anchorNode || null, this.cursorElm.getHTMLElement())) { return; }
+
+            this.parentEditor.childFocused.send(this);
 
             const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"))
             if (instructionLine) {
@@ -204,7 +212,6 @@ class InstructionGroupEditor extends WorldElm {
         });
 
         this.cursorElm.inputCapture.onLineDelete.subscribe(ev => {
-            console.log(ev);
             let targetLine = this.activeLine;
             if (ev.isNextLine) { targetLine++ }
             if (ev.isInsert) {
@@ -302,7 +309,7 @@ class InstructionGroupEditor extends WorldElm {
 
     public serialize(uidGen: UIDGenerator): InstructionElmData {
         const childrenUids = [];
-        for (const child of this.children) {
+        for (const child of this.branchTargets) {
             childrenUids.push(uidGen.getId(child));
         }
 
@@ -316,8 +323,22 @@ class InstructionGroupEditor extends WorldElm {
         };
     }
 
-    public addChild(instructionRectangle: InstructionGroupEditor) {
-        this.children.push(instructionRectangle);
+    public addBranchTarget(instructionRectangle: InstructionGroupEditor) {
+        this.branchTargets.push(instructionRectangle);
+    }
+
+    public setBranchTarget(instruction: InstructionLine, instructionEditor: InstructionGroupEditor) {
+        let index = -1;
+        for (const line of this.lines) {
+            if (line.isBranch()) {
+                index++;
+                if (line === instruction) {
+                    this.branchTargets[index] = instructionEditor;
+                    return;
+                }
+            }
+        }
+        throw new Error("Given instruction not in this.lines");
     }
 
     public draw(): void {
@@ -334,7 +355,7 @@ class InstructionGroupEditor extends WorldElm {
         elm.style.left = this.rect.x + "px";
 
         X.strokeStyle = "#000";
-        for (const child of this.children) {
+        for (const child of this.branchTargets) {
             X.beginPath();
             X.moveTo(this.rect.centerX(), this.rect.bottomY());
             X.lineTo(child.rect.centerX(), child.rect.y);
@@ -461,9 +482,21 @@ class InstructionLine extends Component {
         return newLine;
     }
 
+    public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
+        return this.parent.parentEditor.requestSelectInstructionGroup();
+    }
+
+    public isBranch() {
+        return this.view instanceof BranchInstructionLineView;
+    }
+
+    public setBranchTarget(target: InstructionGroupEditor) {
+        this.parent.setBranchTarget(this, target);
+    }
+
     public changeView(view: InstructionLineView) {
-        this.view._setParent(this);
         this.view = view;
+        this.view._setParent(this);
         this.elm.replaceContents(view);
 
         this.parent.updateInputCapture();
@@ -487,7 +520,7 @@ class InstructionLine extends Component {
     }
 }
 
-class InstructionLineView extends Component {
+abstract class InstructionLineView extends Component {
     protected parent!: InstructionLine;
 
     public spanToEditable = new Map<HTMLSpanElement, Editable>();
@@ -524,9 +557,7 @@ class InstructionLineView extends Component {
         return null;
     }
 
-    public serialize(): any {
-        throw new Error("Abstract method not implemented");
-    }
+    public abstract serialize(): any;
 
     public getAreas(): TextareaUserInputCaptureAreas {
         return [];
@@ -537,6 +568,27 @@ class InstructionLineView extends Component {
         this.spanToEditable.set(editable.getHTMLElement(), editable);
         this.editables.push(editable);
         return editable;
+    }
+}
+
+abstract class BranchInstructionLineView extends InstructionLineView {
+    public branchTarget?: InstructionGroupEditor;
+
+    constructor(name: string) {
+        super(name);
+        this.elm.append(new Elm().class("branchConnect").on("click", () => {
+            this.parent.requestSelectInstructionGroup()
+            .then(editor => {
+                if (editor) {
+                    this.setBranchTarget(editor);
+                }
+            });
+        }));
+    }
+
+    private setBranchTarget(editor: InstructionGroupEditor) {
+        this.parent.setBranchTarget(editor);
+        this.branchTarget = editor;
     }
 }
 
@@ -556,7 +608,9 @@ class JSONLine extends InstructionLineView {
     }
 }
 
-class ControlBranchLine extends InstructionLineView {
+
+
+class ControlBranchLine extends BranchInstructionLineView {
     private opSpan: Editable;
     private v1Span: Editable;
     private v2Span: Editable;
@@ -600,7 +654,7 @@ class ControlBranchLine extends InstructionLineView {
 }
 
 
-class ControlJumpLine extends InstructionLineView {
+class ControlJumpLine extends BranchInstructionLineView {
     private editable = this.createEditable('');
 
     constructor(private data: ControlJump) {
@@ -1017,7 +1071,6 @@ class TextareaUserInputCapture {
         if (cursorDelta) {
             this.lastSelectionStart = lastSelectionStart; // so getPosition gets relative movement data
             const cursorPos = this.getPosition(lastSelectionStart + cursorDelta);
-            console.log(cursorPos);
             this.setPositionOnCurrentLine(cursorPos[1], cursorPos[2]);
             if (cursorPos && cursorPos[3]) {
                 cursorPos[3].setActive(cursorPos[2], this.cursor);
@@ -1234,6 +1287,10 @@ class NewInstructionLine extends InstructionLineView {
 
             this.parent.changeView(newView);
         });
+    }
+
+    public serialize() {
+        throw new Error("Not implemented");
     }
 
     public getAreas(): TextareaUserInputCaptureAreas {
