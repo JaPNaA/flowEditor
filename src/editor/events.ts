@@ -1,4 +1,3 @@
-
 export abstract class RejectableEvent {
     private rejected = false;
 

@@ -1,4 +1,4 @@
-import { FlowData, isControlItem } from "./FlowRunner.js";
+import { FlowData, isControlItem } from "../FlowRunner.js";
 
 export interface InstructionData {
     x: number;

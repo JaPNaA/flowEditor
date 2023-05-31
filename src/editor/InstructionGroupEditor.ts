@@ -5,8 +5,8 @@ import { TextareaUserInputCursorPosition } from "./TextareaUserInputCapture.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData } from "./flowToInstructionData.js";
 import { InstructionLine, NewInstructionLine } from "./instructionLines.js";
-import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "./japnaaEngine2d/JaPNaAEngine2d.js";
-import { getAncestorWhich, isAncestor } from "./utils.js";
+import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { getAncestorWhich, isAncestor } from "../utils.js";
 
 export class InstructionGroupEditor extends WorldElm {
     private static fontSize = 16;

@@ -1,9 +1,9 @@
 import { Editable } from "./Editable.js";
-import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "./FlowRunner.js";
+import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "../FlowRunner.js";
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { TextareaUserInputCaptureAreas } from "./TextareaUserInputCapture.js";
-import { Component, Elm } from "./japnaaEngine2d/JaPNaAEngine2d.js";
-import { getAncestorWhich } from "./utils.js";
+import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { getAncestorWhich } from "../utils.js";
 
 export class InstructionLine extends Component {
     private parent!: InstructionGroupEditor;

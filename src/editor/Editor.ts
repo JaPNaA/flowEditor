@@ -2,7 +2,7 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
 import { InstructionLine } from "./instructionLines.js";
-import { EventBus, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElmWithComponents } from "./japnaaEngine2d/JaPNaAEngine2d.js";
+import { EventBus, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 
 export class Editor extends WorldElmWithComponents {
     private parentComponent = this.addComponent(new ParentComponent());

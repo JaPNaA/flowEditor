@@ -1,7 +1,7 @@
 import { Editable } from "./Editable.js";
 import { EditorCursor } from "./EditorCursor.js";
 import { LineOperationEvent, UserInputEvent } from "./events.js";
-import { Elm, EventBus } from "./japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
 export type TextareaUserInputCaptureAreas = (Editable | number)[];

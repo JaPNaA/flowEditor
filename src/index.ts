@@ -1,6 +1,6 @@
-import { Editor } from "./Editor.js";
+import { Editor } from "./editor/Editor.js";
 import { FlowData, FlowRunner } from "./FlowRunner.js";
-import { InstructionData, constructInstructionData } from "./flowToInstructionData.js";
+import { InstructionData, constructInstructionData } from "./editor/flowToInstructionData.js";
 import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 
 fetch("/data/exampleFlow.json").then(e => e.json()).then((flowData: FlowData) => {
