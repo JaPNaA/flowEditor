@@ -39,6 +39,11 @@
     padding: 0;
     resize: none;
     pointer-events: none;
+
+    /** Prevent wrapping */
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: scroll;
 }
 
 /* 
