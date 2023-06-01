@@ -90,9 +90,9 @@ class ChooseInput extends Component {
     }
 
     private onSelect(choice: number) {
+        this.elm.clear();
         if (this.selectCallback) {
             this.selectCallback(choice);
         }
-        this.elm.clear();
     }
 }
