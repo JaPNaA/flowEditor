@@ -35,6 +35,7 @@ export class ExecuterContainer extends Component {
         const compiled = appHooks.getCompiledFlowFromEditor();
         console.log(compiled);
         this.log.clear();
+        this.input.clear();
         this.runner = new FlowRunner({ flow: compiled });
         this.continueExecute();
     }
@@ -89,8 +90,12 @@ class ChooseInput extends Component {
         }
     }
 
-    private onSelect(choice: number) {
+    public clear() {
         this.elm.clear();
+    }
+
+    private onSelect(choice: number) {
+        this.clear();
         if (this.selectCallback) {
             this.selectCallback(choice);
         }
