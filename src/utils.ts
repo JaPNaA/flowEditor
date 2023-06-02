@@ -43,9 +43,5 @@ export async function requestFile() {
 }
 
 export function stringToBlob(string: string) {
-    const array = new Uint8Array(string.length);
-    for (let i = 0; i < string.length; i++) {
-        array[i] = string.charCodeAt(i);
-    }
-    return new Blob([array]);
+    return new Blob([string], { type: "plain/text" });
 }
