@@ -121,13 +121,27 @@
 .executerContainer .outputLog {
     padding: 8px;
     font-family: monospace;
-    height: calc(100vh - 120px);
+    max-height: calc(100vh - 120px);
     overflow: auto;
 }
 
-.executerContainer .deleteAndReload {
-    position: absolute;
-    right: 8px;
-    bottom: 8px;
-    color: red;
+.executerContainer .fileOperationsBar {
+    background-color: #3a3a3a;
+}
+
+.executerContainer .fileOperationsBar button {
+    background-color: #535353;
+    color: #c9c9c9;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.executerContainer .fileOperationsBar button:hover {
+    background-color: #686868;
+    color: #e9e9e9;
+}
+
+.executerContainer .fileOperationsBar button.deleteAndReload {
+    color: #ff2d2d;
 }
