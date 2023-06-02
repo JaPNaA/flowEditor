@@ -12,8 +12,10 @@ export class EditorCursor extends Elm<"span"> {
     private inputCapture = new TextareaUserInputCapture(this);
     private position?: Readonly<EditorCursorPositionAbsolute>;
 
+    private lastActiveEditable?: Editable;
+
     constructor() {
-        super();
+        super("span");
         this.class("cursor");
 
         document.addEventListener("selectionchange", e => {
@@ -35,7 +37,7 @@ export class EditorCursor extends Elm<"span"> {
                     const position = group.selectionToPosition(selection);
                     if (position) {
                         this._setPosition(position);
-                        this.setVirtualCursorPosition(position);
+                        this.setVirtualCursorPosition(position, position, false);
                         this.setTextareInputCursorPosition(position);
                         position.group.appendInputCapture(this.inputCapture);
                         this.inputCapture.focus();
@@ -44,15 +46,16 @@ export class EditorCursor extends Elm<"span"> {
             }
         });
 
-        this.inputCapture.setPositionChangeHandler(relativePos => {
+        this.inputCapture.setPositionChangeHandler((relPosStart, relPosEnd, backwards) => {
             if (!this.position) { return; }
-            const newPos = this.position.group.calculateNewPosition(this.position, relativePos);
-            this.setVirtualCursorPosition(newPos);
-            if (this.position.group !== newPos.group || this.position.line !== newPos.line) {
+            const newPosStart = this.position.group.calculateNewPosition(this.position, relPosStart);
+            const newPosEnd = this.position.group.calculateNewPosition(this.position, relPosEnd);
+            this.setVirtualCursorPosition(newPosStart, newPosEnd, backwards);
+            if (this.position.group !== newPosStart.group || this.position.line !== newPosStart.line) {
                 this.position.group.appendInputCapture(this.inputCapture);
-                this.setTextareInputCursorPosition(newPos);
+                this.setTextareInputCursorPosition(newPosStart);
             }
-            this._setPosition(newPos);
+            this._setPosition(newPosStart);
             this.inputCapture.focus();
         });
 
@@ -64,7 +67,11 @@ export class EditorCursor extends Elm<"span"> {
         this.inputCapture.setLineDeleteHandler(lineOp => {
             if (!this.position) { return; }
             this.position.group.onLineDelete(this.position, lineOp);
-        })
+        });
+    }
+
+    public setSelectedText(text: string) {
+        this.replaceContents(text);
     }
 
     public getPosition(): Readonly<EditorCursorPositionAbsolute | undefined> {
@@ -75,7 +82,7 @@ export class EditorCursor extends Elm<"span"> {
         this._setPosition(position);
         this.clampPositionChar();
         position.group.appendInputCapture(this.inputCapture);
-        this.setVirtualCursorPosition(this.position!);
+        this.setVirtualCursorPosition(this.position!, this.position!, false);
         this.setTextareInputCursorPosition(this.position!);
 
         this.inputCapture.focus();
@@ -94,11 +101,16 @@ export class EditorCursor extends Elm<"span"> {
         this.position = position;
     }
 
-    private setVirtualCursorPosition(position: Readonly<EditorCursorPositionAbsolute>) {
-        position.group.getLines()[position.line]
-            .getEditableFromIndex(position.editable)
-            .setActive(position.char, this);
+    private setVirtualCursorPosition(positionStart: Readonly<EditorCursorPositionAbsolute>, positionEnd: Readonly<EditorCursorPositionAbsolute>, backwards: boolean) {
+        if (this.lastActiveEditable) {
+            this.lastActiveEditable.updateAndDeactivate();
+        }
+        const editable = positionStart.group.getLines()[positionStart.line]
+            .getEditableFromIndex(positionStart.editable);
+        editable.setActive(positionStart.char, positionEnd.char, this);
+        this.lastActiveEditable = editable;
         this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);
+        if (backwards) { this.class("backwards"); } else { this.removeClass("backwards"); }
     }
 
     private setTextareInputCursorPosition(position: Readonly<EditorCursorPositionAbsolute>) {

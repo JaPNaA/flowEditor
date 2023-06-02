@@ -27,11 +27,23 @@
 } */
 
 .instructionGroup .editable .cursor {
+    display: inline;
+    background-color: #3665ffa2;
+}
+
+.instructionGroup .editable .cursor::after,
+.instructionGroup .editable .cursor.backwards::before {
+    content: '';
     position: absolute;
-    display: inline-block;
+    display: inline;
     width: 2px;
     background-color: #000000;
     height: 1.25em;
+}
+
+.instructionGroup .editable .cursor.backwards::after {
+    content: '';
+    display: none;
 }
 
 .instructionGroup .inputCapture {
@@ -56,11 +68,11 @@
 
 /** Debug */
 
-/* .instructionGroup .inputCapture {
+.instructionGroup .inputCapture {
     height: 64px;
     opacity: 0.4;
     transform: translateX(500px);
-} */
+}
 
 .instructionLine .jump {
     color: #ce3232;

@@ -48,10 +48,17 @@ export class Editable extends Elm<"span"> {
         return count;
     }
 
-    public setActive(offset: number, cursor: EditorCursor) {
-        const before = this.value.slice(0, offset);
-        const after = this.value.slice(offset);
+    public setActive(offsetStart: number, offsetEnd: number, cursor: EditorCursor) {
+        const before = this.value.slice(0, offsetStart);
+        const selected = this.value.slice(offsetStart, offsetEnd);
+        const after = this.value.slice(offsetEnd);
+
+        cursor.setSelectedText(selected);
 
         this.replaceContents(before, cursor, after);
+    }
+
+    public updateAndDeactivate() {
+        this.replaceContents(this.value);
     }
 }
