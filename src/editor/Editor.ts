@@ -2,9 +2,13 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
 import { InstructionLine } from "./instructionLines.js";
-import { EventBus, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, EventBus, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EditorCursor } from "./EditorCursor.js";
 
 export class Editor extends WorldElmWithComponents {
+    public cursor = new EditorCursor();
+    public childFocused = new EventBus<InstructionGroupEditor>();
+
     private parentComponent = this.addComponent(new ParentComponent());
     private subscriptions = this.addComponent(new SubscriptionsComponent());
     private draggingInstructionRectangle?: InstructionGroupEditor;
@@ -12,7 +16,10 @@ export class Editor extends WorldElmWithComponents {
 
     private groupEditors: InstructionGroupEditor[] = [];
 
-    public childFocused = new EventBus<InstructionGroupEditor>();
+    constructor() {
+        super();
+        this.parentComponent.addChild(new DummyText());
+    }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
         super._setEngine(engine);
@@ -56,8 +63,7 @@ export class Editor extends WorldElmWithComponents {
         const newEditor = new InstructionGroupEditor(this, newData);
         newEditor.rect.x = this.engine.mouse.worldPos.x;
         newEditor.rect.y = this.engine.mouse.worldPos.y;
-        this.parentComponent.addChild(newEditor);
-        this.groupEditors.push(newEditor);
+        this.addGroup(newEditor);
         newEditor.insertNewInstructionLine(0);
     }
 
@@ -69,9 +75,8 @@ export class Editor extends WorldElmWithComponents {
         const instructionToElmMap = new Map<InstructionData, InstructionGroupEditor>();
         for (const instruction of instructionsData) {
             const elm = new InstructionGroupEditor(this, instruction);
-            this.parentComponent.addChild(elm);
             instructionToElmMap.set(instruction, elm);
-            this.groupEditors.push(elm);
+            this.addGroup(elm);
         }
 
         for (const [instruction, elm] of instructionToElmMap) {
@@ -92,8 +97,7 @@ export class Editor extends WorldElmWithComponents {
 
             const elm = new InstructionGroupEditor(this, instructionData);
             idElmMap.set(elmData.id, elm);
-            this.groupEditors.push(elm);
-            this.parentComponent.addChild(elm);
+            this.addGroup(elm);
         }
 
         for (const elmData of data.elms) {
@@ -101,6 +105,12 @@ export class Editor extends WorldElmWithComponents {
                 idElmMap.get(elmData.id)!.addBranchTarget(idElmMap.get(child)!);
             }
         }
+    }
+
+    public addGroup(group: InstructionGroupEditor) {
+        this.groupEditors.push(group);
+        this.parentComponent.addChild(group);
+        this.cursor.registerInstructionGroup(group);
     }
 
     public serialize(): EditorSaveData {
@@ -146,6 +156,23 @@ export class Editor extends WorldElmWithComponents {
         }
 
         return compiled;
+    }
+}
+
+/**
+ * Prevents a click on the editor moving the editorCursor back to 0
+ */
+class DummyText extends WorldElm {
+    private elm = new Elm().class("dummyText").append("Editor");
+
+    public _setEngine(engine: JaPNaAEngine2d): void {
+        super._setEngine(engine);
+        engine.htmlOverlay.elm.append(this.elm);
+    }
+
+    public remove(): void {
+        super.remove();
+        this.elm.remove();
     }
 }
 

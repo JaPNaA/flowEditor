@@ -1,26 +1,29 @@
 import { Editable } from "./Editable.js";
 import { EditorCursor } from "./EditorCursor.js";
 import { LineOperationEvent, UserInputEvent } from "./events.js";
-import { Elm, EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
 export type TextareaUserInputCaptureAreas = (Editable | number)[];
 /** Change of line. Then, (only for "up", "same", "down") offset on line given by which editiable, then character offset in editable */
-export type TextareaUserInputCursorPosition = ["top" | "up" | "same" | "down" | "bottom", number, number, Editable?];
+export type TextareaUserInputCursorPositionRelative = ["top" | "up" | "same" | "down" | "bottom", number, number, Editable?];
 
 export class TextareaUserInputCapture {
-    /** Fired when an editable is edited */
-    public onInput = new EventBus<UserInputEvent>();
-
-    /** Fired when a line deletion is requested by the user. Event handlers must setup the input capture again, unless the event is rejected. */
-    public onLineDelete = new EventBus<LineOperationEvent>();
 
     private inputCapture: Elm<"textarea"> = new Elm("textarea").class("inputCapture");
     private textarea: HTMLTextAreaElement;
     private currentLine: TextareaUserInputCaptureAreas = [];
     private aboveLine: TextareaUserInputCaptureAreas = [];
     private belowLine: TextareaUserInputCaptureAreas = [];
-    private changeHandler?: (pos: TextareaUserInputCursorPosition) => void;
+
+    /** Fired when the cursor position changes */
+    private positionChangeHandler?: (pos: TextareaUserInputCursorPositionRelative) => void;
+
+    /** Fired when an editable is edited */
+    public inputHandler?: (userInputEvent: UserInputEvent) => void;
+
+    /** Fired when a line deletion is requested by the user. Event handlers must setup the input capture again, unless the event is rejected. */
+    public lineDeleteHandler?: (lineOp: LineOperationEvent) => void;
 
     private lastSelectionStart: number = 0;
     private lastSelectionEnd: number = 0;
@@ -59,23 +62,28 @@ export class TextareaUserInputCapture {
         this.textarea.focus();
     }
 
-    public setCurrentLine(areas: TextareaUserInputCaptureAreas) {
-        this.currentLine = areas;
-    }
-    public setAboveLine(areas: TextareaUserInputCaptureAreas) {
-        this.aboveLine = areas;
-    }
-    public setBelowLine(areas: TextareaUserInputCaptureAreas) {
-        this.belowLine = areas;
+    public setContext(context: TextareaUserInputCaptureContext) {
+        this.currentLine = context.current;
+        this.aboveLine = context.above;
+        this.belowLine = context.below;
+        this.updateTextareaValue();
     }
 
-    public update() {
+    private updateTextareaValue() {
         this.textarea.value = this.lastTextareaValue = this.generateTextareaText();
         this.lastSelectionStart = this.lastSelectionEnd = -1;
     }
 
-    public setChangeHandler(changeHandler: (pos: TextareaUserInputCursorPosition) => void) {
-        this.changeHandler = changeHandler;
+    public setPositionChangeHandler(changeHandler: (pos: TextareaUserInputCursorPositionRelative) => void) {
+        this.positionChangeHandler = changeHandler;
+    }
+
+    public setInputHandler(inputHandler: (inputEvent: UserInputEvent) => void) {
+        this.inputHandler = inputHandler;
+    }
+
+    public setLineDeleteHandler(lineDeleteHandler: (lineOp: LineOperationEvent) => void) {
+        this.lineDeleteHandler = lineDeleteHandler;
     }
 
     public getCurrentPosition() {
@@ -92,8 +100,8 @@ export class TextareaUserInputCapture {
             this.textarea.selectionEnd == this.lastSelectionEnd) { return; }
 
         const pos = this.getPosition(this.textarea.selectionStart);
-        if (this.changeHandler) {
-            this.changeHandler(pos);
+        if (this.positionChangeHandler) {
+            this.positionChangeHandler(pos);
         }
 
         this.lastSelectionStart = this.textarea.selectionStart;
@@ -193,7 +201,7 @@ export class TextareaUserInputCapture {
             if (!diff) { return; }
 
             const event = new UserInputEvent(diff.added, diff.removed, newContent);
-            that.onInput.send(event);
+            that.inputHandler?.(event);
             editable.checkInput(event);
             if (event.isRejected()) {
                 that.resetChanges(0);
@@ -206,7 +214,7 @@ export class TextareaUserInputCapture {
 
         function applyLineOperation(isNextLine: boolean, isInsert: boolean) {
             const event = new LineOperationEvent(isNextLine, isInsert);
-            that.onLineDelete.send(event);
+            that.lineDeleteHandler?.(event);
             if (event.isRejected()) {
                 that.resetChanges(0);
             }
@@ -245,7 +253,7 @@ export class TextareaUserInputCapture {
 
     private resetChanges(cursorDelta: number) {
         const lastSelectionStart = this.lastSelectionStart;
-        this.update();
+        this.updateTextareaValue();
 
         if (cursorDelta) {
             this.lastSelectionStart = lastSelectionStart; // so getPosition gets relative movement data
@@ -259,7 +267,7 @@ export class TextareaUserInputCapture {
         }
     }
 
-    private getPosition(cursorOffset: number): TextareaUserInputCursorPosition {
+    private getPosition(cursorOffset: number): TextareaUserInputCursorPositionRelative {
         let curr = cursorOffset;
         const movingLeft = curr < this.lastSelectionStart;
 
@@ -407,4 +415,10 @@ export class TextareaUserInputCapture {
     private areasToString(areas: TextareaUserInputCaptureAreas): string {
         return areas.map(e => e instanceof Editable ? e.getValue() : "\xa0".repeat(e)).join("");
     }
+}
+
+export interface TextareaUserInputCaptureContext {
+    above: TextareaUserInputCaptureAreas;
+    current: TextareaUserInputCaptureAreas;
+    below: TextareaUserInputCaptureAreas;
 }

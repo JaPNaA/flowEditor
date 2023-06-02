@@ -1,14 +1,18 @@
 import { Editable } from "./Editable.js";
 import { Editor, InstructionElmData } from "./Editor.js";
-import { EditorCursor } from "./EditorCursor.js";
-import { TextareaUserInputCursorPosition } from "./TextareaUserInputCapture.js";
+import { EditorCursor, EditorCursorPositionAbsolute } from "./EditorCursor.js";
+import { TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative } from "./TextareaUserInputCapture.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData } from "./flowToInstructionData.js";
 import { InstructionLine, NewInstructionLine } from "./instructionLines.js";
 import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich, isAncestor } from "../utils.js";
+import { LineOperationEvent, UserInputEvent } from "./events";
 
 export class InstructionGroupEditor extends WorldElm {
+    public elm: Elm;
+    public collisionType = InstructionGroupEditor.collisionType;
+
     private static fontSize = 16;
     private static collisionType = Symbol();
 
@@ -16,143 +20,112 @@ export class InstructionGroupEditor extends WorldElm {
     private branchTargets: InstructionGroupEditor[] = [];
     private lines: InstructionLine[] = [];
     private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
-    private activeLine: number = -1;
-    private elm: Elm;
-
-    private cursorElm = new EditorCursor();
-
-    public collisionType = InstructionGroupEditor.collisionType;
 
     constructor(public readonly parentEditor: Editor, private data: InstructionData) {
         super();
         this.rect.x = data.x;
         this.rect.y = data.y;
 
-        this.elm = new Elm().class("instructionElm");
+        this.elm = new Elm().class("instructionGroup");
         this.elm.attribute("tabindex", "-1");
         this.elm.on("input", () => this.updateHeight());
-        this.cursorElm.inputCapture.appendTo(this.elm);
+    }
 
-        document.addEventListener("selectionchange", e => {
-            if (!e.isTrusted) { return; } // prevent self-caused selection changes
+    public appendInputCapture(inputCapture: TextareaUserInputCapture) {
+        inputCapture.appendTo(this.elm);
+    }
 
-            // must be in this.elm
-            const selection = getSelection();
-            if (!selection || !isAncestor(selection.anchorNode || null, this.elm.getHTMLElement())) { return; }
-            if (isAncestor(selection.anchorNode || null, this.cursorElm.getHTMLElement())) { return; }
+    public onCursorInput(position: EditorCursorPositionAbsolute, ev: UserInputEvent) {
+        if (ev.isRejected()) { return; }
+        if (ev.added.includes("\n")) {
+            this.insertLineAndUpdateCursor(position.line + 1);
+        }
+    }
 
-            this.parentEditor.childFocused.send(this);
-
-            const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"))
-            if (instructionLine) {
-                const instructionLineElm = this.htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
-                if (instructionLineElm) {
-                    const index = this.lines.indexOf(instructionLineElm);
-                    this.activeLine = index;
-                    const newEditable = instructionLineElm.getEditableFromSelection(selection);
-                    if (newEditable) {
-                        const characterOffset = newEditable.getCharacterOffset(selection);
-                        this.updateInputCapture();
-
-                        newEditable.setActive(characterOffset, this.cursorElm);
-                        this.cursorElm.inputCapture.setPositionOnCurrentLine(newEditable, characterOffset);
-                        this.cursorElm.inputCapture.focus();
-                    }
-                }
-            }
-        });
-
-        this.cursorElm.inputCapture.setChangeHandler(this.updateCursorPosition.bind(this));
-
-        this.cursorElm.inputCapture.onInput.subscribe(ev => {
-            if (ev.added.includes("\n")) {
-                this.insertLineAndUpdateCursor(this.activeLine + 1);
-            }
-        });
-
-        this.cursorElm.inputCapture.onLineDelete.subscribe(ev => {
-            let targetLine = this.activeLine;
-            if (ev.isNextLine) { targetLine++ }
-            if (ev.isInsert) {
-                this.insertLineAndUpdateCursor(targetLine);
-            } else {
+    public onLineDelete(position: EditorCursorPositionAbsolute, lineOp: LineOperationEvent) {
+        let targetLine = position.line;
+        if (lineOp.isNextLine) { targetLine++ }
+        if (lineOp.isInsert) {
+            this.insertLineAndUpdateCursor(targetLine);
+        } else {
+            if (targetLine > 0) {
                 this.removeInstructionLine(targetLine);
-                this.updateInputCapture();
-                const instructionLine = this.lines[this.activeLine];
-                instructionLine.getEditableFromIndex(0).setActive(0, this.cursorElm);
-                this.cursorElm.inputCapture.setPositionOnCurrentLine(0, 0);
+                const previousLine = this.lines[targetLine - 1];
+                this.parentEditor.cursor.setPosition({
+                    group: this,
+                    line: targetLine - 1,
+                    editable: previousLine.getLastEditableIndex(),
+                    char: previousLine.getLastEditableCharacterIndex()
+                });
             }
-        });
+        }
     }
 
-    private insertLineAndUpdateCursor(position: number) {
-        this.activeLine = position;
-        const instructionLine = this.insertNewInstructionLine(this.activeLine);
-        this.updateInputCapture();
-        instructionLine.getEditableFromIndex(0).setActive(0, this.cursorElm);
-        this.cursorElm.inputCapture.setPositionOnCurrentLine(0, 0);
-    }
-
-    private updateCursorPosition(pos: TextareaUserInputCursorPosition) {
-        if (this.activeLine < 0) { return; }
-        if (pos[0] === "up") {
-            this.activeLine--;
-            if (this.activeLine < 0) { this.activeLine = 0; }
-            this.updateInputCapture();
-        }
-        if (pos[0] === "down") {
-            this.activeLine++;
-            if (this.activeLine >= this.lines.length) {
-                this.activeLine = this.lines.length - 1;
+    public calculateNewPosition(pos: EditorCursorPositionAbsolute, change: TextareaUserInputCursorPositionRelative): EditorCursorPositionAbsolute {
+        if (change[0] === "up") {
+            if (pos.line - 1 < 0) {
+                return { group: this, line: 0, editable: 0, char: 0 };
+            } else {
+                return { group: this, line: pos.line - 1, editable: change[1], char: change[2] };
             }
-            this.updateInputCapture();
         }
-        if (pos[0] === "top") { this.activeLine = 0; this.updateInputCapture(); }
-        if (pos[0] === "bottom") { this.activeLine = this.lines.length - 1; this.updateInputCapture(); }
+        if (change[0] === "down") {
+            if (pos.line + 1 >= this.lines.length) {
+                return { group: this, line: this.lines.length - 1, editable: change[1], char: change[2] };
+            } else {
+                return { group: this, line: pos.line + 1, editable: change[1], char: change[2] };
+            }
+        }
+        if (change[0] === "top") {
+            return { group: this, line: 0, editable: 0, char: 0 };
+        }
+        if (change[0] === "bottom") {
+            return { group: this, line: this.lines.length - 1, editable: change[1], char: change[2] };
+        }
 
         // pos[0] === 'same'
-        this.activateEditableOnActiveLine(pos[1], pos[2], pos[3]);
+        return { group: this, line: pos.line, editable: change[1], char: change[2] };
     }
 
-    public setCursorPositionStartOfCurrentLine() {
-        this.cursorElm.inputCapture.setPositionOnCurrentLine(0, 0);
-        const pos = this.cursorElm.inputCapture.getCurrentPosition();
-        this.activateEditableOnActiveLine(0, 0, pos[3]);
+    public selectionToPosition(selection: Selection): EditorCursorPositionAbsolute | undefined {
+        const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"));
+        if (instructionLine) {
+            const instructionLineElm = this.htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
+            if (instructionLineElm) {
+                const index = this.lines.indexOf(instructionLineElm);
+                const newEditable = instructionLineElm.getEditableIndexFromSelection(selection);
+                if (newEditable >= 0) {
+                    const characterOffset = instructionLineElm.getEditableFromIndex(newEditable).getCharacterOffset(selection);
+                    return {
+                        group: this,
+                        line: index,
+                        editable: newEditable,
+                        char: characterOffset
+                    };
+                }
+            }
+        }
     }
 
-    private activateEditableOnActiveLine(editableIndex: number, characterOffset: number, editable_: Editable | undefined) {
-        let editable = editable_;
-        if (!editable_) {
-            editable = this.lines[this.activeLine].getEditableFromIndex(editableIndex);
-        }
-        if (!editable) { throw new Error("Editable not found"); }
-
-        editable.setActive(characterOffset, this.cursorElm);
-
-        const cursorElm = this.cursorElm.getHTMLElement();
-        this.cursorElm.inputCapture.setStyleTop(cursorElm.offsetTop + cursorElm.offsetHeight);
-        this.cursorElm.inputCapture.focus();
+    private insertLineAndUpdateCursor(lineNumber: number) {
+        this.insertNewInstructionLine(lineNumber);
+        this.parentEditor.cursor.setPosition({
+            group: this,
+            line: lineNumber,
+            editable: 0,
+            char: 0,
+        });
     }
 
-    public updateInputCapture() {
-        if (this.activeLine - 1 >= 0) {
-            this.cursorElm.inputCapture.setAboveLine(this.lines[this.activeLine - 1].getAreas());
-        } else {
-            this.cursorElm.inputCapture.setAboveLine([]);
-        }
-        if (this.activeLine >= 0) {
-            this.cursorElm.inputCapture.setCurrentLine(this.lines[this.activeLine].getAreas());
-        } else {
-            this.cursorElm.inputCapture.setCurrentLine([]);
-        }
-        if (this.activeLine + 1 < this.lines.length) {
-            this.cursorElm.inputCapture.setBelowLine(this.lines[this.activeLine + 1].getAreas());
-        } else {
-            this.cursorElm.inputCapture.setBelowLine([]);
-        }
-
-        this.cursorElm.inputCapture.update();
-        this.cursorElm.inputCapture.focus();
+    public getContextForPosition(position: EditorCursorPositionAbsolute): TextareaUserInputCaptureContext {
+        return {
+            above: position.line - 1 >= 0 ?
+                this.lines[position.line - 1].getAreas() : [],
+            current: position.line >= 0 ?
+                this.lines[position.line].getAreas() : [],
+            below: position.line + 1 < this.lines.length ?
+                this.lines[position.line + 1].getAreas() : []
+        };
     }
 
     public _setEngine(engine: JaPNaAEngine2d): void {

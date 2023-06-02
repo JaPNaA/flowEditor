@@ -89,20 +89,33 @@ export class InstructionLine extends Component {
         this.view._setParent(this);
         this.elm.replaceContents(view);
 
-        this.parent.updateInputCapture();
-        this.parent.setCursorPositionStartOfCurrentLine();
+        const position = this.parent.parentEditor.cursor.getPosition();
+        if (position) {
+            this.parent.parentEditor.cursor.setPosition({
+                ...position,
+                char: view.preferredStartingCharOffset
+            });
+        }
     }
 
     public serialize() {
         return this.view.serialize();
     }
 
-    public getEditableFromSelection(selection: Selection) {
-        return this.view.getEditableFromSelection(selection);
+    public getEditableIndexFromSelection(selection: Selection) {
+        return this.view.getEditableIndexFromSelection(selection);
     }
 
     public getEditableFromIndex(index: number) {
         return this.view.editables[index];
+    }
+
+    public getLastEditableIndex() {
+        return this.view.editables.length - 1;
+    }
+
+    public getLastEditableCharacterIndex() {
+        return this.view.editables[this.view.editables.length - 1].getValue().length;
     }
 
     public getAreas(): TextareaUserInputCaptureAreas {
@@ -115,8 +128,15 @@ abstract class InstructionLineView extends Component {
 
     public spanToEditable = new Map<HTMLSpanElement, Editable>();
     public editables: Editable[] = [];
+    public preferredStartingCharOffset = 0;
 
     public _setParent(parent: InstructionLine) { this.parent = parent; }
+
+    public getEditableIndexFromSelection(selection: Selection): number {
+        const editable = this.getEditableFromSelection(selection);
+        if (!editable) { return -1; }
+        return this.editables.indexOf(editable);
+    }
 
     public getEditableFromSelection(selection: Selection): Editable | null {
         const thisElm = this.elm.getHTMLElement();
@@ -185,6 +205,8 @@ abstract class BranchInstructionLineView extends InstructionLineView {
 
 class JSONLine extends InstructionLineView {
     private editable: Editable;
+    public preferredStartingCharOffset = 1;
+
     constructor(private data: any) {
         super("jsonLine");
         this.elm.append(this.editable = this.createEditable(JSON.stringify(data)));
