@@ -2,7 +2,7 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
 import { InstructionLine } from "./instructionLines.js";
-import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, Vec2, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
 
 export class Editor extends WorldElmWithComponents {
@@ -44,11 +44,12 @@ export class Editor extends WorldElmWithComponents {
     }
 
     private mousemoveHandler(ev: MouseEvent) {
+        const scale = this.engine.camera.scale;
         if (this.draggingInstructionRectangle) {
-            this.draggingInstructionRectangle.rect.x += ev.movementX;
-            this.draggingInstructionRectangle.rect.y += ev.movementY;
+            this.draggingInstructionRectangle.rect.x += ev.movementX / scale;
+            this.draggingInstructionRectangle.rect.y += ev.movementY / scale;
         } else if (this.draggingCamera) {
-            this.engine.camera.move(-ev.movementX, -ev.movementY);
+            this.engine.camera.move(-ev.movementX / scale, -ev.movementY / scale);
         }
     }
 

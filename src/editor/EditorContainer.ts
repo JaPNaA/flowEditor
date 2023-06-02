@@ -35,6 +35,10 @@ export class EditorContainer extends Component {
             }
         });
 
+        addEventListener("wheel", ev => {
+            this.engine.camera.zoomInto(ev.deltaY > 0 ? 1 / 1.2 : 1.2, this.engine.mouse.worldPos);
+        });
+
         console.log(this.engine.world);
     }
 
