@@ -56,11 +56,11 @@
 
 /** Debug */
 
-.instructionGroup .inputCapture {
+/* .instructionGroup .inputCapture {
     height: 64px;
     opacity: 0.4;
     transform: translateX(500px);
-}
+} */
 
 .instructionLine .jump {
     color: #ce3232;
@@ -96,6 +96,11 @@
 
 .instructionLine .branchConnect::before {
     content: "[>]";
+}
+
+.instructionLine .branchConnect.active::before {
+    content: "[click target...]";
+    font-weight: bold;
 }
 
 .instructionLine [contenteditable] {

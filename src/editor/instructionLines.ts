@@ -118,6 +118,10 @@ export class InstructionLine extends Component {
         return this.view.editables[this.view.editables.length - 1].getValue().length;
     }
 
+    public getCurrentLine() {
+        return this.parentGroup.getLines().indexOf(this);
+    }
+
     public getAreas(): TextareaUserInputCaptureAreas {
         return this.view.getAreas();
     }
@@ -190,16 +194,27 @@ abstract class BranchInstructionLineView extends InstructionLineView {
     public branchTarget?: InstructionGroupEditor;
     public branchOffset: number = 0;
 
+    private branchConnectElm: Elm;
+
     constructor(name: string) {
         super(name);
-        this.elm.append(new Elm().class("branchConnect").on("click", () => {
-            this.parent.requestSelectInstructionGroup()
-                .then(editor => {
-                    if (editor) {
-                        this.setBranchTarget(editor);
-                    }
+        this.elm.append(this.branchConnectElm =
+            new Elm().class("branchConnect").on("click", () => {
+                this.parent.parentGroup.parentEditor.cursor.setPosition({
+                    group: this.parent.parentGroup,
+                    char: 0,
+                    editable: 0,
+                    line: this.parent.getCurrentLine()
                 });
-        }));
+                this.branchConnectElm.class("active");
+                this.parent.requestSelectInstructionGroup()
+                    .then(editor => {
+                        if (editor) {
+                            this.branchConnectElm.removeClass("active");
+                            this.setBranchTarget(editor);
+                        }
+                    });
+            }));
     }
 
     private setBranchTarget(editor: InstructionGroupEditor) {
@@ -264,7 +279,7 @@ class JSONLineEditable extends Editable {
         this.setValue(JSON.stringify(lines[0]));
 
         const parentGroup = this.parentLine.parentGroup;
-        const currentPosition = this.parentLine.parentGroup.getLines().indexOf(this.parentLine);
+        const currentPosition = this.parentLine.getCurrentLine();
         let i;
         for (i = 1; i < lines.length; i++) {
             console.log(lines[i]);
