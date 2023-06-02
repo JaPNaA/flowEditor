@@ -101,7 +101,11 @@ export class Editor extends WorldElmWithComponents {
 
         for (const elmData of data.elms) {
             for (const child of elmData.children) {
-                idElmMap.get(elmData.id)!.addBranchTarget(idElmMap.get(child)!);
+                if (child === null) {
+                    idElmMap.get(elmData.id)!.addBranchTarget(null);
+                } else {
+                    idElmMap.get(elmData.id)!.addBranchTarget(idElmMap.get(child)!);
+                }
             }
         }
     }
@@ -183,7 +187,7 @@ export interface InstructionElmData {
     id: number;
     instructions: any[],
     branches: any[],
-    children: number[];
+    children: (number | null)[];
     x: number;
     y: number;
 }

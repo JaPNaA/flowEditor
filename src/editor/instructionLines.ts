@@ -75,13 +75,13 @@ export class InstructionLine extends Component {
         return this.view.serialize();
     }
 
-    public setBranchTargetUp(target: InstructionGroupEditor) {
-        this.parentGroup.setBranchTarget(this, target);
-    }
-
-    public setBranchTargetDown(target: InstructionGroupEditor) {
+    public setBranchTarget(target: InstructionGroupEditor | null) {
         if (!(this.view instanceof BranchInstructionLineView)) { throw new Error("Not a branch"); }
-        this.view.branchTarget = target;
+        if (target) {
+            this.view.branchTarget = target;
+        } else {
+            this.view.branchTarget = undefined;
+        }
     }
 
     public changeView(view: InstructionLineView) {
@@ -218,7 +218,6 @@ abstract class BranchInstructionLineView extends InstructionLineView {
     }
 
     private setBranchTarget(editor: InstructionGroupEditor) {
-        this.parent.setBranchTargetUp(editor);
         this.branchTarget = editor;
     }
 }

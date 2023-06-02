@@ -1,12 +1,11 @@
-import { Editable } from "./Editable.js";
 import { Editor, InstructionElmData } from "./Editor.js";
-import { EditorCursor, EditorCursorPositionAbsolute } from "./EditorCursor.js";
+import { EditorCursorPositionAbsolute } from "./EditorCursor.js";
 import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./TextareaUserInputCapture.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData } from "./flowToInstructionData.js";
 import { InstructionLine, NewInstructionLine } from "./instructionLines.js";
 import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { getAncestorWhich, isAncestor } from "../utils.js";
+import { getAncestorWhich } from "../utils.js";
 
 export class InstructionGroupEditor extends WorldElm {
     public elm: Elm;
@@ -16,7 +15,7 @@ export class InstructionGroupEditor extends WorldElm {
     private static collisionType = Symbol();
 
     private rendered = false;
-    private branchTargets: InstructionGroupEditor[] = [];
+    private initBranchTargets: (InstructionGroupEditor | null)[] = [];
     private lines: InstructionLine[] = [];
     private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
 
@@ -141,16 +140,19 @@ export class InstructionGroupEditor extends WorldElm {
 
     public serialize(uidGen: UIDGenerator): InstructionElmData {
         const childrenUids = [];
-        for (const child of this.branchTargets) {
-            childrenUids.push(uidGen.getId(child));
-        }
-
         const instructions = [];
         const branches = [];
 
         for (const line of this.lines) {
             if (line.isBranch()) {
+                console.log(line.serialize(), line.getBranchTarget());
                 branches.push(line.serialize());
+                const branchTarget = line.getBranchTarget();
+                if (branchTarget) {
+                    childrenUids.push(uidGen.getId(branchTarget));
+                } else {
+                    childrenUids.push(null);
+                }
             } else {
                 instructions.push(line.serialize());
             }
@@ -170,22 +172,8 @@ export class InstructionGroupEditor extends WorldElm {
         return this.lines;
     }
 
-    public addBranchTarget(instructionRectangle: InstructionGroupEditor) {
-        this.branchTargets.push(instructionRectangle);
-    }
-
-    public setBranchTarget(instruction: InstructionLine, instructionEditor: InstructionGroupEditor) {
-        let index = -1;
-        for (const line of this.lines) {
-            if (line.isBranch()) {
-                index++;
-                if (line === instruction) {
-                    this.branchTargets[index] = instructionEditor;
-                    return;
-                }
-            }
-        }
-        throw new Error("Given instruction not in this.lines");
+    public addBranchTarget(instructionRectangle: InstructionGroupEditor | null) {
+        this.initBranchTargets.push(instructionRectangle);
     }
 
     public draw(): void {
@@ -202,10 +190,16 @@ export class InstructionGroupEditor extends WorldElm {
         elm.style.left = this.rect.x + "px";
 
         X.strokeStyle = "#000";
-        for (const child of this.branchTargets) {
+        const branchesTargets = [];
+        for (const instruction of this.lines) {
+            if (instruction.isBranch()) { branchesTargets.push(instruction.getBranchTarget()); }
+        }
+
+        for (const target of branchesTargets) {
+            if (!target) { continue; }
             X.beginPath();
             X.moveTo(this.rect.centerX(), this.rect.bottomY());
-            X.lineTo(child.rect.centerX(), child.rect.y);
+            X.lineTo(target.rect.centerX(), target.rect.y);
             X.stroke();
         }
     }
@@ -224,7 +218,8 @@ export class InstructionGroupEditor extends WorldElm {
         let index = 0;
         for (const branch of this.data.branches) {
             const line = this.addInstructionLine(branch);
-            line.setBranchTargetDown(this.branchTargets[index++]);
+            console.log(line, this.initBranchTargets[index]);
+            line.setBranchTarget(this.initBranchTargets[index++]);
         }
 
         this.rect.width = width;
