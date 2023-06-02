@@ -121,6 +121,8 @@
 .executerContainer .outputLog {
     padding: 8px;
     font-family: monospace;
+    height: calc(100vh - 120px);
+    overflow: auto;
 }
 
 .executerContainer .deleteAndReload {

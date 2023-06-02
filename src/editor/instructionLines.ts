@@ -442,30 +442,36 @@ export class NewInstructionLine extends InstructionLineView {
         super("newInstructionLine");
 
         this.elm.append(
-            this.editable = this.createEditable("Press one of [ibjved]...")
+            // this.editable = this.createEditable("Press one of [ibjved]...")
+            this.editable = this.createEditable("Press one of [divceg]...")
         );
 
         this.editable.onChange.subscribe(changes => {
             changes.reject(); // prevent updating
             let newView;
             switch (changes.added && changes.added[0].toLowerCase()) {
-                case "b":
+                // case "b":
+                case "i":
                     newView = new ControlBranchLine({
                         ctrl: "branch",
                         offset: 1,
-                        op: "<",
-                        v1: "v1",
-                        v2: "v2"
+                        op: "=",
+                        // v1: "v1",
+                        v1: "choice",
+                        // v2: "v2"
+                        v2: "0"
                     });
                     break;
-                case "i":
+                // case "i":
+                case "c":
                     newView = new ControlInputLine({
                         ctrl: "input",
                         options: ["option"],
                         variable: "choice"
                     });
                     break;
-                case "j":
+                // case "j":
+                case "g":
                     newView = new ControlJumpLine({
                         ctrl: "jump",
                         offset: 1

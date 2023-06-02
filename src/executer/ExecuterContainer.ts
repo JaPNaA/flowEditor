@@ -63,10 +63,15 @@ export class ExecuterContainer extends Component {
 class OutputLog extends Component {
     constructor() {
         super("outputLog");
+
+        this.elm.on("wheel", ev => ev.stopPropagation());
     }
 
     public log(text: string) {
         this.elm.append(new Elm().class("log").append(text));
+
+        const htmlElm = this.elm.getHTMLElement();
+        htmlElm.scrollTop = htmlElm.scrollHeight;
     }
 
     public clear() {
