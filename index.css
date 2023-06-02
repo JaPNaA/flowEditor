@@ -68,11 +68,11 @@
 
 /** Debug */
 
-.instructionGroup .inputCapture {
+/* .instructionGroup .inputCapture {
     height: 64px;
     opacity: 0.4;
     transform: translateX(500px);
-}
+} */
 
 .instructionLine .jump {
     color: #ce3232;
