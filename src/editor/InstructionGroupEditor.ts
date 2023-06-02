@@ -190,18 +190,63 @@ export class InstructionGroupEditor extends WorldElm {
         elm.style.left = this.rect.x + "px";
 
         X.strokeStyle = "#000";
-        const branchesTargets = [];
-        for (const instruction of this.lines) {
-            if (instruction.isBranch()) { branchesTargets.push(instruction.getBranchTarget()); }
+        X.fillStyle = "#000";
+
+        X.globalCompositeOperation = "destination-over";
+
+        const activeGroup = this.parentEditor.cursor.getPosition()?.group;
+        let alpha = 0.5;
+        let lineWidth = 1;
+        let triangleSize = 1;
+        if (this === activeGroup) {
+            alpha = 1;
+            lineWidth = 2.5;
+            triangleSize = 1.3;
+            X.strokeStyle = X.fillStyle = "#a00";
         }
 
-        for (const target of branchesTargets) {
-            if (!target) { continue; }
-            X.beginPath();
-            X.moveTo(this.rect.centerX(), this.rect.bottomY());
-            X.lineTo(target.rect.centerX(), target.rect.y);
-            X.stroke();
+        let index = -1;
+        for (const instruction of this.lines) {
+            if (instruction.isBranch()) {
+                const target = instruction.getBranchTarget();
+                if (!target) { continue; }
+                index++;
+
+                const instructionElm = instruction.elm.getHTMLElement();
+                const startY = this.rect.y + instructionElm.offsetTop + instructionElm.offsetHeight / 2;
+                const startX = this.rect.rightX() + 16 + 16 * index;
+                const endY = target.rect.y - 16;
+                const targetRectCenterX = target.rect.x + target.rect.width / 2;
+                let currTriangleSize = triangleSize;
+
+                // highlight current connections
+                if (target === activeGroup) {
+                    X.globalAlpha = 1;
+                    X.lineWidth = 2.5;
+                    currTriangleSize = 1.5;
+                } else {
+                    X.globalAlpha = alpha;
+                    X.lineWidth = lineWidth;
+                }
+
+                X.beginPath();
+                X.moveTo(this.rect.rightX(), startY);
+                X.lineTo(startX, startY);
+                X.lineTo(startX, endY);
+                X.lineTo(targetRectCenterX, endY);
+                X.lineTo(targetRectCenterX, target.rect.y - 6 * currTriangleSize);
+                X.stroke();
+
+                X.beginPath();
+                X.moveTo(targetRectCenterX, target.rect.y);
+                X.lineTo(targetRectCenterX - 4 * currTriangleSize, target.rect.y - 6 * currTriangleSize);
+                X.lineTo(targetRectCenterX + 4 * currTriangleSize, target.rect.y - 6 * currTriangleSize);
+                X.fill();
+            }
         }
+
+        X.globalCompositeOperation = "source-over";
+        X.globalAlpha = 1;
     }
 
     private render() {
