@@ -4,6 +4,7 @@ import { InstructionData, newInstructionData } from "./flowToInstructionData.js"
 import { InstructionLine } from "./instructionLines.js";
 import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, Vec2, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
+import { ControlItem } from "../FlowRunner";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -86,8 +87,12 @@ export class Editor extends WorldElmWithComponents {
         }
 
         for (const [instruction, elm] of instructionToElmMap) {
-            for (const child of instruction.children) {
-                elm.addBranchTarget(instructionToElmMap.get(child)!);
+            for (const { target } of instruction.branches) {
+                if (target) {
+                    elm.addBranchTarget(instructionToElmMap.get(target)!);
+                } else {
+                    elm.addBranchTarget(null);
+                }
             }
         }
     }
@@ -97,7 +102,10 @@ export class Editor extends WorldElmWithComponents {
         for (const elmData of data.elms) {
             const instructionData = newInstructionData();
             instructionData.instructions = elmData.instructions;
-            instructionData.branches = elmData.branches;
+            instructionData.branches = [];
+            for (const branch of elmData.branches) {
+                instructionData.branches.push({ instruction: branch });
+            }
             instructionData.x = elmData.x;
             instructionData.y = elmData.y;
 
@@ -193,7 +201,7 @@ interface EditorSaveData {
 export interface InstructionElmData {
     id: number;
     instructions: any[],
-    branches: any[],
+    branches: ControlItem[],
     children: (number | null)[];
     x: number;
     y: number;

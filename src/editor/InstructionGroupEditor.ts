@@ -262,8 +262,7 @@ export class InstructionGroupEditor extends WorldElm {
 
         let index = 0;
         for (const branch of this.data.branches) {
-            const line = this.addInstructionLine(branch);
-            console.log(line, this.initBranchTargets[index]);
+            const line = this.addInstructionLine(branch.instruction);
             line.setBranchTarget(this.initBranchTargets[index++]);
         }
 

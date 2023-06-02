@@ -1,15 +1,19 @@
-import { FlowData, isControlItem } from "../FlowRunner.js";
+import { ControlItem, FlowData, isControlItem } from "../FlowRunner.js";
 
 export interface InstructionData {
     x: number;
     y: number;
-    parents: InstructionData[];
-    children: InstructionData[];
     instructions: any[];
-    branches: any[];
+    branches: BranchInstructionData[];
+}
+
+export interface BranchInstructionData {
+    instruction: ControlItem;
+    target?: InstructionData;
 }
 
 export function constructInstructionData(flowData: FlowData): InstructionData[] {
+    // find all to/froms of instructions
     const instructions: GraphInstructionNode[] = [];
 
     const jumpers: [number, number][] = [];
@@ -40,66 +44,83 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
         instructions[destination].parents.push(from);
     }
 
+    // group instructions, separated by in/out-going
     let y = 0;
     const groups: InstructionData[] = [];
-    const jumpChildrenParentMap = new Map<number, InstructionData[]>();
+    const indexToGroupMap = new Map<number, InstructionData>();
+    const jumpChildrenParentMap = new Map<number, BranchInstructionData[]>();
     let currGroup: InstructionData = newInstructionData();
+    indexToGroupMap.set(0, currGroup);
 
-    function endGroup() {
+    function endGroup(nextGroupStartIndex: number) {
         if (currGroup.instructions.length === 0 && currGroup.branches.length === 0) { return; }
         groups.push(currGroup);
         y += 24 * (currGroup.instructions.length + currGroup.branches.length);
         currGroup = newInstructionData();
         currGroup.y = y;
+        indexToGroupMap.set(nextGroupStartIndex, currGroup);
     }
 
-    let lastInstructionWasJump = false;
-    for (let i = 0; i < instructions.length; i++) {
+    let lastInstructionWasGroupEnd = false;
+    let i;
+    for (i = 0; i < instructions.length; i++) {
         const instruction = instructions[i];
 
         if (instruction.child === undefined && instruction.parents.length === 0 && currGroup.branches.length === 0) {
             currGroup.instructions.push(instruction.instruction);
-            lastInstructionWasJump = false;
+            lastInstructionWasGroupEnd = false;
+            if (isControlItem(instruction.instruction) && instruction.instruction.ctrl === "end") {
+                lastInstructionWasGroupEnd = true;
+                endGroup(i + 1);
+            }
         } else if (instruction.parents.length === 0 && isControlItem(instruction.instruction)) {
             // branch or jump
-            currGroup.branches.push(instruction.instruction);
+            const branchInstructionData = {
+                instruction: instruction.instruction,
+                target: undefined
+            };
+            currGroup.branches.push(branchInstructionData);
 
             const existing = jumpChildrenParentMap.get(instruction.child!);
             if (existing) {
-                existing.push(currGroup);
+                existing.push(branchInstructionData);
             } else {
-                jumpChildrenParentMap.set(instruction.child!, [currGroup])
+                jumpChildrenParentMap.set(instruction.child!, [branchInstructionData])
             }
 
-            lastInstructionWasJump = false;
+            lastInstructionWasGroupEnd = false;
             if (instruction.instruction.ctrl === "jump") {
-                lastInstructionWasJump = true;
-                endGroup();
+                lastInstructionWasGroupEnd = true;
+                endGroup(i + 1);
             }
         } else {
-            endGroup();
+            endGroup(i);
 
-            const parents = jumpChildrenParentMap.get(i);
-            if (parents) {
-                for (const parent of parents) {
-                    currGroup.parents.push(parent);
-                    parent.children.push(currGroup);
-                }
-            }
-
-            // add last group last so the list of children match with the order of the branches
-            if (!lastInstructionWasJump) {
+            // add jump instruction so the destination is editable
+            if (!lastInstructionWasGroupEnd) {
                 const lastGroup = groups[groups.length - 1];
-                currGroup.parents.push(lastGroup);
-                lastGroup.children.push(currGroup);
+
+                lastGroup.branches.push({
+                    instruction: { ctrl: "jump", offset: 1 },
+                    target: currGroup
+                });
             }
 
             currGroup.instructions.push(instruction.instruction);
-            lastInstructionWasJump = false;
+            lastInstructionWasGroupEnd = false;
         }
     }
 
-    endGroup();
+    endGroup(i);
+
+    // link groups
+    for (const [index, parents] of jumpChildrenParentMap) {
+        if (parents) {
+            for (const parent of parents) {
+                parent.target = indexToGroupMap.get(index);
+            }
+        }
+    }
 
     return groups;
 }
@@ -113,9 +134,7 @@ interface GraphInstructionNode {
 export function newInstructionData(): InstructionData {
     return {
         branches: [],
-        children: [],
         instructions: [],
-        parents: [],
         x: 0,
         y: 0
     }
