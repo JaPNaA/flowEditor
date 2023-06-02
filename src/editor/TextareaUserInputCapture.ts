@@ -198,14 +198,15 @@ export class TextareaUserInputCapture {
             if (!diff) { return; }
 
             const event = new UserInputEvent(diff.added, diff.removed, newContent);
-            that.inputHandler?.(event);
             editable.checkInput(event);
+            that.inputHandler?.(event);
             if (event.isRejected()) {
                 that.resetChanges(0);
             } else {
                 editable.setValue(newContent);
                 const cursorPos = that.getPosition(that.textarea.selectionStart);
                 editable.setActive(cursorPos[2], that.cursor);
+                editable.afterChangeApply();
             }
         }
 

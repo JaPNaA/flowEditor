@@ -1,12 +1,12 @@
 import { Editable } from "./Editable.js";
 import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "../FlowRunner.js";
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
-import { TextareaUserInputCaptureAreas } from "./TextareaUserInputCapture.js";
+import { TextareaUserInputCaptureAreas, UserInputEvent } from "./TextareaUserInputCapture.js";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 
 export class InstructionLine extends Component {
-    private parent!: InstructionGroupEditor;
+    public parentGroup!: InstructionGroupEditor;
 
     constructor(private view: InstructionLineView) {
         super("instructionLine");
@@ -15,7 +15,7 @@ export class InstructionLine extends Component {
     }
 
     public _setParent(parent: InstructionGroupEditor) {
-        this.parent = parent;
+        this.parentGroup = parent;
     }
 
     public static fromInstruction(data: any): InstructionLine {
@@ -53,7 +53,7 @@ export class InstructionLine extends Component {
     }
 
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
-        return this.parent.parentEditor.requestSelectInstructionGroup();
+        return this.parentGroup.parentEditor.requestSelectInstructionGroup();
     }
 
     public isBranch() {
@@ -76,7 +76,7 @@ export class InstructionLine extends Component {
     }
 
     public setBranchTargetUp(target: InstructionGroupEditor) {
-        this.parent.setBranchTarget(this, target);
+        this.parentGroup.setBranchTarget(this, target);
     }
 
     public setBranchTargetDown(target: InstructionGroupEditor) {
@@ -89,9 +89,9 @@ export class InstructionLine extends Component {
         this.view._setParent(this);
         this.elm.replaceContents(view);
 
-        const position = this.parent.parentEditor.cursor.getPosition();
+        const position = this.parentGroup.parentEditor.cursor.getPosition();
         if (position) {
-            this.parent.parentEditor.cursor.setPosition({
+            this.parentGroup.parentEditor.cursor.setPosition({
                 ...position,
                 char: view.preferredStartingCharOffset
             });
@@ -175,6 +175,11 @@ abstract class InstructionLineView extends Component {
 
     protected createEditable(text: string | number): Editable {
         const editable = new Editable(text.toString());
+        this.registerEditable(editable);
+        return editable;
+    }
+
+    protected registerEditable<T extends Editable>(editable: T): T {
         this.spanToEditable.set(editable.getHTMLElement(), editable);
         this.editables.push(editable);
         return editable;
@@ -204,12 +209,19 @@ abstract class BranchInstructionLineView extends InstructionLineView {
 }
 
 class JSONLine extends InstructionLineView {
-    private editable: Editable;
+    private editable: JSONLineEditable;
     public preferredStartingCharOffset = 1;
 
     constructor(private data: any) {
         super("jsonLine");
-        this.elm.append(this.editable = this.createEditable(JSON.stringify(data)));
+        this.elm.append(this.editable = this.registerEditable(
+            new JSONLineEditable(JSON.stringify(data))
+        ));
+    }
+
+    public _setParent(parent: InstructionLine): void {
+        super._setParent(parent);
+        this.editable.setParentLine(parent);
     }
 
     public serialize(): any {
@@ -218,6 +230,59 @@ class JSONLine extends InstructionLineView {
 
     public getAreas(): TextareaUserInputCaptureAreas {
         return [this.editable];
+    }
+}
+
+class JSONLineEditable extends Editable {
+    private newlineDetected = false;
+    private surroundingChar = "";
+    private parentLine!: InstructionLine;
+
+    public setParentLine(parentLine: InstructionLine) {
+        this.parentLine = parentLine;
+    }
+
+    public checkInput(event: UserInputEvent): void {
+        if (event.added.includes("\n")) {
+            const value = this.getValue();
+            // support for multiline paste only if JSONLine is a string
+            if (value[0] === '"' && value[value.length - 1] === '"') {
+                this.newlineDetected = true;
+            } else {
+                event.reject();
+            }
+        }
+    }
+
+    public afterChangeApply(): void {
+        if (!this.newlineDetected) { return; }
+        this.newlineDetected = false;
+
+        const lines = this.getValue()
+            .slice(1, -1)
+            .split("\n");
+        this.setValue(JSON.stringify(lines[0]));
+
+        const parentGroup = this.parentLine.parentGroup;
+        const currentPosition = this.parentLine.parentGroup.getLines().indexOf(this.parentLine);
+        let i;
+        for (i = 1; i < lines.length; i++) {
+            console.log(lines[i]);
+            parentGroup.insertInstructionLine(
+                new InstructionLine(
+                    new JSONLine(lines[i])
+                ),
+                currentPosition + i
+            );
+        }
+
+        this.replaceContents(this.getValue());
+        parentGroup.parentEditor.cursor.setPosition({
+            group: parentGroup,
+            line: currentPosition + i - 1,
+            editable: 0,
+            char: lines[i - 1].length + 1 // +1 for left quote only
+        });
     }
 }
 

@@ -1,13 +1,12 @@
 import { Editable } from "./Editable.js";
 import { Editor, InstructionElmData } from "./Editor.js";
 import { EditorCursor, EditorCursorPositionAbsolute } from "./EditorCursor.js";
-import { TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative } from "./TextareaUserInputCapture.js";
+import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./TextareaUserInputCapture.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData } from "./flowToInstructionData.js";
 import { InstructionLine, NewInstructionLine } from "./instructionLines.js";
 import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich, isAncestor } from "../utils.js";
-import { LineOperationEvent, UserInputEvent } from "./events";
 
 export class InstructionGroupEditor extends WorldElm {
     public elm: Elm;
@@ -36,9 +35,10 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     public onCursorInput(position: EditorCursorPositionAbsolute, ev: UserInputEvent) {
-        if (ev.isRejected()) { return; }
-        if (ev.added.includes("\n")) {
-            this.insertLineAndUpdateCursor(position.line + 1);
+        if (ev.isRejected()) {
+            if (ev.added.includes("\n")) {
+                this.insertLineAndUpdateCursor(position.line + 1);
+            }
         }
     }
 
@@ -243,7 +243,10 @@ export class InstructionGroupEditor extends WorldElm {
 
     public insertNewInstructionLine(position: number) {
         const instructionLine = new InstructionLine(new NewInstructionLine());
+        return this.insertInstructionLine(instructionLine, position);
+    }
 
+    public insertInstructionLine(instructionLine: InstructionLine, position: number) {
         if (position < this.lines.length) {
             this.elm.getHTMLElement().insertBefore(instructionLine.elm.getHTMLElement(), this.lines[position].elm.getHTMLElement());
         } else {

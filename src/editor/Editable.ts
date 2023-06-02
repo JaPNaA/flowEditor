@@ -1,6 +1,6 @@
 import { EditorCursor } from "./EditorCursor.js";
-import { UserInputEvent } from "./events";
 import { Elm, EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { UserInputEvent } from "./TextareaUserInputCapture";
 
 export class Editable extends Elm<"span"> {
     private value: string;
@@ -20,6 +20,9 @@ export class Editable extends Elm<"span"> {
     public setValue(value: string) {
         this.value = value;
     }
+
+    /** Called by TextareaUserInput after setting a new value for the editable and moving the cursor. */
+    public afterChangeApply() { }
 
     public checkInput(event: UserInputEvent) {
         this.onChange.send(event);
