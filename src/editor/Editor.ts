@@ -65,6 +65,12 @@ export class Editor extends WorldElmWithComponents {
         newEditor.rect.y = this.engine.mouse.worldPos.y;
         this.addGroup(newEditor);
         newEditor.insertNewInstructionLine(0);
+        this.cursor.setPosition({
+            group: newEditor,
+            line: 0,
+            editable: 0,
+            char: 0
+        });
     }
 
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {

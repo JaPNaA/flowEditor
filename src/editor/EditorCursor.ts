@@ -37,6 +37,7 @@ export class EditorCursor extends Elm<"span"> {
                         this._setPosition(position);
                         this.setVirtualCursorPosition(position);
                         this.setTextareInputCursorPosition(position);
+                        position.group.appendInputCapture(this.inputCapture);
                         this.inputCapture.focus();
                     }
                 }
@@ -47,7 +48,8 @@ export class EditorCursor extends Elm<"span"> {
             if (!this.position) { return; }
             const newPos = this.position.group.calculateNewPosition(this.position, relativePos);
             this.setVirtualCursorPosition(newPos);
-            if (!this.position || this.position.group !== newPos.group || this.position.line !== newPos.line) {
+            if (this.position.group !== newPos.group || this.position.line !== newPos.line) {
+                this.position.group.appendInputCapture(this.inputCapture);
                 this.setTextareInputCursorPosition(newPos);
             }
             this._setPosition(newPos);
@@ -72,6 +74,7 @@ export class EditorCursor extends Elm<"span"> {
     public setPosition(position: EditorCursorPositionAbsolute) {
         this._setPosition(position);
         this.clampPositionChar();
+        position.group.appendInputCapture(this.inputCapture);
         this.setVirtualCursorPosition(this.position!);
         this.setTextareInputCursorPosition(this.position!);
 
@@ -95,7 +98,6 @@ export class EditorCursor extends Elm<"span"> {
         position.group.getLines()[position.line]
             .getEditableFromIndex(position.editable)
             .setActive(position.char, this);
-        position.group.appendInputCapture(this.inputCapture);
         this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);
     }
 
