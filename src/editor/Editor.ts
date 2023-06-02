@@ -2,12 +2,11 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
 import { InstructionLine } from "./instructionLines.js";
-import { Elm, EventBus, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
-    public childFocused = new EventBus<InstructionGroupEditor>();
 
     private parentComponent = this.addComponent(new ParentComponent());
     private subscriptions = this.addComponent(new SubscriptionsComponent());
@@ -68,7 +67,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
-        return this.childFocused.promise();
+        return this.cursor.focusChangeGroup.promise();
     }
 
     public setInstructions(instructionsData: InstructionData[]) {
