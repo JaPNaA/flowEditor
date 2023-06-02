@@ -111,12 +111,10 @@ export class TextareaUserInputCapture {
     }
 
     private generateTextareaText() {
-        return "\n  " + this.areasToString(this.aboveLine) + "\n  " + this.areasToString(this.currentLine) + "\n  " + this.areasToString(this.belowLine) + "\n";
+        return "\n \xa0" + this.areasToString(this.aboveLine) + "\n \xa0" + this.areasToString(this.currentLine) + "\n \xa0" + this.areasToString(this.belowLine) + "\n";
     }
 
     private getChanges() {
-        // better algorithm: getPosition, but scanning for changes. To be implemented.
-
         const that = this;
         const currentValue = this.textarea.value;
         const lastValue = this.lastTextareaValue;
