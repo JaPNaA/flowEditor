@@ -1,5 +1,4 @@
 import { FlowData } from "../FlowRunner.js";
-import { appHooks } from "../index.js";
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Editor } from "./Editor.js";
 import { InstructionData, constructInstructionData } from "./flowToInstructionData.js";
@@ -12,6 +11,7 @@ export class EditorContainer extends Component {
     });
 
     private editor = new Editor();
+    public preventSaveOnExit = false;
 
     constructor() {
         super("editorContainer");
@@ -28,11 +28,8 @@ export class EditorContainer extends Component {
         });
 
         addEventListener("beforeunload", () => {
-            if (appHooks.deleteAndReloadRequested) {
-                localStorage['flowEditorSave'] = "";
-            } else {
-                localStorage['flowEditorSave'] = JSON.stringify(this.editor.serialize());
-            }
+            if (this.preventSaveOnExit) { return; }
+            this.setSaveData(this.getSaveData());
         });
 
         addEventListener("wheel", ev => {
@@ -44,5 +41,13 @@ export class EditorContainer extends Component {
 
     public compile() {
         return this.editor.compile();
+    }
+
+    public getSaveData() {
+        return this.editor.serialize();
+    }
+
+    public setSaveData(saveData: any) {
+        localStorage['flowEditorSave'] = saveData ? JSON.stringify(saveData) : "";
     }
 }

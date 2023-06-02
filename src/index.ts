@@ -6,7 +6,15 @@ export const appHooks = {
         return editorContainer.compile();
     },
 
-    deleteAndReloadRequested: false
+    getEditorSaveData() {
+        return editorContainer.getSaveData();
+    },
+
+    setEditorSaveData(data: any) {
+        editorContainer.preventSaveOnExit = true;
+        editorContainer.setSaveData(data);
+        location.reload();
+    }
 };
 
 const executerContainer = new ExecuterContainer();

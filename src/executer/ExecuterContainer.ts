@@ -1,7 +1,7 @@
-import { FlowRunner } from "../FlowRunner.js";
+import { FlowRunner, FlowRunnerOutput } from "../FlowRunner.js";
 import { appHooks } from "../index.js";
-import { FlowRunnerOutput } from "../japnaaEngine2d/FlowRunner";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { download, requestFile, stringToBlob } from "../utils.js";
 
 export class ExecuterContainer extends Component {
     private log = new OutputLog();
@@ -13,15 +13,27 @@ export class ExecuterContainer extends Component {
         super("executerContainer");
 
         this.elm.append(
-            new Elm("button").append("Run").onActivate(() => this.execute()),
+            new Elm().class("fileOperationsBar").append(
+                new Elm("button").append("Run").onActivate(() => this.execute()),
+                new Elm("button").append("Save").onActivate(() =>
+                    download(
+                        stringToBlob(JSON.stringify(appHooks.getEditorSaveData())),
+                        "flowEditorSave.json"
+                    )
+                ),
+                new Elm("button").append("Load").onActivate(() =>
+                    requestFile()
+                        .then(file => file.text())
+                        .then(text => appHooks.setEditorSaveData(JSON.parse(text)))
+                ),
+                new Elm("button").append("Delete all").class("deleteAndReload").onActivate(() => {
+                    if (confirm("Delete editor contents and reload?")) {
+                        appHooks.setEditorSaveData(null);
+                    }
+                })
+            ),
             this.log,
-            this.input,
-            new Elm("button").append("Delete and reload").class("deleteAndReload").onActivate(() => {
-                if (confirm("Delete editor contents and reload?")) {
-                    appHooks.deleteAndReloadRequested = true;
-                    location.reload();
-                }
-            })
+            this.input
         );
 
         this.input.selectCallback = choice => {
