@@ -15,6 +15,7 @@ export class InstructionGroupEditor extends WorldElm {
     private static collisionType = Symbol();
 
     private rendered = false;
+    private selected = false;
     private initBranchTargets: (InstructionGroupEditor | null)[] = [];
     private lines: InstructionLine[] = [];
     private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
@@ -106,16 +107,6 @@ export class InstructionGroupEditor extends WorldElm {
         }
     }
 
-    private insertLineAndUpdateCursor(lineNumber: number) {
-        this.insertNewInstructionLine(lineNumber);
-        this.parentEditor.cursor.setPosition({
-            group: this,
-            line: lineNumber,
-            editable: 0,
-            char: 0,
-        });
-    }
-
     public getContextForPosition(position: EditorCursorPositionAbsolute): TextareaUserInputCaptureContext {
         return {
             above: position.line - 1 >= 0 ?
@@ -185,7 +176,15 @@ export class InstructionGroupEditor extends WorldElm {
         }
 
         X.fillStyle = "#ddd";
-        X.fillRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
+        X.beginPath();
+        X.rect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
+        if (this.selected) {
+            X.strokeStyle = "#66d";
+            X.lineWidth = 4;
+            X.stroke();
+        }
+        X.fill();
+
         elm.style.top = this.rect.y + "px";
         elm.style.left = this.rect.x + "px";
 
@@ -272,12 +271,20 @@ export class InstructionGroupEditor extends WorldElm {
         this.rendered = true;
     }
 
-    private addInstructionLine(instruction: any) {
-        const instructionLine = InstructionLine.fromInstruction(instruction).appendTo(this.elm);
-        instructionLine._setParent(this);
-        this.lines.push(instructionLine);
-        this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
-        return instructionLine;
+    public setSelected() {
+        this.selected = true;
+    }
+
+    public unsetSelected() {
+        this.selected = false;
+    }
+
+    public setEditMode() {
+        this.elm.class("editMode");
+    }
+
+    public unsetEditMode() {
+        this.elm.removeClass("editMode");
     }
 
     public insertNewInstructionLine(position: number) {
@@ -305,6 +312,24 @@ export class InstructionGroupEditor extends WorldElm {
             this.htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
             line.elm.remove();
         }
+    }
+
+    private insertLineAndUpdateCursor(lineNumber: number) {
+        this.insertNewInstructionLine(lineNumber);
+        this.parentEditor.cursor.setPosition({
+            group: this,
+            line: lineNumber,
+            editable: 0,
+            char: 0,
+        });
+    }
+
+    private addInstructionLine(instruction: any) {
+        const instructionLine = InstructionLine.fromInstruction(instruction).appendTo(this.elm);
+        instructionLine._setParent(this);
+        this.lines.push(instructionLine);
+        this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
+        return instructionLine;
     }
 
     private updateHeight() {

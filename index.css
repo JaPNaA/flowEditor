@@ -17,9 +17,12 @@
 
 .instructionGroup {
     position: absolute;
-    /* width: 460px; */
-    width: 452px;
-    /* pointer-events: none; */
+    width: 460px;
+    pointer-events: none;
+}
+
+.instructionGroup.editMode {
+    pointer-events: all;
 }
 
 /* .instructionElm.active {
