@@ -13,6 +13,7 @@ export class InstructionGroupEditor extends WorldElm {
 
     private static fontSize = 16;
     private static collisionType = Symbol();
+    private hitbox = new Hitbox(this.rect, this);
 
     private rendered = false;
     private selected = false;
@@ -120,13 +121,36 @@ export class InstructionGroupEditor extends WorldElm {
 
     public _setEngine(engine: JaPNaAEngine2d): void {
         super._setEngine(engine);
-        this.engine.collisions.addHitbox(new Hitbox(this.rect, this));
+        this.engine.collisions.addHitbox(this.hitbox);
         this.engine.htmlOverlay.elm.append(this.elm);
     }
 
     public remove(): void {
+        this.engine.collisions.removeHitbox(this.hitbox);
         super.remove();
         this.elm.remove();
+    }
+
+    public relinkParentsToFinalBranch() {
+        // todo: improve efficiency (currently scanning because child branches
+        // don't report when they change targets)
+        let newTarget = undefined;
+
+        for (const line of this.lines) {
+            if (line.isBranch()) {
+                newTarget = line.getBranchTarget();
+            }
+        }
+
+        for (const editor of this.parentEditor.groupEditors) {
+            for (const line of editor.lines) {
+                if (line.isBranch()) {
+                    if (line.getBranchTarget() === this) {
+                        line.setBranchTarget(newTarget || null);
+                    }
+                }
+            }
+        }
     }
 
     public serialize(uidGen: UIDGenerator): InstructionElmData {

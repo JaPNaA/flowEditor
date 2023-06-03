@@ -143,6 +143,10 @@ export class EditorCursor extends Elm<"span"> {
     public registerInstructionGroup(group: InstructionGroupEditor) {
         this.groupEditorsElmsMap.set(group.elm.getHTMLElement(), group);
     }
+
+    public unregisterInstructionGroup(group: InstructionGroupEditor) {
+        this.groupEditorsElmsMap.delete(group.elm.getHTMLElement());
+    }
 }
 
 export interface EditorCursorPositionAbsolute {

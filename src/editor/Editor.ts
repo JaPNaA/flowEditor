@@ -2,9 +2,10 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
 import { InstructionLine } from "./instructionLines.js";
-import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, Vec2, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
-import { ControlItem } from "../FlowRunner";
+import { ControlItem } from "../FlowRunner.js";
+import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -31,7 +32,7 @@ export class Editor extends WorldElmWithComponents {
 
     private selectRectangle = new SelectRectangle();
 
-    private groupEditors: InstructionGroupEditor[] = [];
+    public groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
 
     constructor() {
         super();
@@ -45,6 +46,7 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.mouse.onMousemove, this.mousedragHandler);
         this.subscriptions.subscribe(this.engine.mouse.onMouseup, this.mouseupHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addGroupHandler);
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Backspace", "Delete"]), this.deleteSelectedHandler);
     }
 
     private mousedownHandler() {
@@ -144,6 +146,14 @@ export class Editor extends WorldElmWithComponents {
         });
     }
 
+    private deleteSelectedHandler() {
+        if (this.editMode) { return; }
+        for (const group of this.selectedGroups) {
+            this.removeGroup(group);
+            this.selectedGroups.delete(group);
+        }
+    }
+
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
         return this.cursor.focusChangeGroup.promise();
     }
@@ -199,6 +209,13 @@ export class Editor extends WorldElmWithComponents {
         this.groupEditors.push(group);
         this.parentComponent.addChild(group);
         this.cursor.registerInstructionGroup(group);
+    }
+
+    public removeGroup(group: InstructionGroupEditor) {
+        removeElmFromArray(group, this.groupEditors);
+        group.relinkParentsToFinalBranch();
+        this.parentComponent.removeChild(group);
+        this.cursor.unregisterInstructionGroup(group);
     }
 
     public serialize(): EditorSaveData {
