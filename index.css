@@ -137,6 +137,10 @@
     overflow: auto;
 }
 
+.executerContainer .outputLog .log.secondary {
+    color: #7797ff;
+}
+
 .executerContainer .fileOperationsBar {
     background-color: #3a3a3a;
 }

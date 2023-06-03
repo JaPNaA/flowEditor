@@ -8,6 +8,7 @@ export class ExecuterContainer extends Component {
     private input = new ChooseInput();
     private runner?: FlowRunner;
     private paused = false;
+    private lastChoice: any[] = [];
 
     constructor() {
         super("executerContainer");
@@ -39,6 +40,7 @@ export class ExecuterContainer extends Component {
         this.input.selectCallback = choice => {
             if (!this.runner) { return; }
             this.runner.input(choice);
+            this.log.logSecondary("<- " + this.lastChoice[choice]);
             this.continueExecute();
         };
     }
@@ -67,6 +69,7 @@ export class ExecuterContainer extends Component {
             this.log.log(JSON.stringify(output.data));
         } else if (output.type === "input") {
             this.input.requestChoice(output.choices);
+            this.lastChoice = output.choices;
             this.paused = true;
         }
     }
@@ -81,7 +84,15 @@ class OutputLog extends Component {
 
     public log(text: string) {
         this.elm.append(new Elm().class("log").append(text));
+        this.scrollToBottom();
+    }
 
+    public logSecondary(text: string) {
+        this.elm.append(new Elm().class("log").class("secondary").append(text));
+        this.scrollToBottom();
+    }
+
+    public scrollToBottom() {
         const htmlElm = this.elm.getHTMLElement();
         htmlElm.scrollTop = htmlElm.scrollHeight;
     }
