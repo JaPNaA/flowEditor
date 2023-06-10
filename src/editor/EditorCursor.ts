@@ -104,8 +104,9 @@ export class EditorCursor extends Elm<"span"> {
     }
 
     private _setPosition(position: EditorCursorPositionAbsolute) {
-        if (!this.position || position.group !== this.position.group) {
-            this.position = position;
+        const lastPosition = this.position;
+        this.position = position;
+        if (!lastPosition || position.group !== lastPosition.group) {
             this.focusChangeGroup.send(position.group);
         }
     }
