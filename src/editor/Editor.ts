@@ -17,7 +17,7 @@ export class Editor extends WorldElmWithComponents {
      * In edit mode, the user can can edit the contents of the group and move the
      * cursor (also to other groups) in one click.
      * The user activates edit mode by clicking on the selected group when there is only
-     * one selected group.
+     * one selected group, or pressing enter.
      * The user deactivates edit mode by clicking on whitespace or pressing Escape.
      * 
      * If not in edit mode, one click will select a group. The user may use ctrl or shift
@@ -34,6 +34,8 @@ export class Editor extends WorldElmWithComponents {
 
     public groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
 
+    private requestedInstructionGroupSelectHandlers: ((group: InstructionGroupEditor | null) => any)[] = [];
+
     constructor() {
         super();
         this.parentComponent.addChild(new DummyText());
@@ -47,6 +49,11 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.mouse.onMouseup, this.mouseupHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addGroupHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Backspace", "Delete"]), this.deleteSelectedHandler);
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Enter", "NumpadEnter"]), ev => {
+            ev.preventDefault();
+            this.setEditMode();
+        });
+        this.subscriptions.subscribe(this.cursor.focusChangeGroup, group => this.handleClickGroup(group));
     }
 
     private mousedownHandler() {
@@ -65,33 +72,72 @@ export class Editor extends WorldElmWithComponents {
             }
         }
 
+        this.handleClickGroup(clickedGroup);
+    }
+
+    private handleClickGroup(group: InstructionGroupEditor | null) {
+        // handle select handlers
+        for (const handler of this.requestedInstructionGroupSelectHandlers) {
+            handler(group);
+        }
+        this.requestedInstructionGroupSelectHandlers.length = 0;
+
+        // handle selections
         if (this.engine.keyboard.isDown(["ControlLeft", "ControlRight"])) {
-            // remove from selection
-            if (clickedGroup && this.selectedGroups.has(clickedGroup)) {
-                this.selectedGroups.delete(clickedGroup);
-                clickedGroup.unsetSelected();
+            // ctrl: remove from selection
+            if (group && this.selectedGroups.has(group)) {
+                this.selectedGroups.delete(group);
+                group.unsetSelected();
             }
         } else {
-            if (!clickedGroup || !this.selectedGroups.has(clickedGroup)) {
+            if (!group || !this.selectedGroups.has(group)) {
                 // shift to add to selection; otherwise, clear selection
                 if (!this.engine.keyboard.isDown(["ShiftLeft", "ShiftRight"])) {
                     for (const group of this.selectedGroups) { group.unsetSelected(); }
                     this.selectedGroups.clear();
+
+                    if (!group) {
+                        // clicked on whitespace
+                        this.unsetEditMode();
+                    }
                 }
             }
-            // add to selection
-            if (clickedGroup) {
+            // clicked on group: add to selection
+            if (group) {
                 this.movingGroups = true;
-                if (this.selectedGroups.has(clickedGroup)) {
-                    //* incorrect behaviour
-                    clickedGroup.setEditMode();
+                if (this.selectedGroups.has(group)) {
+                    if (this.selectedGroups.size === 1) {
+                        this.setEditMode();
+                    }
                 } else {
-                    this.selectedGroups.add(clickedGroup);
-                    clickedGroup.setSelected();
+                    this.selectedGroups.add(group);
+                    group.setSelected();
                 }
             }
         }
+    }
 
+    public setEditMode() {
+        this.cursor.show();
+        for (const group of this.groupEditors) {
+            group.setEditMode();
+        }
+        for (const selectedGroup of this.selectedGroups) {
+            this.cursor.setPosition({
+                group: selectedGroup,
+                line: 0,
+                editable: 0,
+                char: 0,
+            });
+            break; // only one
+        }
+    }
+
+    public unsetEditMode() {
+        this.cursor.hide();
+        for (const group of this.groupEditors) {
+            group.unsetEditMode();
+        }
     }
 
     private mousedragHandler(ev: MouseEvent) {
@@ -155,7 +201,9 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
-        return this.cursor.focusChangeGroup.promise();
+        return new Promise(res => {
+            this.requestedInstructionGroupSelectHandlers.push(res);
+        });
     }
 
     public setInstructions(instructionsData: InstructionData[]) {

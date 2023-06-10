@@ -34,6 +34,10 @@
     background-color: #3665ffa2;
 }
 
+.instructionGroup .editable .cursor.hidden {
+    display: none;
+}
+
 .instructionGroup .editable .cursor::after,
 .instructionGroup .editable .cursor.backwards::before {
     content: '';
@@ -105,6 +109,7 @@
 
 .instructionLine .branchConnect {
     cursor: pointer;
+    pointer-events: all; /* override allow clicks outside edit mode */
     position: absolute;
     right: 8px;
 }

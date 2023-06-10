@@ -209,8 +209,8 @@ abstract class BranchInstructionLineView extends InstructionLineView {
                 this.branchConnectElm.class("active");
                 this.parent.requestSelectInstructionGroup()
                     .then(editor => {
+                        this.branchConnectElm.removeClass("active");
                         if (editor) {
-                            this.branchConnectElm.removeClass("active");
                             this.setBranchTarget(editor);
                         }
                     });

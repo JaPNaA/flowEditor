@@ -61,6 +61,10 @@ export class TextareaUserInputCapture {
         this.textarea.focus();
     }
 
+    public unfocus() {
+        this.textarea.blur();
+    }
+
     public setContext(context: TextareaUserInputCaptureContext) {
         this.currentLine = context.current;
         this.aboveLine = context.above;

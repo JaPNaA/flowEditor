@@ -70,6 +70,15 @@ export class EditorCursor extends Elm<"span"> {
         });
     }
 
+    public hide() {
+        this.class("hidden");
+        this.inputCapture.unfocus();
+    }
+
+    public show() {
+        this.removeClass("hidden");
+    }
+
     public setSelectedText(text: string) {
         this.replaceContents(text);
     }
@@ -96,9 +105,9 @@ export class EditorCursor extends Elm<"span"> {
 
     private _setPosition(position: EditorCursorPositionAbsolute) {
         if (!this.position || position.group !== this.position.group) {
+            this.position = position;
             this.focusChangeGroup.send(position.group);
         }
-        this.position = position;
     }
 
     private setVirtualCursorPosition(positionStart: Readonly<EditorCursorPositionAbsolute>, positionEnd: Readonly<EditorCursorPositionAbsolute>, backwards: boolean) {

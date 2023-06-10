@@ -29,6 +29,12 @@ export class InstructionGroupEditor extends WorldElm {
         this.elm = new Elm().class("instructionGroup");
         this.elm.attribute("tabindex", "-1");
         this.elm.on("input", () => this.updateHeight());
+
+        this.elm.on("keydown", ev => {
+            if (ev.code === "Escape") {
+                this.parentEditor.unsetEditMode();
+            }
+        });
     }
 
     public appendInputCapture(inputCapture: TextareaUserInputCapture) {
