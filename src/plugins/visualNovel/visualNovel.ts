@@ -37,7 +37,7 @@ class SayInstructionLine extends InstructionLineView {
     constructor(character: string, text: string) {
         super("sayInstructionLine");
 
-        this.elm.append(
+        this.setAreas(
             this.characterEditable = this.createEditable(character),
             ' says: "',
             this.textEditable = this.createEditable(text),
@@ -47,9 +47,5 @@ class SayInstructionLine extends InstructionLineView {
 
     public serialize() {
         return { visualNovelCtrl: "say", char: this.characterEditable.getValue(), text: this.textEditable.getValue() };
-    }
-
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [this.characterEditable, 8, this.textEditable];
     }
 }

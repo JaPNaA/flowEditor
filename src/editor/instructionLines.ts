@@ -137,11 +137,12 @@ export class InstructionLine extends Component {
 }
 
 export abstract class InstructionLineView extends Component {
-    protected parent!: InstructionLine;
-
     public spanToEditable = new Map<HTMLSpanElement, Editable>();
     public editables: Editable[] = [];
     public preferredStartingCharOffset = 0;
+
+    protected parent!: InstructionLine;
+    private areas: TextareaUserInputCaptureAreas = [];
 
     public _setParent(parent: InstructionLine) { this.parent = parent; }
 
@@ -183,7 +184,25 @@ export abstract class InstructionLineView extends Component {
     public abstract serialize(): any;
 
     public getAreas(): TextareaUserInputCaptureAreas {
-        return [];
+        return this.areas;
+    }
+
+    protected setAreas(...elements: (string | Editable)[]) {
+        let lastStringLength = 0;
+        this.areas = [];
+
+        for (const element of elements) {
+            if (typeof element === "string") {
+                lastStringLength += element.length;
+            } else {
+                if (lastStringLength) {
+                    this.areas.push(lastStringLength);
+                    lastStringLength = 0;
+                }
+                this.areas.push(element);
+            }
+            this.elm.append(element);
+        }
     }
 
     protected createEditable(text: string | number): Editable {
@@ -258,7 +277,6 @@ class JSONLine extends InstructionLineView {
 
 class JSONLineEditable extends Editable {
     private newlineDetected = false;
-    private surroundingChar = "";
     private parentLine!: InstructionLine;
 
     public setParentLine(parentLine: InstructionLine) {
