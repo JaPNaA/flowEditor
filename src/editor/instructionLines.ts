@@ -4,6 +4,7 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "./TextareaUserInputCapture.js";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
+import { pluginHooks } from "../index.js";
 
 export class InstructionLine extends Component {
     public parentGroup!: InstructionGroupEditor;
@@ -19,11 +20,18 @@ export class InstructionLine extends Component {
     }
 
     public static fromInstruction(data: any): InstructionLine {
+        let view;
+
         if (!isControlItem(data)) {
-            return new InstructionLine(new JSONLine(data));
+            // not control, check if plugin recognizes
+            view = pluginHooks.parseInstruction(data);
+            if (view) {
+                return new InstructionLine(view);
+            } else {
+                return new InstructionLine(new JSONLine(data));
+            }
         }
 
-        let view;
         switch (data.ctrl) {
             case "branch":
                 view = new ControlBranchLine(data);
@@ -44,6 +52,7 @@ export class InstructionLine extends Component {
                 view = new NewInstructionLine();
                 break;
             default:
+                // unknown control
                 view = new JSONLine(data);
         }
 
@@ -127,7 +136,7 @@ export class InstructionLine extends Component {
     }
 }
 
-abstract class InstructionLineView extends Component {
+export abstract class InstructionLineView extends Component {
     protected parent!: InstructionLine;
 
     public spanToEditable = new Map<HTMLSpanElement, Editable>();
@@ -443,7 +452,7 @@ export class NewInstructionLine extends InstructionLineView {
 
         this.elm.append(
             // this.editable = this.createEditable("Press one of [ibjved]...")
-            this.editable = this.createEditable("Press one of [divceg]...")
+            this.editable = this.createEditable(`Press one of [divceg${pluginHooks.getKeyInstructionMappingKeys().join("")}]...`)
         );
 
         this.editable.onChange.subscribe(changes => {
@@ -492,7 +501,12 @@ export class NewInstructionLine extends InstructionLineView {
                     newView = new JSONLine("");
                     break;
                 default:
-                    return;
+                    newView = pluginHooks.getInstructionFromKeyMappingKey(
+                        changes.added[0].toLowerCase()
+                    );
+                    if (!newView) {
+                        return;
+                    }
             }
 
             this.parent.changeView(newView);

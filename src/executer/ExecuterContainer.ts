@@ -1,5 +1,5 @@
 import { FlowRunner, FlowRunnerOutput } from "../FlowRunner.js";
-import { appHooks } from "../index.js";
+import { appHooks, pluginHooks } from "../index.js";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { download, requestFile, stringToBlob } from "../utils.js";
 
@@ -66,7 +66,16 @@ export class ExecuterContainer extends Component {
     private processOutput(output: FlowRunnerOutput | null) {
         if (!output) { return; }
         if (output.type === "default") {
-            this.log.log(JSON.stringify(output.data));
+            const promise = pluginHooks.runInstruction(output.data);
+            if (promise) {
+                this.paused = true;
+                promise.then(() => {
+                    this.paused = false;
+                    this.continueExecute();
+                });
+            } else {
+                this.log.log(JSON.stringify(output.data));
+            }
         } else if (output.type === "input") {
             this.input.requestChoice(output.choices);
             this.lastChoice = output.choices;
