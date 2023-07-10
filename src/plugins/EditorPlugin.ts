@@ -1,9 +1,8 @@
-import { InstructionLineView } from "../editor/instructionLines.js";
+import { Instruction } from "../editor/instructionLines";
 
 export interface EditorPlugin {
-    views: InstructionLineView[];
-    keyMappings: { [x: string]: () => InstructionLineView };
-    parse(data: any): InstructionLineView | undefined;
+    keyMappings: { [x: string]: () => Instruction };
+    parse(data: any): Instruction | undefined;
     executer: Executer;
 }
 

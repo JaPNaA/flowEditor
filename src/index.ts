@@ -1,7 +1,7 @@
 import { ExecuterContainer } from "./executer/ExecuterContainer.js";
 import { EditorContainer } from "./editor/EditorContainer.js";
 import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
-import { InstructionLineView } from "./editor/instructionLines.js";
+import { Instruction } from "./editor/instructionLines.js";
 
 export const appHooks = {
     getCompiledFlowFromEditor() {
@@ -20,7 +20,7 @@ export const appHooks = {
 };
 
 export const pluginHooks = {
-    parseInstruction(instruction: any): undefined | InstructionLineView {
+    parseInstruction(instruction: any): undefined | Instruction {
         return plugin.parse(instruction);
     },
 

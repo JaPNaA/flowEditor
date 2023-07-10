@@ -9,7 +9,7 @@ export interface InstructionData {
 
 export interface BranchInstructionData {
     instruction: ControlItem;
-    target?: InstructionData;
+    targets?: (InstructionData | undefined)[];
 }
 
 export function constructInstructionData(flowData: FlowData): InstructionData[] {
@@ -102,7 +102,7 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
 
                 lastGroup.branches.push({
                     instruction: { ctrl: "jump", offset: 1 },
-                    target: currGroup
+                    targets: [currGroup]
                 });
             }
 
@@ -117,7 +117,7 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
     for (const [index, parents] of jumpChildrenParentMap) {
         if (parents) {
             for (const parent of parents) {
-                parent.target = indexToGroupMap.get(index);
+                parent.targets = [indexToGroupMap.get(index)];
             }
         }
     }

@@ -3,7 +3,7 @@ import { EditorCursorPositionAbsolute } from "./EditorCursor.js";
 import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./TextareaUserInputCapture.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData } from "./flowToInstructionData.js";
-import { InstructionLine, NewInstructionLine } from "./instructionLines.js";
+import { BranchInstructionLine, Instruction, InstructionLine } from "./instructionLines.js";
 import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 
@@ -17,7 +17,8 @@ export class InstructionGroupEditor extends WorldElm {
 
     private rendered = false;
     private selected = false;
-    private initBranchTargets: (InstructionGroupEditor | null)[] = [];
+    private initBranchTargets: ((InstructionGroupEditor | null)[] | null)[] = [];
+    private instructions: Instruction[] = [];
     private lines: InstructionLine[] = [];
     private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
 
@@ -142,17 +143,26 @@ export class InstructionGroupEditor extends WorldElm {
         // don't report when they change targets)
         let newTarget = undefined;
 
-        for (const line of this.lines) {
-            if (line.isBranch()) {
-                newTarget = line.getBranchTarget();
+        for (const instruction of this.instructions) {
+            if (instruction.isBranch()) {
+                newTarget = instruction.getBranchTargets();
             }
         }
 
         for (const editor of this.parentEditor.groupEditors) {
-            for (const line of editor.lines) {
+            for (const line of editor.instructions) {
                 if (line.isBranch()) {
-                    if (line.getBranchTarget() === this) {
-                        line.setBranchTarget(newTarget || null);
+                    const targets = line.getBranchTargets();
+                    const newTargets = [];
+                    if (targets) {
+                        for (const target of targets) {
+                            if (target === this) {
+                                newTargets.push(newTarget);
+                            } else {
+                                newTargets.push(target);
+                            }
+                        }
+                        line.setBranchTargets(targets);
                     }
                 }
             }
@@ -160,22 +170,26 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     public serialize(uidGen: UIDGenerator): InstructionElmData {
-        const childrenUids = [];
+        const childrenUids: number[][] = [];
         const instructions = [];
         const branches = [];
 
-        for (const line of this.lines) {
-            if (line.isBranch()) {
-                console.log(line.serialize(), line.getBranchTarget());
-                branches.push(line.serialize());
-                const branchTarget = line.getBranchTarget();
-                if (branchTarget) {
-                    childrenUids.push(uidGen.getId(branchTarget));
+        for (const instruction of this.instructions) {
+            if (instruction.isBranch()) {
+                console.log(instruction.serialize(), instruction.getBranchTargets());
+                branches.push(instruction.serialize());
+                const branchTargets = instruction.getBranchTargets();
+                if (branchTargets) {
+                    const uids = [];
+                    for (const branchTarget of branchTargets) {
+                        uids.push(uidGen.getId(branchTarget));
+                    }
+                    childrenUids.push(uids);
                 } else {
-                    childrenUids.push(null);
+                    childrenUids.push([]);
                 }
             } else {
-                instructions.push(line.serialize());
+                instructions.push(instruction.serialize());
             }
         }
 
@@ -189,12 +203,16 @@ export class InstructionGroupEditor extends WorldElm {
         };
     }
 
+    public getInstructions() {
+        return this.instructions;
+    }
+
     public getLines() {
         return this.lines;
     }
 
-    public addBranchTarget(instructionRectangle: InstructionGroupEditor | null) {
-        this.initBranchTargets.push(instructionRectangle);
+    public addBranchTargets(targets: (InstructionGroupEditor | null)[] | null) {
+        this.initBranchTargets.push(targets);
     }
 
     public draw(): void {
@@ -236,7 +254,7 @@ export class InstructionGroupEditor extends WorldElm {
 
         let index = -1;
         for (const instruction of this.lines) {
-            if (instruction.isBranch()) {
+            if (instruction instanceof BranchInstructionLine) {
                 const target = instruction.getBranchTarget();
                 if (!target) { continue; }
                 index++;
@@ -292,7 +310,7 @@ export class InstructionGroupEditor extends WorldElm {
         let index = 0;
         for (const branch of this.data.branches) {
             const line = this.addInstructionLine(branch.instruction);
-            line.setBranchTarget(this.initBranchTargets[index++]);
+            line.setBranchTargets(this.initBranchTargets[index++]);
         }
 
         this.rect.width = width;
@@ -318,25 +336,36 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     public insertNewInstructionLine(position: number) {
-        const instructionLine = new InstructionLine(new NewInstructionLine());
-        return this.insertInstructionLine(instructionLine, position);
+        const instructionLine = Instruction.fromData({ ctrl: 'nop' });
+        return this.insertInstruction(instructionLine, position);
     }
 
-    public insertInstructionLine(instructionLine: InstructionLine, position: number) {
+    public insertInstruction(instruction: Instruction, position: number) {
+        const lines = instruction.getLines();
         if (position < this.lines.length) {
-            this.elm.getHTMLElement().insertBefore(instructionLine.elm.getHTMLElement(), this.lines[position].elm.getHTMLElement());
+            let lastPosition = this.lines[position].elm.getHTMLElement();
+            for (let i = 0; i < lines.length; i++) {
+                this.elm.getHTMLElement().insertBefore(lines[i].elm.getHTMLElement(), lastPosition);
+                lastPosition = lines[i].elm.getHTMLElement();
+            }
         } else {
-            this.elm.append(instructionLine);
+            for (const line of lines) {
+                this.elm.append(line);
+            }
         }
-        instructionLine._setParent(this);
-        this.lines.splice(position, 0, instructionLine);
-        this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
+        instruction._setParent(this);
+        this.lines.splice(position, 0, ...lines);
+        this.instructions.splice(position, 0, instruction);
+        for (const line of lines) {
+            this.htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
+        }
 
-        return instructionLine;
+        return instruction;
     }
 
-    public removeInstructionLine(positon: number) {
-        const lines = this.lines.splice(positon, 1);
+    public removeInstructionLine(position: number) {
+        const lines = this.lines.splice(position, 1);
+        const instructions = this.instructions.splice(position, 1);
         if (lines.length < 0) { throw new Error("Invalid position"); }
         for (const line of lines) {
             this.htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
@@ -354,12 +383,19 @@ export class InstructionGroupEditor extends WorldElm {
         });
     }
 
-    private addInstructionLine(instruction: any) {
-        const instructionLine = InstructionLine.fromInstruction(instruction).appendTo(this.elm);
-        instructionLine._setParent(this);
-        this.lines.push(instructionLine);
-        this.htmlInstructionLineToJS.set(instructionLine.elm.getHTMLElement(), instructionLine);
-        return instructionLine;
+    private addInstructionLine(data: any) {
+        const instruction = Instruction.fromData(data);
+        const lines = instruction.getLines();
+        instruction._setParent(this);
+
+        for (const line of lines) {
+            line.appendTo(this.elm);
+            this.lines.push(line);
+            this.htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
+        }
+
+        this.instructions.push(instruction);
+        return instruction;
     }
 
     private updateHeight() {

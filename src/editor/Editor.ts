@@ -1,7 +1,7 @@
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
-import { InstructionLine } from "./instructionLines.js";
+import { Instruction, InstructionLine } from "./instructionLines.js";
 import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
@@ -220,11 +220,19 @@ export class Editor extends WorldElmWithComponents {
         }
 
         for (const [instruction, elm] of instructionToElmMap) {
-            for (const { target } of instruction.branches) {
-                if (target) {
-                    elm.addBranchTarget(instructionToElmMap.get(target)!);
+            for (const { targets } of instruction.branches) {
+                if (targets) {
+                    const resolved = [];
+                    for (const target of targets) {
+                        if (target) {
+                            resolved.push(instructionToElmMap.get(target)!);
+                        } else {
+                            resolved.push(null);
+                        }
+                    }
+                    elm.addBranchTargets(resolved);
                 } else {
-                    elm.addBranchTarget(null);
+                    elm.addBranchTargets(null);
                 }
             }
         }
@@ -248,11 +256,20 @@ export class Editor extends WorldElmWithComponents {
         }
 
         for (const elmData of data.elms) {
-            for (const child of elmData.children) {
-                if (child === null) {
-                    idElmMap.get(elmData.id)!.addBranchTarget(null);
+            for (const children of elmData.children) {
+                if (children === null) {
+                    idElmMap.get(elmData.id)!.addBranchTargets(null);
                 } else {
-                    idElmMap.get(elmData.id)!.addBranchTarget(idElmMap.get(child)!);
+                    if (Array.isArray(children)) {
+                        const targets = [];
+                        for (const child of children) {
+                            targets.push(idElmMap.get(child)!);
+                        }
+                        idElmMap.get(elmData.id)!.addBranchTargets(targets);
+                    } else {
+                        // backwards compatibility: handle case when not array
+                        idElmMap.get(elmData.id)!.addBranchTargets([idElmMap.get(children)!]);
+                    }
                 }
             }
         }
@@ -284,32 +301,47 @@ export class Editor extends WorldElmWithComponents {
         const startIndicies = new Map<InstructionGroupEditor, number>();
 
         const compiled: any[] = [];
-        const groupLines: InstructionLine[][] = [];
+        const groupInstructions: Instruction[][] = [];
         let index = 0;
 
         for (const group of this.groupEditors) {
             startIndicies.set(group, index);
-            const lines = group.getLines();
-            groupLines.push(lines);
-            index += lines.length;
+            const instructions = group.getInstructions();
+            groupInstructions.push(instructions);
+            for (const instruction of instructions) {
+                index += instruction.export().length;
+            }
         }
 
         index = 0;
-        for (const group of groupLines) {
-            for (const line of group) {
-                if (line.isBranch()) {
-                    const target = line.getBranchTarget();
-                    if (target) {
-                        compiled.push(line.exportWithBranchOffset(startIndicies.get(target)! - index));
+        for (const group of groupInstructions) {
+            for (const instruction of group) {
+                let exportedInstructions: any[];
+                if (instruction.isBranch()) {
+                    const targets = instruction.getBranchTargets();
+                    if (targets) {
+                        const offsets: (number | null)[] = [];
+                        for (const target of targets) {
+                            if (target) {
+                                offsets.push(startIndicies.get(target)! - index);
+                            } else {
+                                offsets.push(null);
+                            }
+                        }
+                        instruction.setBranchOffsets(offsets);
+                        exportedInstructions = instruction.export();
                     } else {
-                        compiled.push({ ctrl: "nop" });
-                        console.warn("NOP inserted in place of branch");
+                        exportedInstructions = [{ ctrl: 'nop' }];
+                        console.warn("Removed branch because there was no targets");
                     }
                 } else {
-                    compiled.push(line.export());
+                    exportedInstructions = instruction.export();
                 }
 
-                index++;
+                for (const instruction of exportedInstructions) {
+                    compiled.push(instruction);
+                }
+                index += exportedInstructions.length;
             }
         }
 
@@ -394,7 +426,7 @@ export interface InstructionElmData {
     id: number;
     instructions: any[],
     branches: ControlItem[],
-    children: (number | null)[];
+    children: number[][];
     x: number;
     y: number;
 }

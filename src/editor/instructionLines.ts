@@ -6,59 +6,48 @@ import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 import { pluginHooks } from "../index.js";
 
-export class InstructionLine extends Component {
+export abstract class Instruction {
     public parentGroup!: InstructionGroupEditor;
+    protected lines: InstructionLine[] = [];
 
-    constructor(private view: InstructionLineView) {
-        super("instructionLine");
-        this.view._setParent(this);
-        this.elm.append(this.view);
+    public getLines(): ReadonlyArray<InstructionLine> {
+        return this.lines;
     }
 
-    public _setParent(parent: InstructionGroupEditor) {
-        this.parentGroup = parent;
-    }
-
-    public static fromInstruction(data: any): InstructionLine {
-        let view;
+    public static fromData(data: any): Instruction {
+        let instruction;
 
         if (!isControlItem(data)) {
             // not control, check if plugin recognizes
-            view = pluginHooks.parseInstruction(data);
-            if (view) {
-                return new InstructionLine(view);
+            instruction = pluginHooks.parseInstruction(data);
+            if (instruction) {
+                return instruction;
             } else {
-                return new InstructionLine(new JSONLine(data));
+                return new InstructionOneLine(new JSONLine(data));
             }
         }
 
         switch (data.ctrl) {
             case "branch":
-                view = new ControlBranchLine(data);
-                break;
+                return new InstructionOneLine(new ControlBranchLine(data));
             case "jump":
-                view = new ControlJumpLine(data);
-                break;
+                return new InstructionOneLine(new ControlJumpLine());
             case "end":
-                view = new ControlEndLine(data);
-                break;
+                return new InstructionOneLine(new ControlEndLine());
             case "input":
-                view = new ControlInputLine(data);
-                break;
+                return new InstructionOneLine(new ControlInputLine(data));
             case "variable":
-                view = new ControlVariableLine(data);
-                break;
+                return new InstructionOneLine(new ControlVariableLine(data));
             case "nop":
-                view = new NewInstructionLine();
-                break;
+                return new InstructionOneLine(new NewInstructionLine());
             default:
                 // unknown control
-                view = new JSONLine(data);
+                return new InstructionOneLine(new JSONLine(data));
         }
+    }
 
-        const newLine = new InstructionLine(view);
-
-        return newLine;
+    public _setParent(group: InstructionGroupEditor) {
+        this.parentGroup = group;
     }
 
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
@@ -66,85 +55,44 @@ export class InstructionLine extends Component {
     }
 
     public isBranch() {
-        return this.view instanceof BranchInstructionLineView;
+        return false; // this.view instanceof BranchInstructionLineView;
     }
 
-    public getBranchTarget() {
-        if (!(this.view instanceof BranchInstructionLineView)) { throw new Error("Not a branch"); }
-        return this.view.branchTarget;
+    public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
+        return null;
     }
 
-    public exportWithBranchOffset(branchOffset: number) {
-        if (!(this.view instanceof BranchInstructionLineView)) { throw new Error("Not a branch"); }
-        this.view.branchOffset = branchOffset;
-        return this.view.serialize();
+    public setBranchTargets(_targets: (InstructionGroupEditor | null)[] | null) { }
+
+    public setBranchOffsets(_offsets: (number | null)[]) {
+        return;
     }
 
-    public export() {
-        return this.view.serialize();
-    }
+    public abstract export(): any[];
 
-    public setBranchTarget(target: InstructionGroupEditor | null) {
-        if (!(this.view instanceof BranchInstructionLineView)) { throw new Error("Not a branch"); }
-        if (target) {
-            this.view.branchTarget = target;
-        } else {
-            this.view.branchTarget = undefined;
-        }
-    }
+    public abstract serialize(): any;
 
-    public changeView(view: InstructionLineView) {
-        this.view = view;
-        this.view._setParent(this);
-        this.elm.replaceContents(view);
-
-        const position = this.parentGroup.parentEditor.cursor.getPosition();
-        if (position) {
-            this.parentGroup.parentEditor.cursor.setPosition({
-                ...position,
-                char: view.preferredStartingCharOffset
-            });
-        }
-    }
-
-    public serialize() {
-        return this.view.serialize();
-    }
-
-    public getEditableIndexFromSelection(selection: Selection) {
-        return this.view.getEditableIndexFromSelection(selection);
-    }
-
-    public getEditableFromIndex(index: number) {
-        return this.view.editables[index];
-    }
-
-    public getLastEditableIndex() {
-        return this.view.editables.length - 1;
-    }
-
-    public getLastEditableCharacterIndex() {
-        return this.view.editables[this.view.editables.length - 1].getValue().length;
-    }
-
-    public getCurrentLine() {
-        return this.parentGroup.getLines().indexOf(this);
-    }
-
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return this.view.getAreas();
+    protected addLine(line: InstructionLine) {
+        this.lines.push(line);
+        line._setParent(this);
     }
 }
 
-export abstract class InstructionLineView extends Component {
-    public spanToEditable = new Map<HTMLSpanElement, Editable>();
-    public editables: Editable[] = [];
+export abstract class InstructionLine extends Component {
     public preferredStartingCharOffset = 0;
+    public parentInstruction!: Instruction;
 
-    protected parent!: InstructionLine;
     private areas: TextareaUserInputCaptureAreas = [];
+    private spanToEditable = new Map<HTMLSpanElement, Editable>();
+    private editables: Editable[] = [];
 
-    public _setParent(parent: InstructionLine) { this.parent = parent; }
+    constructor() {
+        super("instructionLine");
+    }
+
+    public _setParent(instruction: Instruction) {
+        this.parentInstruction = instruction;
+    }
 
     public getEditableIndexFromSelection(selection: Selection): number {
         const editable = this.getEditableFromSelection(selection);
@@ -181,8 +129,6 @@ export abstract class InstructionLineView extends Component {
         return null;
     }
 
-    public abstract serialize(): any;
-
     public getAreas(): TextareaUserInputCaptureAreas {
         return this.areas;
     }
@@ -203,6 +149,7 @@ export abstract class InstructionLineView extends Component {
             }
             this.elm.append(element);
         }
+        console.log(this.areas);
     }
 
     protected createEditable(text: string | number): Editable {
@@ -216,26 +163,99 @@ export abstract class InstructionLineView extends Component {
         this.editables.push(editable);
         return editable;
     }
+
+    public getEditableFromIndex(index: number) {
+        return this.editables[index];
+    }
+
+    public getLastEditableIndex() {
+        return this.editables.length - 1;
+    }
+
+    public getLastEditableCharacterIndex() {
+        return this.editables[this.editables.length - 1].getValue().length;
+    }
+
+    public getCurrentLine() {
+        return this.parentInstruction.parentGroup.getLines().indexOf(this);
+    }
 }
 
-abstract class BranchInstructionLineView extends InstructionLineView {
-    public branchTarget?: InstructionGroupEditor;
+export interface OneLineInstruction extends InstructionLine {
+    serialize(): any;
+    isBranch: boolean;
+}
+
+/**
+ * One-line instruction. Allows conviently declaring Instruction and it's line
+ * in one class.
+ */
+export class InstructionOneLine extends Instruction {
+    private line: OneLineInstruction;
+
+    constructor(line: OneLineInstruction) {
+        super();
+        this.line = line;
+        this.addLine(line);
+    }
+
+    public getBranchTargets(): InstructionGroupEditor[] | null {
+        if (this.line instanceof BranchInstructionLine) {
+            const branchTarget = this.line.getBranchTarget();
+            if (branchTarget) {
+                return [branchTarget];
+            }
+        }
+        return null;
+    }
+
+    public setBranchTargets(targets: (InstructionGroupEditor | null)[] | null): void {
+        if (this.line instanceof BranchInstructionLine) {
+            this.line.setBranchTarget(targets && targets[0]);
+        } else {
+            throw new Error("Not a branch");
+        }
+    }
+
+    public setBranchOffsets(offsets: (number | null)[]): any {
+        if (this.line instanceof BranchInstructionLine) {
+            return this.line.setBranchOffset(offsets[0] || 1);
+        } else {
+            throw new Error("Not a branch");
+        }
+    }
+
+    public isBranch(): boolean {
+        return this.line.isBranch;
+    }
+
+    public serialize(): any {
+        return this.line.serialize();
+    }
+
+    public export(): any[] {
+        return [this.serialize()];
+    }
+}
+
+export abstract class BranchInstructionLine extends InstructionLine {
+    public branchTarget: InstructionGroupEditor | null = null;
     public branchOffset: number = 0;
 
     private branchConnectElm: Elm;
 
-    constructor(name: string) {
-        super(name);
+    constructor() {
+        super();
         this.elm.append(this.branchConnectElm =
             new Elm().class("branchConnect").on("click", () => {
-                this.parent.parentGroup.parentEditor.cursor.setPosition({
-                    group: this.parent.parentGroup,
+                this.parentInstruction.parentGroup.parentEditor.cursor.setPosition({
+                    group: this.parentInstruction.parentGroup,
                     char: 0,
                     editable: 0,
-                    line: this.parent.getCurrentLine()
+                    line: this.getCurrentLine()
                 });
                 this.branchConnectElm.class("active");
-                this.parent.requestSelectInstructionGroup()
+                this.parentInstruction.requestSelectInstructionGroup()
                     .then(editor => {
                         this.branchConnectElm.removeClass("active");
                         if (editor) {
@@ -245,26 +265,32 @@ abstract class BranchInstructionLineView extends InstructionLineView {
             }));
     }
 
-    private setBranchTarget(editor: InstructionGroupEditor) {
-        this.branchTarget = editor;
+    public getBranchTarget() {
+        return this.branchTarget;
+    }
+
+    public setBranchOffset(branchOffset: number) {
+        this.branchOffset = branchOffset;
+    }
+
+    public setBranchTarget(target: InstructionGroupEditor | null) {
+        this.branchTarget = target;
     }
 }
 
-class JSONLine extends InstructionLineView {
+class JSONLine extends InstructionLine implements OneLineInstruction {
     private editable: JSONLineEditable;
     public preferredStartingCharOffset = 1;
+    public isBranch: boolean = false;
 
-    constructor(private data: any) {
-        super("jsonLine");
+    constructor(data: any) {
+        super();
         this.elm.append(this.editable = this.registerEditable(
             new JSONLineEditable(JSON.stringify(data))
         ));
+        this.editable.setParentLine(this);
     }
 
-    public _setParent(parent: InstructionLine): void {
-        super._setParent(parent);
-        this.editable.setParentLine(parent);
-    }
 
     public serialize(): any {
         return JSON.parse(this.editable.getValue());
@@ -304,13 +330,13 @@ class JSONLineEditable extends Editable {
             .split("\n");
         this.setValue(JSON.stringify(lines[0]));
 
-        const parentGroup = this.parentLine.parentGroup;
+        const parentGroup = this.parentLine.parentInstruction.parentGroup;
         const currentPosition = this.parentLine.getCurrentLine();
         let i;
         for (i = 1; i < lines.length; i++) {
             console.log(lines[i]);
-            parentGroup.insertInstructionLine(
-                new InstructionLine(
+            parentGroup.insertInstruction(
+                new InstructionOneLine(
                     new JSONLine(lines[i])
                 ),
                 currentPosition + i
@@ -329,13 +355,15 @@ class JSONLineEditable extends Editable {
 
 
 
-class ControlBranchLine extends BranchInstructionLineView {
+class ControlBranchLine extends BranchInstructionLine implements OneLineInstruction {
     private opSpan: Editable;
     private v1Span: Editable;
     private v2Span: Editable;
 
+    public isBranch: boolean = true;
+
     constructor(data: ControlBranch) {
-        super("controlBranchLine");
+        super();
 
         this.elm.append(
             "If ",
@@ -373,11 +401,12 @@ class ControlBranchLine extends BranchInstructionLineView {
 }
 
 
-class ControlJumpLine extends BranchInstructionLineView {
+class ControlJumpLine extends BranchInstructionLine implements OneLineInstruction {
     private editable = this.createEditable('');
+    public isBranch: boolean = true;
 
-    constructor(data: ControlJump) {
-        super("controlJumpLine");
+    constructor() {
+        super();
         this.elm.append('Goto...', this.editable).class("jump");
     }
 
@@ -391,14 +420,14 @@ class ControlJumpLine extends BranchInstructionLineView {
 }
 
 
-class ControlEndLine extends InstructionLineView {
+class ControlEndLine extends InstructionLine implements OneLineInstruction {
     private editable = this.createEditable('');
+    public isBranch: boolean = false;
 
-    constructor(data: ControlEnd) {
-        super("controlEndLine");
+    constructor() {
+        super();
         this.elm.append('End', this.editable).class("control");
     }
-
 
     public serialize(): ControlEnd {
         return { ctrl: 'end' };
@@ -410,12 +439,13 @@ class ControlEndLine extends InstructionLineView {
 }
 
 
-class ControlInputLine extends InstructionLineView {
+class ControlInputLine extends InstructionLine implements OneLineInstruction {
     private variableSpan: Editable;
     private choicesSpan: Editable;
+    public isBranch: boolean = false;
 
     constructor(data: ControlInput) {
-        super("controlInputLine");
+        super();
         this.elm.append(
             this.variableSpan = this.createEditable(data.variable),
             ' <- choose from [',
@@ -438,12 +468,13 @@ class ControlInputLine extends InstructionLineView {
 }
 
 
-class ControlVariableLine extends InstructionLineView {
+class ControlVariableLine extends InstructionLine implements OneLineInstruction {
     private variableSpan: Editable;
     private expressionSpan: Editable;
+    public isBranch: boolean = false;
 
     constructor(private data: ControlVariable) {
-        super("controlVariableLine");
+        super();
         this.variableSpan = this.createEditable(data.v1);
         this.expressionSpan = this.createEditable(
             data.op === "=" ?
@@ -462,12 +493,14 @@ class ControlVariableLine extends InstructionLineView {
     }
 }
 
-export class NewInstructionLine extends InstructionLineView {
+export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     private editable: Editable;
+    public isBranch: boolean = false;
 
     constructor() {
-        super("newInstructionLine");
+        super();
 
+        this.elm.class("newInstructionLine");
         this.elm.append(
             // this.editable = this.createEditable("Press one of [ibjved]...")
             this.editable = this.createEditable(`Press one of [divceg${pluginHooks.getKeyInstructionMappingKeys().join("")}]...`)
@@ -475,7 +508,7 @@ export class NewInstructionLine extends InstructionLineView {
 
         this.editable.onChange.subscribe(changes => {
             changes.reject(); // prevent updating
-            let newView;
+            let newView: OneLineInstruction;
             switch (changes.added && changes.added[0].toLowerCase()) {
                 // case "b":
                 case "i":
@@ -499,13 +532,10 @@ export class NewInstructionLine extends InstructionLineView {
                     break;
                 // case "j":
                 case "g":
-                    newView = new ControlJumpLine({
-                        ctrl: "jump",
-                        offset: 1
-                    });
+                    newView = new ControlJumpLine();
                     break;
                 case "e":
-                    newView = new ControlEndLine({ ctrl: "end" });
+                    newView = new ControlEndLine();
                     break;
                 case "v":
                     newView = new ControlVariableLine({
@@ -519,15 +549,16 @@ export class NewInstructionLine extends InstructionLineView {
                     newView = new JSONLine("");
                     break;
                 default:
-                    newView = pluginHooks.getInstructionFromKeyMappingKey(
+                    const instruction = pluginHooks.getInstructionFromKeyMappingKey(
                         changes.added[0].toLowerCase()
                     );
-                    if (!newView) {
-                        return;
+                    if (instruction) {
+                        this.changeView(instruction);
                     }
+                    return;
             }
 
-            this.parent.changeView(newView);
+            this.changeView(new InstructionOneLine(newView));
         });
     }
 
@@ -537,5 +568,21 @@ export class NewInstructionLine extends InstructionLineView {
 
     public getAreas(): TextareaUserInputCaptureAreas {
         return [this.editable];
+    }
+
+    public changeView(instruction: Instruction) {
+        const currentLine = this.getCurrentLine();
+        const position = this.parentInstruction.parentGroup.parentEditor.cursor.getPosition();
+        this.parentInstruction.parentGroup.removeInstructionLine(currentLine);
+        this.parentInstruction.parentGroup.insertInstruction(
+            instruction, currentLine
+        );
+
+        if (position) {
+            this.parentInstruction.parentGroup.parentEditor.cursor.setPosition({
+                ...position,
+                char: instruction.getLines()[0].preferredStartingCharOffset
+            });
+        }
     }
 }
