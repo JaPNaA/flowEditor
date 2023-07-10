@@ -29,7 +29,7 @@ export const pluginHooks = {
     },
 
     getInstructionFromKeyMappingKey(key: string) {
-        return plugin.keyMappings[key]();
+        return plugin.keyMappings[key]?.();
     },
 
     runInstruction(instruction: any) {

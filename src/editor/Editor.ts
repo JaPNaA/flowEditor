@@ -122,15 +122,19 @@ export class Editor extends WorldElmWithComponents {
         for (const group of this.groupEditors) {
             group.setEditMode();
         }
-        for (const selectedGroup of this.selectedGroups) {
-            this.cursor.setPosition({
-                group: selectedGroup,
-                line: 0,
-                editable: 0,
-                char: 0,
-            });
-            break; // only one
-        }
+
+        // focus selected group
+        setTimeout(() => {
+            for (const selectedGroup of this.selectedGroups) {
+                this.cursor.setPosition({
+                    group: selectedGroup,
+                    line: 0,
+                    editable: 0,
+                    char: 0,
+                });
+                break; // only one
+            }
+        }, 1);
     }
 
     public unsetEditMode() {
@@ -184,6 +188,7 @@ export class Editor extends WorldElmWithComponents {
         newEditor.rect.y = this.engine.mouse.worldPos.y;
         this.addGroup(newEditor);
         newEditor.insertNewInstructionLine(0);
+        this.setEditMode();
         this.cursor.setPosition({
             group: newEditor,
             line: 0,
