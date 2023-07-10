@@ -141,29 +141,28 @@ export class InstructionGroupEditor extends WorldElm {
     public relinkParentsToFinalBranch() {
         // todo: improve efficiency (currently scanning because child branches
         // don't report when they change targets)
-        let newTarget = undefined;
+        let newTarget: InstructionGroupEditor | null = null;
 
         for (const instruction of this.instructions) {
             if (instruction.isBranch()) {
-                newTarget = instruction.getBranchTargets();
+                newTarget = instruction.getBranchTargets()?.[0] || null;
             }
         }
 
         for (const editor of this.parentEditor.groupEditors) {
-            for (const line of editor.instructions) {
-                if (line.isBranch()) {
-                    const targets = line.getBranchTargets();
-                    const newTargets = [];
-                    if (targets) {
-                        for (const target of targets) {
-                            if (target === this) {
-                                newTargets.push(newTarget);
-                            } else {
-                                newTargets.push(target);
-                            }
+            for (const instruction of editor.instructions) {
+                if (!instruction.isBranch()) { continue; }
+                const targets = instruction.getBranchTargets();
+                const newTargets = [];
+                if (targets) {
+                    for (const target of targets) {
+                        if (target === this) {
+                            newTargets.push(newTarget);
+                        } else {
+                            newTargets.push(target);
                         }
-                        line.setBranchTargets(targets);
                     }
+                    instruction.setBranchTargets(newTargets);
                 }
             }
         }
@@ -182,7 +181,7 @@ export class InstructionGroupEditor extends WorldElm {
                 if (branchTargets) {
                     const uids = [];
                     for (const branchTarget of branchTargets) {
-                        uids.push(uidGen.getId(branchTarget));
+                        uids.push(branchTarget && uidGen.getId(branchTarget));
                     }
                     childrenUids.push(uids);
                 } else {
@@ -343,10 +342,9 @@ export class InstructionGroupEditor extends WorldElm {
     public insertInstruction(instruction: Instruction, position: number) {
         const lines = instruction.getLines();
         if (position < this.lines.length) {
-            let lastPosition = this.lines[position].elm.getHTMLElement();
-            for (let i = 0; i < lines.length; i++) {
-                this.elm.getHTMLElement().insertBefore(lines[i].elm.getHTMLElement(), lastPosition);
-                lastPosition = lines[i].elm.getHTMLElement();
+            const lastPosition = this.lines[position].elm.getHTMLElement();
+            for (const line of lines) {
+                this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), lastPosition);
             }
         } else {
             for (const line of lines) {
