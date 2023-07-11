@@ -9,6 +9,7 @@ export class ExecuterContainer extends Component {
     private runner?: FlowRunner;
     private paused = false;
     private lastChoice: any[] = [];
+    private outputDisplays: Elm;
 
     constructor() {
         super("executerContainer");
@@ -33,6 +34,7 @@ export class ExecuterContainer extends Component {
                     }
                 })
             ),
+            this.outputDisplays = new Elm().class("outputDisplays"),
             this.log,
             this.input
         );
@@ -45,12 +47,18 @@ export class ExecuterContainer extends Component {
         };
     }
 
+    public addOutputDisplay(elm: Elm) {
+        this.outputDisplays.append(elm);
+    }
+
     private execute() {
         const compiled = appHooks.getCompiledFlowFromEditor();
         console.log(compiled);
         this.log.clear();
         this.input.clear();
+        pluginHooks.stopExecution();
         this.runner = new FlowRunner({ flow: compiled });
+        pluginHooks.startExecution();
         this.continueExecute();
     }
 

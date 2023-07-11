@@ -1,4 +1,5 @@
 import { Instruction } from "../editor/instructionLines";
+import { ExecuterContainer } from "../executer/ExecuterContainer";
 
 export interface EditorPlugin {
     keyMappings: { [x: string]: () => Instruction };
@@ -7,5 +8,7 @@ export interface EditorPlugin {
 }
 
 export interface Executer {
+    start(executerContainer: ExecuterContainer): Promise<void>;
     run(data: any): Promise<void> | null;
+    stop(): Promise<void>;
 }

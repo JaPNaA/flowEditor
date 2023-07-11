@@ -3,6 +3,7 @@ import { Editable } from "../../editor/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instructionLines.js";
 import { EditorPlugin } from "../EditorPlugin.js";
+import { VisualNovelExecuter } from "./executer.js";
 
 export default class VisualNovelPlugin implements EditorPlugin {
     keyMappings: { [x: string]: () => Instruction; } = {
@@ -16,19 +17,6 @@ export default class VisualNovelPlugin implements EditorPlugin {
             return new InstructionOneLine(new SayInstruction(data.char, data.text));
         } else if (data.visualNovelCtrl === "choiceBranch") {
             return new ChoiceBranchMacro(data.choices);
-        }
-    }
-}
-
-
-class VisualNovelExecuter {
-    run(data: any): Promise<void> | null {
-        console.log(data);
-        if (data.visualNovelCtrl === "say") {
-            alert(data.char + " says '" + data.text + "'");
-            return Promise.resolve();
-        } else {
-            return null;
         }
     }
 }
