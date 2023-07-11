@@ -20,13 +20,16 @@ export class VisualNovelExecuter implements Executer {
         if (!this.game) { return Promise.reject("Game not started"); }
 
         if (data.visualNovelCtrl === "say") {
+            this.executerContainer.log.log(`${data.char}: "${data.text}"`);
             return this.game.characterSay(data.char, data.text);
         } else if (data.visualNovelCtrl === "background") {
+            this.executerContainer.log.log(`Background set to ${data.background}`);
             this.game.setBackground(data.background);
             return Promise.resolve();
         } else if (data.visualNovelCtrl === "choose") {
             return this.game.requestChoice(data.options)
                 .then(val => {
+                    this.executerContainer.log.logSecondary(`<- ${data.options[val]}`);
                     this.executerContainer.writeVariable("__choice__", val);
                 });
         } else {

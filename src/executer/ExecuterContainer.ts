@@ -4,7 +4,7 @@ import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { download, requestFile, stringToBlob } from "../utils.js";
 
 export class ExecuterContainer extends Component {
-    private log = new OutputLog();
+    public log = new OutputLog();
     private input = new ChooseInput();
     private runner?: FlowRunner;
     private paused = false;
