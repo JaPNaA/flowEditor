@@ -73,6 +73,9 @@ export class ExecuterContainer extends Component {
             this.runner.runOne();
             this.processOutput(this.runner.getOutput());
         }
+        if (!this.runner.isActive()) {
+            this.log.logSecondary("-- End --");
+        }
     }
 
     private processOutput(output: FlowRunnerOutput | null) {
