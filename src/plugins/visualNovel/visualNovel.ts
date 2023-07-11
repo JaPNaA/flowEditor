@@ -8,15 +8,21 @@ import { VisualNovelExecuter } from "./executer.js";
 export default class VisualNovelPlugin implements EditorPlugin {
     keyMappings: { [x: string]: () => Instruction; } = {
         "s": () => new InstructionOneLine(new SayInstruction("", "")),
-        "b": () => new ChoiceBranchMacro(["a", "b"])
+        "b": () => new ChoiceBranchMacro(["a", "b"]),
+        "h": () => new InstructionOneLine(new BackgroundInstruction("#000"))
     };
     executer = new VisualNovelExecuter();
 
     parse(data: any): Instruction | undefined {
-        if (data.visualNovelCtrl === "say") {
-            return new InstructionOneLine(new SayInstruction(data.char, data.text));
-        } else if (data.visualNovelCtrl === "choiceBranch") {
-            return new ChoiceBranchMacro(data.choices);
+        switch (data.visualNovelCtrl) {
+            case "say":
+                return new InstructionOneLine(new SayInstruction(data.char, data.text));
+            case "choiceBranch":
+                return new ChoiceBranchMacro(data.choices);
+            case "background":
+                return new InstructionOneLine(new BackgroundInstruction(data.background));
+            default:
+                return;
         }
     }
 }
@@ -39,6 +45,24 @@ class SayInstruction extends InstructionLine implements OneLineInstruction {
 
     public serialize() {
         return { visualNovelCtrl: "say", char: this.characterEditable.getValue(), text: this.textEditable.getValue() };
+    }
+}
+
+class BackgroundInstruction extends InstructionLine implements OneLineInstruction {
+    private backgroundEditable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(background: string) {
+        super();
+
+        this.setAreas(
+            "Set background: ",
+            this.backgroundEditable = this.createEditable(background)
+        );
+    }
+
+    public serialize() {
+        return { visualNovelCtrl: "background", background: this.backgroundEditable.getValue() };
     }
 }
 
@@ -93,10 +117,9 @@ class ChoiceBranchMacro extends Instruction {
 
     public export() {
         const choices = this.getChoices();
-        const output: ControlItem[] = [{
-            ctrl: "input",
-            options: choices,
-            variable: "__choice__"
+        const output: any[] = [{
+            visualNovelCtrl: "choose",
+            options: choices
         }];
         for (let i = 0; i < choices.length - 1; i++) {
             const offset = this.branchOffsets[i];

@@ -18,6 +18,11 @@ export class FlowRunner {
         this.active = true;
     }
 
+    /** Sets a variable's value */
+    public setVariable(key: string, value: number) {
+        this.variables.set(key, value);
+    }
+
     /** Gets the output of the flow runner */
     public getOutput(): FlowRunnerOutput | null {
         return this.output;

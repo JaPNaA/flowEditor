@@ -1,14 +1,16 @@
 import { ExecuterContainer } from "../../executer/ExecuterContainer.js";
-import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Collidable, EventBus, Hitbox, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
 import { Executer } from "../EditorPlugin.js";
 
 export class VisualNovelExecuter implements Executer {
     private elm = new Elm().class("visualNovelExecuter").attribute("style", "height: 50vh");
     private game?: VisualNovelGame;
+    private executerContainer!: ExecuterContainer;
 
     public start(executerContainer: ExecuterContainer): Promise<void> {
-        executerContainer.addOutputDisplay(this.elm);
+        this.executerContainer = executerContainer;
+        this.executerContainer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
 
         return Promise.resolve();
@@ -19,6 +21,14 @@ export class VisualNovelExecuter implements Executer {
 
         if (data.visualNovelCtrl === "say") {
             return this.game.characterSay(data.char, data.text);
+        } else if (data.visualNovelCtrl === "background") {
+            this.game.setBackground(data.background);
+            return Promise.resolve();
+        } else if (data.visualNovelCtrl === "choose") {
+            return this.game.requestChoice(data.options)
+                .then(val => {
+                    this.executerContainer.writeVariable("__choice__", val);
+                });
         } else {
             return null;
         }
@@ -33,14 +43,18 @@ export class VisualNovelExecuter implements Executer {
 class VisualNovelGame {
     private engine: JaPNaAEngine2d;
 
+    private chooser = new Chooser();
     private speechBubble = new SpeechBubble();
+    private background = new Background();
 
     constructor(parentElm: HTMLElement) {
         this.engine = new JaPNaAEngine2d({
             sizing: { width: 1280, height: 720 },
             parentElement: parentElm
         });
+        this.engine.world.addElm(this.background);
         this.engine.world.addElm(this.speechBubble);
+        this.engine.world.addElm(this.chooser);
     }
 
     public async characterSay(charName: string, text: string) {
@@ -49,8 +63,89 @@ class VisualNovelGame {
         await this.speechBubble.onNextRequested.promise();
     }
 
+    public async requestChoice(choices: string[]) {
+        this.chooser.requestChoice(choices);
+        const val = await this.chooser.onChosen.promise();
+        this.chooser.clear();
+        return val;
+    }
+
+    public setBackground(background: string) {
+        this.background.set(background);
+    }
+
     public dispose() {
         this.engine.dispose();
+    }
+}
+
+class Chooser extends WorldElmWithComponents {
+    private elm = new Elm();
+    public onChosen = new EventBus<number>();
+
+    constructor() {
+        super();
+        const style = this.elm.getHTMLElement().style;
+        style.textAlign = "center";
+        style.paddingTop = "64px";
+    }
+
+    public _setEngine(engine: JaPNaAEngine2d): void {
+        super._setEngine(engine);
+        this.engine.htmlOverlay.elm.append(this.elm);
+    }
+
+    public requestChoice(choices: string[]) {
+        let i = 0;
+        for (const choice of choices) {
+            const cc = new ChooserChoice(choice, i, this);
+            this.elm.append(cc);
+            i++;
+        }
+    }
+
+    public clear() {
+        this.elm.clear();
+    }
+
+    public remove(): void {
+        super.remove();
+        this.elm.remove();
+    }
+}
+
+class ChooserChoice extends Elm {
+    constructor(public text: string, public index: number, private parent: Chooser) {
+        super();
+        this.elm.style.width = "500px";
+        this.elm.style.margin = "16px auto";
+        this.elm.style.backgroundColor = "#000";
+        this.elm.style.fontSize = "32px";
+        this.elm.style.color = "#aaa";
+        this.elm.style.textAlign = "center";
+        this.elm.style.padding = "16px";
+        this.elm.style.cursor = "pointer";
+        this.elm.style.pointerEvents = "all";
+
+        this.onActivate(() => {
+            this.parent.onChosen.send(index);
+        });
+
+        this.append(text);
+    }
+}
+
+class Background extends WorldElm {
+    private color: string = "#000";
+
+    public draw() {
+        const X = this.engine.canvas.X;
+        X.fillStyle = this.color;
+        X.fillRect(0, 0, this.engine.sizer.width, this.engine.sizer.height);
+    }
+
+    public set(background: string) {
+        this.color = background;
     }
 }
 

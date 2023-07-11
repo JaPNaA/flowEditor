@@ -109,7 +109,8 @@
 
 .instructionLine .branchConnect {
     cursor: pointer;
-    pointer-events: all; /* override allow clicks outside edit mode */
+    pointer-events: all;
+    /* override allow clicks outside edit mode */
     position: absolute;
     right: 8px;
 }

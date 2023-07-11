@@ -32,8 +32,16 @@ export const pluginHooks = {
         return plugin.keyMappings[key]?.();
     },
 
+    startExecution(): Promise<void> {
+        return plugin.executer.start(executerContainer);
+    },
+
     runInstruction(instruction: any) {
         return plugin.executer.run(instruction);
+    },
+
+    stopExecution() {
+        return plugin.executer.stop();
     }
 };
 

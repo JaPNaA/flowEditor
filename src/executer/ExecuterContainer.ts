@@ -47,6 +47,10 @@ export class ExecuterContainer extends Component {
         };
     }
 
+    public writeVariable(key: string, value: number) {
+        this.runner?.setVariable(key, value);
+    }
+
     public addOutputDisplay(elm: Elm) {
         this.outputDisplays.append(elm);
     }
