@@ -22,6 +22,9 @@ export class VisualNovelExecuter implements Executer {
         if (data.visualNovelCtrl === "say") {
             this.executerContainer.log.log(`${data.char}: "${data.text}"`);
             return this.game.characterSay(data.char, data.text);
+        } else if (data.visualNovelCtrl === "display") {
+            this.executerContainer.log.log(data.text);
+            return this.game.characterSay("", data.text);
         } else if (data.visualNovelCtrl === "background") {
             this.executerContainer.log.log(`Background set to ${data.background}`);
             this.game.setBackground(data.background);
@@ -122,9 +125,9 @@ class ChooserChoice extends Elm {
         super();
         this.elm.style.width = "500px";
         this.elm.style.margin = "16px auto";
-        this.elm.style.backgroundColor = "#000";
+        this.elm.style.backgroundColor = "#000a";
         this.elm.style.fontSize = "32px";
-        this.elm.style.color = "#aaa";
+        this.elm.style.color = "#fffa";
         this.elm.style.textAlign = "center";
         this.elm.style.padding = "16px";
         this.elm.style.cursor = "pointer";
@@ -222,7 +225,7 @@ class SpeechBubbleElm extends Elm {
         this.elm.style.border = "2px solid #888";
         this.elm.style.borderRadius = "8px";
         this.elm.style.padding = "16px";
-        this.elm.style.color = "#aaa";
+        this.elm.style.color = "#fffa";
         this.elm.style.backgroundColor = "#0008";
     }
 
