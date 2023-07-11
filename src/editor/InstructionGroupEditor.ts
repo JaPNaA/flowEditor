@@ -298,9 +298,11 @@ export class InstructionGroupEditor extends WorldElm {
     private render() {
         const elm = this.elm.getHTMLElement();
         const font = `${InstructionGroupEditor.fontSize}px monospace`;
-        elm.style.font = font;
+        const width = 720;
 
-        const width = 460;
+        elm.style.font = font;
+        elm.style.width = width + "px";
+
 
         for (const instruction of this.data.instructions) {
             this.addInstructionLine(instruction);
