@@ -57,7 +57,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     private mousedownHandler() {
-        if (this.engine.keyboard.isDown(["Space"])) { return; }
+        if (this.engine.keyboard.isDown(["Space"]) || this.engine.mouse.rightDown) { return; }
 
         const collisions = this.engine.collisions.getCollisionsWith(
             new RectangleM(this.engine.mouse.worldPos.x, this.engine.mouse.worldPos.y, 1, 1)
@@ -145,13 +145,12 @@ export class Editor extends WorldElmWithComponents {
     }
 
     private mousedragHandler(ev: MouseEvent) {
-        if (!this.engine.mouse.leftDown) { return; }
 
         const scale = this.engine.camera.scale;
-        if (this.engine.keyboard.isDown(["Space"])) {
+        if (this.engine.keyboard.isDown(["Space"]) || this.engine.mouse.rightDown) {
             // move camera
             this.engine.camera.move(-ev.movementX / scale, -ev.movementY / scale);
-        } else {
+        } else if (this.engine.mouse.leftDown) {
             if (this.movingGroups) {
                 // drag selected
                 for (const group of this.selectedGroups) {
