@@ -149,7 +149,6 @@ export abstract class InstructionLine extends Component {
             }
             this.elm.append(element);
         }
-        console.log(this.areas);
     }
 
     protected createEditable(text: string | number): Editable {
@@ -469,23 +468,72 @@ class ControlInputLine extends InstructionLine implements OneLineInstruction {
 
 
 class ControlVariableLine extends InstructionLine implements OneLineInstruction {
-    private variableSpan: Editable;
-    private expressionSpan: Editable;
     public isBranch: boolean = false;
 
-    constructor(private data: ControlVariable) {
+    private static expressionRegex = /^\s*([-+*])\s*([^+*]+)\s*$/;
+    private static warningRegex = /^\s*\//;
+    private variableSpan: Editable;
+    private expressionSpan: Editable;
+
+    constructor(data: ControlVariable) {
         super();
         this.variableSpan = this.createEditable(data.v1);
+        let op: string = data.op;
+        let v2 = data.v2;
+
+        if (op === "+" && typeof v2 === "number" && v2 < 0) {
+            v2 *= -1;
+            op = "-";
+        }
+
         this.expressionSpan = this.createEditable(
             data.op === "=" ?
-                data.v2 : `${data.v1} ${data.op} ${data.v2}`
+                data.v2 : `${op}${v2}`
         );
         this.elm.append(this.variableSpan, " <- ", this.expressionSpan).class("control");
     }
 
     public serialize(): ControlVariable {
-        console.warn("control variable serialize not implemented");
-        return this.data;
+        const expression = this.expressionSpan.getValue();
+        const match = expression.match(ControlVariableLine.expressionRegex);
+        const v1 = this.variableSpan.getValue().trim();
+        if (expression.match(ControlVariableLine.warningRegex)) {
+            console.warn("Cannot divide (/) in a variable line");
+        }
+
+        if (match) {
+            let op = match[1];
+            let v2 = this.stringToNumberIfIs(match[2]);
+            if (op === "-") {
+                if (typeof v2 === "string") {
+                    throw new Error("Cannot subtract variables. Please *-1 and then +");
+                }
+                op = "+";
+                v2 *= -1;
+            }
+
+            return {
+                ctrl: "variable",
+                v1: v1,
+                op: op as "+" | "*",
+                v2: v2
+            };
+        } else {
+            return {
+                ctrl: "variable",
+                v1: v1,
+                op: "=",
+                v2: this.stringToNumberIfIs(expression.trim())
+            };
+        }
+    }
+
+    private stringToNumberIfIs(str: string): string | number {
+        if (str.match(/^-?\d+(\.\d*)?$/)) {
+            return parseFloat(str);
+        } else {
+            return str;
+        }
     }
 
     public getAreas(): TextareaUserInputCaptureAreas {
