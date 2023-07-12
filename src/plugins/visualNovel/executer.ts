@@ -1,7 +1,8 @@
 import { ExecuterContainer } from "../../executer/ExecuterContainer.js";
-import { Collidable, EventBus, Hitbox, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
 import { Executer } from "../EditorPlugin.js";
+import { ControlBackground, isVisualNovelControlItem } from "./controls.js";
 
 export class VisualNovelExecuter implements Executer {
     private elm = new Elm().class("visualNovelExecuter").attribute("style", "height: 50vh");
@@ -18,6 +19,7 @@ export class VisualNovelExecuter implements Executer {
 
     public run(data: any): Promise<void> | null {
         if (!this.game) { return Promise.reject("Game not started"); }
+        if (!isVisualNovelControlItem(data)) { return null; }
 
         if (data.visualNovelCtrl === "say") {
             this.executerContainer.log.log(`${data.char}: "${data.text}"`);
@@ -26,8 +28,8 @@ export class VisualNovelExecuter implements Executer {
             this.executerContainer.log.log(data.text);
             return this.game.characterSay("", data.text);
         } else if (data.visualNovelCtrl === "background") {
-            this.executerContainer.log.log(`Background set to ${data.background}`);
-            this.game.setBackground(data.background);
+            this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
+            this.game.setBackground(data);
             return Promise.resolve();
         } else if (data.visualNovelCtrl === "choose") {
             return this.game.requestChoice(data.options)
@@ -76,7 +78,7 @@ class VisualNovelGame {
         return val;
     }
 
-    public setBackground(background: string) {
+    public setBackground(background: ControlBackground) {
         this.background.set(background);
     }
 
@@ -127,7 +129,7 @@ class ChooserChoice extends Elm {
         this.elm.style.margin = "16px auto";
         this.elm.style.backgroundColor = "#000a";
         this.elm.style.fontSize = "32px";
-        this.elm.style.color = "#fffa";
+        this.elm.style.color = "#fffc";
         this.elm.style.textAlign = "center";
         this.elm.style.padding = "16px";
         this.elm.style.cursor = "pointer";
@@ -143,15 +145,51 @@ class ChooserChoice extends Elm {
 
 class Background extends WorldElm {
     private color: string = "#000";
+    private image?: HTMLImageElement;
+    private zoom: number = 1;
+    private focusX: number = 0;
+    private focusY: number = 0;
+
+    private imageLoaded = false;
 
     public draw() {
         const X = this.engine.canvas.X;
         X.fillStyle = this.color;
         X.fillRect(0, 0, this.engine.sizer.width, this.engine.sizer.height);
+
+        if (this.image && this.imageLoaded) {
+            const screenRatio = this.engine.sizer.width / this.engine.sizer.height;
+            const imageRatio = this.image.width / this.image.height;
+            let scale;
+            if (screenRatio > imageRatio) {
+                // match width
+                scale = this.engine.sizer.width / this.image.width;
+            } else {
+                // match height
+                scale = this.engine.sizer.height / this.image.height;
+            }
+            scale *= this.zoom;
+
+            let x = (this.engine.sizer.width - this.image.width * scale) * this.focusX;
+            let y = (this.engine.sizer.height - this.image.height * scale) * this.focusY;
+            X.drawImage(this.image, x, y, this.image.width * scale, this.image.height * scale);
+        }
     }
 
-    public set(background: string) {
-        this.color = background;
+    public set(background: ControlBackground) {
+        if (background.src) {
+            this.image = new Image();
+            this.image.src = background.src;
+            this.imageLoaded = false;
+            this.image.onload = () => this.imageLoaded = true;
+        } else {
+            this.image = undefined;
+        }
+
+        this.color = background.color ? "#" + background.color : "#fff";
+        this.zoom = background.zoom === undefined ? 1 : background.zoom;
+        this.focusX = background.x === undefined ? 0.5 : background.x / 100;
+        this.focusY = background.y === undefined ? 0.5 : background.y / 100;
     }
 }
 
@@ -225,7 +263,7 @@ class SpeechBubbleElm extends Elm {
         this.elm.style.border = "2px solid #888";
         this.elm.style.borderRadius = "8px";
         this.elm.style.padding = "16px";
-        this.elm.style.color = "#fffa";
+        this.elm.style.color = "#fffc";
         this.elm.style.backgroundColor = "#0008";
     }
 

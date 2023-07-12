@@ -2,6 +2,7 @@ import { Editable } from "../../editor/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instructionLines.js";
 import { EditorPlugin } from "../EditorPlugin.js";
+import { ControlBackground } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 
 export default class VisualNovelPlugin implements EditorPlugin {
@@ -9,7 +10,10 @@ export default class VisualNovelPlugin implements EditorPlugin {
         "s": () => new InstructionOneLine(new SayInstruction("", "")),
         "t": () => new InstructionOneLine(new DisplayInstruction("")),
         "b": () => new ChoiceBranchMacro(["a", "b"]),
-        "h": () => new InstructionOneLine(new BackgroundInstruction("#000"))
+        "h": () => new InstructionOneLine(new BackgroundInstruction({
+            visualNovelCtrl: "background",
+            color: "000"
+        }))
     };
     executer = new VisualNovelExecuter();
 
@@ -22,7 +26,7 @@ export default class VisualNovelPlugin implements EditorPlugin {
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
-                return new InstructionOneLine(new BackgroundInstruction(data.background));
+                return new InstructionOneLine(new BackgroundInstruction(data));
             default:
                 return;
         }
@@ -73,17 +77,41 @@ class BackgroundInstruction extends InstructionLine implements OneLineInstructio
     private backgroundEditable: Editable;
     public isBranch: boolean = false;
 
-    constructor(background: string) {
+    constructor(data: ControlBackground) {
         super();
 
         this.setAreas(
             "Set background: ",
-            this.backgroundEditable = this.createEditable(background)
+            this.backgroundEditable = this.createEditable(
+                data.background || [
+                    data.src,
+                    data.color && "#" + data.color,
+                    data.zoom,
+                    data.x || data.y ? `${data.x || 0},${data.y || 0}` : undefined
+                ].filter(x => x !== undefined).join(" ")
+            )
         );
     }
 
     public serialize() {
-        return { visualNovelCtrl: "background", background: this.backgroundEditable.getValue() };
+        const parts = this.backgroundEditable.getValue().trim().split(" ");
+        const data: ControlBackground = { visualNovelCtrl: "background" };
+
+        for (const part of parts) {
+            if (part.startsWith("#")) { // color: #fff
+                data.color = part.slice(1);
+            } else if (part.match(/^-?\d+(\.\d*)?,-?\d+(\.\d*)?$/)) { // vec2: 0,2.5
+                const [x, y] = part.split(",").map(x => parseFloat(x));
+                data.x = x;
+                data.y = y;
+            } else if (part.match(/^-?\d+(\.\d*)?$/)) { // number: 3.2
+                data.zoom = parseFloat(part);
+            } else {
+                data.src = part;
+            }
+        }
+
+        return data;
     }
 }
 
