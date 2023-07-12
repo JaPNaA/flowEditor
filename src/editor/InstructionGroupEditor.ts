@@ -45,7 +45,11 @@ export class InstructionGroupEditor extends WorldElm {
     public onCursorInput(position: EditorCursorPositionAbsolute, ev: UserInputEvent) {
         if (ev.isRejected()) {
             if (ev.added.includes("\n")) {
-                this.insertLineAndUpdateCursor(position.line + 1);
+                if (position.editable === 0 && position.char === 0) {
+                    this.insertLineAndUpdateCursor(position.line);
+                } else {
+                    this.insertLineAndUpdateCursor(position.line + 1);
+                }
             }
         }
     }
@@ -64,6 +68,14 @@ export class InstructionGroupEditor extends WorldElm {
                     line: targetLine - 1,
                     editable: previousLine.getLastEditableIndex(),
                     char: previousLine.getLastEditableCharacterIndex()
+                });
+            } else {
+                this.removeInstructionLine(targetLine);
+                this.parentEditor.cursor.setPosition({
+                    group: this,
+                    line: 0,
+                    editable: 0,
+                    char: 0
                 });
             }
         }

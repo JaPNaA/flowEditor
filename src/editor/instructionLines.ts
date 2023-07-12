@@ -551,13 +551,14 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.elm.class("newInstructionLine");
         this.elm.append(
             // this.editable = this.createEditable("Press one of [ibjved]...")
-            this.editable = this.createEditable(`Press one of [divceg${pluginHooks.getKeyInstructionMappingKeys().join("")}]...`)
+            this.editable = this.createEditable(""),
+            `Press one of [divceg${pluginHooks.getKeyInstructionMappingKeys().join("")}]...`
         );
 
         this.editable.onChange.subscribe(changes => {
             changes.reject(); // prevent updating
             let newView: OneLineInstruction;
-            switch (changes.added && changes.added[0].toLowerCase()) {
+            switch (changes.newContent && changes.newContent[0].toLowerCase()) {
                 // case "b":
                 case "i":
                     newView = new ControlBranchLine({
@@ -597,8 +598,9 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                     newView = new JSONLine("");
                     break;
                 default:
+                    if (!changes.newContent) { return; }
                     const instruction = pluginHooks.getInstructionFromKeyMappingKey(
-                        changes.added[0].toLowerCase()
+                        changes.newContent[0].toLowerCase()
                     );
                     if (instruction) {
                         this.changeView(instruction);
