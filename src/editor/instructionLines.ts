@@ -568,7 +568,7 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
     }
 }
 
-class NewInstruction extends InstructionOneLine<NewInstructionLine> {
+export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     constructor() {
         super(new NewInstructionLine());
     }
@@ -579,7 +579,7 @@ class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     }
 }
 
-export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
+class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     private editable: Editable;
     public isBranch: boolean = false;
 

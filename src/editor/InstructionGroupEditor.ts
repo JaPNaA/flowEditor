@@ -3,7 +3,7 @@ import { EditorCursorPositionAbsolute } from "./EditorCursor.js";
 import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./TextareaUserInputCapture.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData } from "./flowToInstructionData.js";
-import { BranchInstructionLine, Instruction, InstructionLine } from "./instructionLines.js";
+import { BranchInstructionLine, Instruction, InstructionLine, NewInstruction } from "./instructionLines.js";
 import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 
@@ -70,17 +70,22 @@ export class InstructionGroupEditor extends WorldElm {
                     char: previousLine.getLastEditableCharacterIndex()
                 });
             } else {
+                const removedLine = this.lines[targetLine];
                 this.requestRemoveLine(targetLine);
                 if (this.lines.length <= 0) {
-                    this.parentEditor.removeGroup(this);
-                } else {
-                    this.parentEditor.cursor.setPosition({
-                        group: this,
-                        line: 0,
-                        editable: 0,
-                        char: 0
-                    });
+                    if (removedLine.parentInstruction instanceof NewInstruction) {
+                        this.parentEditor.removeGroup(this);
+                        return;
+                    } else {
+                        this.requestNewLine(0);
+                    }
                 }
+                this.parentEditor.cursor.setPosition({
+                    group: this,
+                    line: 0,
+                    editable: 0,
+                    char: 0
+                });
             }
         }
     }
@@ -404,7 +409,7 @@ export class InstructionGroupEditor extends WorldElm {
             );
         } else {
             const instructionLine = Instruction.fromData({ ctrl: 'nop' });
-            return this.insertInstruction(instructionLine, this.instructions.length);
+            return this.insertInstruction(instructionLine, 0);
         }
     }
 
