@@ -35,12 +35,11 @@ export class TextareaUserInputCapture {
 
         // chrome support
         // from https://stackoverflow.com/a/53999418
-        this.inputCapture.on('keydown', () => setTimeout(() => this.checkCursorPosition(), 1));
-        this.inputCapture.on('input', () => this.checkCursorPosition()); // Other input events
-        this.inputCapture.on('paste', () => this.checkCursorPosition()); // Clipboard actions
-        this.inputCapture.on('cut', () => this.checkCursorPosition());
-        this.inputCapture.on('select', () => this.checkCursorPosition()); // Some browsers support this event
-        this.inputCapture.on('selectstart', () => this.checkCursorPosition()); // Some browsers support this event
+        this.inputCapture.on("keydown", () => setTimeout(() => this.checkCursorPosition(), 1));
+        this.inputCapture.on("paste", () => this.checkCursorPosition()); // Clipboard actions
+        this.inputCapture.on("cut", () => this.checkCursorPosition());
+        this.inputCapture.on("select", () => this.checkCursorPosition()); // Some browsers support this event
+        this.inputCapture.on("selectstart", () => this.checkCursorPosition()); // Some browsers support this event
     }
 
     private checkCursorPosition() {
