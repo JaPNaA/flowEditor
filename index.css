@@ -82,6 +82,8 @@
 
 .instructionLine {
     white-space: pre-wrap;
+    line-height: 1.25;
+    min-height: 1.25em;
 }
 
 .instructionLine.jump {
