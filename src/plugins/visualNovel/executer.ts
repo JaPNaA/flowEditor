@@ -75,6 +75,15 @@ class VisualNovelGame {
     public async characterSay(charName: string, text: string) {
         console.log(charName, text);
         this.speechBubble.write(charName, text);
+
+        if (this.engine.mouse.rightDown) {
+            // skip
+            this.speechBubble.showAllChars();
+            return new Promise<void>(res => {
+                setTimeout(res, 50);
+            });
+        }
+
         await this.speechBubble.onNextRequested.promise();
     }
 
@@ -275,7 +284,7 @@ class SpeechBubble extends WorldElmWithComponents {
             if (this.isDone) {
                 this.onNextRequested.send();
             } else {
-                this.charsShowing = this.fullText.length;
+                this.showAllChars();
             }
         });
     }
@@ -287,6 +296,10 @@ class SpeechBubble extends WorldElmWithComponents {
         this.characterName = character;
         this.fullText = text;
         console.log(this);
+    }
+
+    public showAllChars() {
+        this.charsShowing = this.fullText.length;
     }
 
     public tick(): void {
