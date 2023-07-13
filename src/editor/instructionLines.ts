@@ -35,7 +35,7 @@ export abstract class Instruction {
             case "variable":
                 return new InstructionOneLine(new ControlVariableLine(data));
             case "nop":
-                return new InstructionOneLine(new NewInstructionLine());
+                return new NewInstruction();
             default:
                 // unknown control
                 return new InstructionOneLine(new JSONLine(data));
@@ -205,10 +205,10 @@ export interface OneLineInstruction extends InstructionLine {
  * One-line instruction. Allows conviently declaring Instruction and it's line
  * in one class.
  */
-export class InstructionOneLine extends Instruction {
-    private line: OneLineInstruction;
+export class InstructionOneLine<T extends OneLineInstruction> extends Instruction {
+    protected line: T;
 
-    constructor(line: OneLineInstruction) {
+    constructor(line: T) {
         super();
         this.line = line;
         this.addLine(line);
@@ -568,6 +568,17 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
     }
 }
 
+class NewInstruction extends InstructionOneLine<NewInstructionLine> {
+    constructor() {
+        super(new NewInstructionLine());
+    }
+
+    public insertLine(_lineIndex: number): boolean {
+        this.line.splitGroupHere();
+        return true;
+    }
+}
+
 export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     private editable: Editable;
     public isBranch: boolean = false;
@@ -578,12 +589,11 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.elm.class("newInstructionLine");
         this.elm.append(
             // this.editable = this.createEditable("Press one of [ibjved]...")
-            this.editable = this.createEditable(""),
+            this.editable = this.registerEditable(new NewInstructionEditable()),
             `Press one of [divceg${pluginHooks.getKeyInstructionMappingKeys().join("")}]...`
         );
 
         this.editable.onChange.subscribe(changes => {
-            changes.reject(); // prevent updating
             let newView: OneLineInstruction;
             switch (changes.newContent && changes.newContent[0].toLowerCase()) {
                 // case "b":
@@ -624,7 +634,11 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 case "d":
                     newView = new JSONLine("");
                     break;
+                case "\n":
+                    this.splitGroupHere();
+                    return;
                 default:
+                    changes.reject(); // prevent updating
                     if (!changes.newContent) { return; }
                     const instruction = pluginHooks.getInstructionFromKeyMappingKey(
                         changes.newContent[0].toLowerCase()
@@ -637,6 +651,40 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 
             this.changeView(new InstructionOneLine(newView));
         });
+    }
+
+    public splitGroupHere() {
+        const group = this.parentInstruction.parentGroup;
+        const editor = group.parentEditor;
+        const instructions = this.parentInstruction.parentGroup.getInstructions();
+        const movingInstructions = [];
+        const numMoving = instructions.length - this.parentInstruction.getIndex();
+        for (let i = 0; i < numMoving; i++) {
+            const instruction = instructions[instructions.length - 1];
+            this.parentInstruction.parentGroup.removeInstruction(instructions.length - 1);
+            movingInstructions.push(instruction);
+        }
+        movingInstructions.pop(); // remove NewInstructionLine
+        movingInstructions.reverse();
+
+        group.updateHeight();
+
+        const newGroup = new InstructionGroupEditor(editor, {
+            x: group.rect.x,
+            y: group.rect.bottomY() + 64,
+            branches: [],
+            instructions: []
+        });
+        let i = 0;
+        for (const instruction of movingInstructions) {
+            newGroup.insertInstruction(instruction, i++);
+        }
+        editor.addGroup(newGroup);
+
+        // link previous group here
+        const jump = new InstructionOneLine(new ControlJumpLine());
+        group.insertInstruction(jump, instructions.length);
+        jump.setBranchTargets([newGroup]);
     }
 
     public serialize() {
@@ -662,5 +710,16 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 char: instruction.getLines()[0].preferredStartingCharOffset
             });
         }
+    }
+}
+
+class NewInstructionEditable extends Editable {
+    constructor() {
+        super("");
+    }
+
+    public checkInput(event: UserInputEvent): void {
+        // allow all
+        this.onChange.send(event);
     }
 }

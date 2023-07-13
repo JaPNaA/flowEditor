@@ -336,6 +336,10 @@ export class InstructionGroupEditor extends WorldElm {
         this.rendered = true;
     }
 
+    public updateHeight() {
+        this.rect.height = this.elm.getHTMLElement().clientHeight;
+    }
+
     public setSelected() {
         this.selected = true;
     }
@@ -408,6 +412,16 @@ export class InstructionGroupEditor extends WorldElm {
         return line.parentInstruction.removeLine(line);
     }
 
+    /** Remove an instruction and corresponding lines */
+    public removeInstruction(instructionIndex: number) {
+        const instruction = this.instructions[instructionIndex];
+        this._removeInstruction(instructionIndex);
+        let lineIndex = instruction.getLines()[0].getCurrentLine();
+        for (const _ of instruction.getLines()) {
+            this._removeInstructionLine(lineIndex);
+        }
+    }
+
     /**
      * Inserts an instruction line without consulting surrounding lines.
      * DO NOT USE OUTSIDE `Instruction` and subclasses.
@@ -467,9 +481,5 @@ export class InstructionGroupEditor extends WorldElm {
 
         this.instructions.push(instruction);
         return instruction;
-    }
-
-    private updateHeight() {
-        this.rect.height = this.elm.getHTMLElement().clientHeight;
     }
 }

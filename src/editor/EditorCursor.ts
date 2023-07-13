@@ -89,7 +89,7 @@ export class EditorCursor extends Elm<"span"> {
 
     public setPosition(position: EditorCursorPositionAbsolute) {
         this._setPosition(position);
-        this.clampPositionChar();
+        this.clampPosition();
         position.group.appendInputCapture(this.inputCapture);
         this.setVirtualCursorPosition(this.position!, this.position!, false);
         this.setTextareInputCursorPosition(this.position!);
@@ -130,20 +130,39 @@ export class EditorCursor extends Elm<"span"> {
         this.inputCapture.setPositionOnCurrentLine(position.editable, position.char);
     }
 
-    private clampPositionChar() {
+    private clampPosition() {
         if (!this.position) { throw new Error("No position to clamp"); }
 
-        const editable = this.position.group.getLines()[this.position.line]
-            .getEditableFromIndex(this.position.editable);
-        const maxCharOffset = editable.getValue().length;
-        if (this.position.char > maxCharOffset) { // clamp offset
+        const lines = this.position.group.getLines();
+        if (this.position.line >= lines.length) {
+            const lastLine = lines[lines.length - 1];
             this.position = {
                 group: this.position.group,
-                line: this.position.line,
-                editable: this.position.editable,
-                char: maxCharOffset
+                line: lines.length - 1,
+                editable: lastLine.getLastEditableIndex(),
+                char: lastLine.getLastEditableCharacterIndex()
             };
+        } else if (this.position.line < 0) {
+            this.position = {
+                group: this.position.group,
+                line: 0,
+                editable: 0,
+                char: 0
+            };
+        } else {
+            const editable = this.position.group.getLines()[this.position.line]
+                .getEditableFromIndex(this.position.editable);
+            const maxCharOffset = editable.getValue().length;
+            if (this.position.char > maxCharOffset) { // clamp offset
+                this.position = {
+                    group: this.position.group,
+                    line: this.position.line,
+                    editable: this.position.editable,
+                    char: maxCharOffset
+                };
+            }
         }
+
     }
 
     private updateInputCaptureContext(position: Readonly<EditorCursorPositionAbsolute>) {
