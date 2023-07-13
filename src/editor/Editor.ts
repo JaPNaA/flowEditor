@@ -186,7 +186,7 @@ export class Editor extends WorldElmWithComponents {
         newEditor.rect.x = this.engine.mouse.worldPos.x;
         newEditor.rect.y = this.engine.mouse.worldPos.y;
         this.addGroup(newEditor);
-        newEditor.insertNewInstructionLine(0);
+        newEditor.requestNewLine(0);
         this.setEditMode();
         this.cursor.setPosition({
             group: newEditor,

@@ -183,6 +183,17 @@ class ChoiceBranchMacro extends Instruction {
         return true;
     }
 
+    public insertLine(index: number): boolean {
+        const choiceNumber = index - this.openingLine.getCurrentLine() - 1;
+        if (choiceNumber < 0) { return false; }
+        if (choiceNumber > this.choiceLines.length) { return false; }
+        const newLine = new ChoiceBranchMacroLineOption("");
+        newLine._setParent(this);
+        this.choiceLines.splice(choiceNumber, 0, newLine);
+        this.parentGroup._insertInstructionLine(index, newLine);
+        return true;
+    }
+
     public export() {
         const choices = this.getChoices();
         const output: any[] = [{

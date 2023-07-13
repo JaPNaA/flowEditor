@@ -348,9 +348,21 @@ export class InstructionGroupEditor extends WorldElm {
         this.elm.removeClass("editMode");
     }
 
-    public insertNewInstructionLine(position: number) {
+    public requestNewLine(lineIndex: number) {
+        const previousLine = this.lines[lineIndex - 1];
+        if (previousLine) {
+            if (previousLine.parentInstruction.insertLine(lineIndex)) {
+                return;
+            }
         const instructionLine = Instruction.fromData({ ctrl: 'nop' });
-        return this.insertInstruction(instructionLine, position);
+            const previousInstructionLines = previousLine.parentInstruction.getLines();
+            return this.insertInstruction(instructionLine,
+                previousInstructionLines[previousInstructionLines.length - 1].getCurrentLine() + 1
+            );
+        } else {
+            const instructionLine = Instruction.fromData({ ctrl: 'nop' });
+            return this.insertInstruction(instructionLine, lineIndex);
+        }
     }
 
     // todo: update usages
@@ -395,6 +407,20 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     /**
+     * Inserts an instruction line without consulting surrounding lines.
+     * DO NOT USE OUTSIDE `Instruction` and subclasses.
+     */
+    public _insertInstructionLine(lineIndex: number, line: InstructionLine) {
+        if (lineIndex >= this.lines.length) {
+            this.elm.append(line);
+        } else {
+            this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), this.lines[lineIndex].elm.getHTMLElement());
+        }
+
+        this.lines.splice(lineIndex, 0, line);
+    }
+
+    /**
      * Removes an instruction line without consulting the original instruction.
      * DO NOT USE OUTSIDE `Instruction` and subclasses.
      */
@@ -416,11 +442,11 @@ export class InstructionGroupEditor extends WorldElm {
         if (instructions.length < 0) { throw new Error("Invalid position"); }
     }
 
-    private insertLineAndUpdateCursor(lineNumber: number) {
-        this.insertNewInstructionLine(lineNumber);
+    private insertLineAndUpdateCursor(lineIndex: number) {
+        this.requestNewLine(lineIndex);
         this.parentEditor.cursor.setPosition({
             group: this,
-            line: lineNumber,
+            line: lineIndex,
             editable: 0,
             char: 0,
         });

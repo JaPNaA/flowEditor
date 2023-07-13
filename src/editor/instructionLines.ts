@@ -42,11 +42,21 @@ export abstract class Instruction {
         }
     }
 
+    /** Return a list of flow control items that perform this instruction */
     public abstract export(): any[];
 
+    /** Return a JSON object that can be used to reconstruct this instruction. */
     public abstract serialize(): any;
 
+    /** Try to remove a line in instruction. Returns true if removed. */
     public abstract removeLine(line: InstructionLine): boolean;
+
+    /**
+     * Request inserting a line at (absolute) index.
+     * Return true if handled (inserted instruction).
+     * If returns false, lets the parent group handle the line insertion.
+     */
+    public abstract insertLine(index: number): boolean;
 
     public getIndex() {
         return this.parentGroup.getInstructions().indexOf(this);
@@ -239,6 +249,10 @@ export class InstructionOneLine extends Instruction {
         this.parentGroup._removeInstruction(this.getIndex());
         this.parentGroup._removeInstructionLine(this.line.getCurrentLine());
         return true;
+    }
+
+    public insertLine(_lineIndex: number): boolean {
+        return false;
     }
 
     public serialize(): any {
