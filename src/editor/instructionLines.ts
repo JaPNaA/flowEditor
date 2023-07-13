@@ -10,10 +10,6 @@ export abstract class Instruction {
     public parentGroup!: InstructionGroupEditor;
     protected lines: InstructionLine[] = [];
 
-    public getLines(): ReadonlyArray<InstructionLine> {
-        return this.lines;
-    }
-
     public static fromData(data: any): Instruction {
         let instruction;
 
@@ -46,6 +42,20 @@ export abstract class Instruction {
         }
     }
 
+    public abstract export(): any[];
+
+    public abstract serialize(): any;
+
+    public abstract removeLine(line: InstructionLine): boolean;
+
+    public getIndex() {
+        return this.parentGroup.getInstructions().indexOf(this);
+    }
+
+    public getLines(): ReadonlyArray<InstructionLine> {
+        return this.lines;
+    }
+
     public _setParent(group: InstructionGroupEditor) {
         this.parentGroup = group;
     }
@@ -67,10 +77,6 @@ export abstract class Instruction {
     public setBranchOffsets(_offsets: (number | null)[]) {
         return;
     }
-
-    public abstract export(): any[];
-
-    public abstract serialize(): any;
 
     protected addLine(line: InstructionLine) {
         this.lines.push(line);
@@ -226,6 +232,13 @@ export class InstructionOneLine extends Instruction {
 
     public isBranch(): boolean {
         return this.line.isBranch;
+    }
+
+    public removeLine(line: InstructionLine): boolean {
+        if (this.line !== line) { throw new Error("Not a line in this instruction"); }
+        this.parentGroup._removeInstruction(this.getIndex());
+        this.parentGroup._removeInstructionLine(this.line.getCurrentLine());
+        return true;
     }
 
     public serialize(): any {
@@ -623,7 +636,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     public changeView(instruction: Instruction) {
         const currentLine = this.getCurrentLine();
         const position = this.parentInstruction.parentGroup.parentEditor.cursor.getPosition();
-        this.parentInstruction.parentGroup.removeInstructionLine(currentLine);
+        this.parentInstruction.parentGroup.requestRemoveLine(currentLine);
         this.parentInstruction.parentGroup.insertInstruction(
             instruction, currentLine
         );

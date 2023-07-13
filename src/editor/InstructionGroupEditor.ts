@@ -61,7 +61,7 @@ export class InstructionGroupEditor extends WorldElm {
             this.insertLineAndUpdateCursor(targetLine);
         } else {
             if (targetLine > 0) {
-                this.removeInstructionLine(targetLine);
+                this.requestRemoveLine(targetLine);
                 const previousLine = this.lines[targetLine - 1];
                 this.parentEditor.cursor.setPosition({
                     group: this,
@@ -70,7 +70,7 @@ export class InstructionGroupEditor extends WorldElm {
                     char: previousLine.getLastEditableCharacterIndex()
                 });
             } else {
-                this.removeInstructionLine(targetLine);
+                this.requestRemoveLine(targetLine);
                 this.parentEditor.cursor.setPosition({
                     group: this,
                     line: 0,
@@ -353,36 +353,67 @@ export class InstructionGroupEditor extends WorldElm {
         return this.insertInstruction(instructionLine, position);
     }
 
-    public insertInstruction(instruction: Instruction, position: number) {
-        const lines = instruction.getLines();
-        if (position < this.lines.length) {
-            const lastPosition = this.lines[position].elm.getHTMLElement();
-            for (const line of lines) {
-                this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), lastPosition);
+    // todo: update usages
+    public insertInstruction(instruction: Instruction, instructionIndex: number) {
+        const newLines = instruction.getLines();
+        const nextInstruction = this.instructions[instructionIndex];
+
+        instruction._setParent(this);
+
+        if (nextInstruction) {
+            const nextLine = nextInstruction.getLines()[0];
+            const nextLineElm = nextLine.elm.getHTMLElement();
+            const lineIndex = this.lines.indexOf(nextLine);
+
+            for (const line of newLines) {
+                this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
             }
+
+            this.lines.splice(lineIndex, 0, ...newLines);
+            this.instructions.splice(instructionIndex, 0, instruction);
         } else {
-            for (const line of lines) {
+            for (const line of newLines) {
                 this.elm.append(line);
             }
+
+            this.lines.push(...newLines);
+            this.instructions.push(instruction);
         }
-        instruction._setParent(this);
-        this.lines.splice(position, 0, ...lines);
-        this.instructions.splice(position, 0, instruction);
-        for (const line of lines) {
+
+        for (const line of newLines) {
             this.htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
         }
 
         return instruction;
     }
 
-    public removeInstructionLine(position: number) {
-        const lines = this.lines.splice(position, 1);
-        const instructions = this.instructions.splice(position, 1);
+    /** Asks the instruction corresponding to the specified line to remove the line */
+    public requestRemoveLine(lineIndex: number) {
+        const line = this.lines[lineIndex];
+        if (!line) { throw new Error("Invalid position"); }
+        return line.parentInstruction.removeLine(line);
+    }
+
+    /**
+     * Removes an instruction line without consulting the original instruction.
+     * DO NOT USE OUTSIDE `Instruction` and subclasses.
+     */
+    public _removeInstructionLine(lineIndex: number) {
+        const lines = this.lines.splice(lineIndex, 1);
         if (lines.length < 0) { throw new Error("Invalid position"); }
         for (const line of lines) {
             this.htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
             line.elm.remove();
         }
+    }
+
+    /**
+     * Removes an instruction without removing associated instruction lines.
+     * DO NOT USE OUTSIDE `Instruction` and subclasses.
+     */
+    public _removeInstruction(instructionIndex: number) {
+        const instructions = this.instructions.splice(instructionIndex, 1);
+        if (instructions.length < 0) { throw new Error("Invalid position"); }
     }
 
     private insertLineAndUpdateCursor(lineNumber: number) {

@@ -117,11 +117,12 @@ class BackgroundInstruction extends InstructionLine implements OneLineInstructio
 
 class ChoiceBranchMacro extends Instruction {
     private choiceLines: ChoiceBranchMacroLineOption[] = [];
+    private openingLine: ChoiceBranchMacroLineOpening;
     private branchOffsets: (number | null)[] = [];
 
     constructor(choices: string[]) {
         super();
-        this.addLine(new ChoiceBranchMacroLineOpening());
+        this.addLine(this.openingLine = new ChoiceBranchMacroLineOpening());
         for (const choice of choices) {
             const line = new ChoiceBranchMacroLineOption(choice);
             this.addLine(line);
@@ -162,6 +163,24 @@ class ChoiceBranchMacro extends Instruction {
 
     public setBranchOffsets(offsets: (number | null)[]): void {
         this.branchOffsets = offsets;
+    }
+
+    public removeLine(line: InstructionLine): boolean {
+        if (line instanceof ChoiceBranchMacroLineOption) {
+            const index = this.choiceLines.indexOf(line);
+            if (index < 0) { throw new Error("Line not in instruction"); }
+            this.choiceLines.splice(index, 1);
+            this.parentGroup._removeInstructionLine(line.getCurrentLine());
+        } else {
+            // remove all
+            const index = this.openingLine.getCurrentLine();
+            this.parentGroup._removeInstructionLine(index);
+            for (const _ of this.choiceLines) {
+                this.parentGroup._removeInstructionLine(index);
+            }
+            this.parentGroup._removeInstruction(this.getIndex());
+        }
+        return true;
     }
 
     public export() {
