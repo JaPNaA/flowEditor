@@ -1,4 +1,4 @@
-export type VisualNovelControlItem = ControlBackground | ControlDisplay | ControlSay | ControlChoose;
+export type VisualNovelControlItem = ControlBackground | ControlShow | ControlDisplay | ControlSay | ControlChoose;
 
 export function isVisualNovelControlItem(item: any): item is VisualNovelControlItem {
     return typeof item.visualNovelCtrl === "string";
@@ -32,6 +32,11 @@ export interface ControlBackground {
     x?: number;
     /** 0 to 100 -- y position of is the zoom center? Default: 50 */
     y?: number;
+}
+
+export interface ControlShow {
+    visualNovelCtrl: "show";
+    src: string;
 }
 
 export interface ControlDisplay {

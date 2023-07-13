@@ -21,24 +21,29 @@ export class VisualNovelExecuter implements Executer {
         if (!this.game) { return Promise.reject("Game not started"); }
         if (!isVisualNovelControlItem(data)) { return null; }
 
-        if (data.visualNovelCtrl === "say") {
-            this.executerContainer.log.log(`${data.char}: "${data.text}"`);
-            return this.game.characterSay(data.char, data.text);
-        } else if (data.visualNovelCtrl === "display") {
-            this.executerContainer.log.log(data.text);
-            return this.game.characterSay("", data.text);
-        } else if (data.visualNovelCtrl === "background") {
-            this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
-            this.game.setBackground(data);
-            return Promise.resolve();
-        } else if (data.visualNovelCtrl === "choose") {
-            return this.game.requestChoice(data.options)
-                .then(val => {
-                    this.executerContainer.log.logSecondary(`<- ${data.options[val]}`);
-                    this.executerContainer.writeVariable("__choice__", val);
-                });
-        } else {
-            return null;
+        switch (data.visualNovelCtrl) {
+            case "say":
+                this.executerContainer.log.log(`${data.char}: "${data.text}"`);
+                return this.game.characterSay(data.char, data.text);
+            case "show":
+                this.executerContainer.log.log(`Show ${data.src}`);
+                this.game.showImage(data.src);
+                return Promise.resolve();
+            case "display":
+                this.executerContainer.log.log(data.text);
+                return this.game.characterSay("", data.text);
+            case "background":
+                this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
+                this.game.setBackground(data);
+                return Promise.resolve();
+            case "choose":
+                return this.game.requestChoice(data.options)
+                    .then(val => {
+                        this.executerContainer.log.logSecondary(`<- ${data.options[val]}`);
+                        this.executerContainer.writeVariable("__choice__", val);
+                    });
+            default:
+                return null;
         }
     }
 
@@ -54,6 +59,7 @@ class VisualNovelGame {
     private chooser = new Chooser();
     private speechBubble = new SpeechBubble();
     private background = new Background();
+    private imageDisplayer = new ImageDisplayer();
 
     constructor(parentElm: HTMLElement) {
         this.engine = new JaPNaAEngine2d({
@@ -61,6 +67,7 @@ class VisualNovelGame {
             parentElement: parentElm
         });
         this.engine.world.addElm(this.background);
+        this.engine.world.addElm(this.imageDisplayer);
         this.engine.world.addElm(this.speechBubble);
         this.engine.world.addElm(this.chooser);
     }
@@ -80,6 +87,10 @@ class VisualNovelGame {
 
     public setBackground(background: ControlBackground) {
         this.background.set(background);
+    }
+
+    public showImage(image: string) {
+        this.imageDisplayer.showImage(image);
     }
 
     public dispose() {
@@ -190,6 +201,52 @@ class Background extends WorldElm {
         this.zoom = background.zoom === undefined ? 1 : background.zoom;
         this.focusX = background.x === undefined ? 0.5 : background.x / 100;
         this.focusY = background.y === undefined ? 0.5 : background.y / 100;
+    }
+}
+
+class ImageDisplayer extends WorldElm {
+    private image?: HTMLImageElement;
+    private zoom: number = 1;
+    private focusX: number = 0.5;
+    private focusY: number = 0.5;
+
+    private imageLoaded = false;
+
+    public draw() {
+        const X = this.engine.canvas.X;
+
+        if (this.image && this.imageLoaded) {
+            const screenRatio = this.engine.sizer.width / this.engine.sizer.height;
+            const imageRatio = this.image.width / this.image.height;
+            let scale;
+            if (screenRatio > imageRatio) {
+                // match height
+                scale = this.engine.sizer.height / this.image.height;
+            } else {
+                // match width
+                scale = this.engine.sizer.width / this.image.width;
+            }
+            scale *= this.zoom;
+
+            let x = (this.engine.sizer.width - this.image.width * scale) * this.focusX;
+            let y = (this.engine.sizer.height - this.image.height * scale) * this.focusY;
+            X.drawImage(this.image, x, y, this.image.width * scale, this.image.height * scale);
+        }
+    }
+
+    public showImage(src: string) {
+        if (src) {
+            this.image = new Image();
+            this.image.src = src;
+            this.imageLoaded = false;
+            this.image.onload = () => this.imageLoaded = true;
+        } else {
+            this.image = undefined;
+        }
+
+        // this.zoom = background.zoom === undefined ? 1 : background.zoom;
+        // this.focusX = background.x === undefined ? 0.5 : background.x / 100;
+        // this.focusY = background.y === undefined ? 0.5 : background.y / 100;
     }
 }
 

@@ -1,13 +1,18 @@
+import { ControlItem } from "../../FlowRunner.js";
 import { Editable } from "../../editor/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instructionLines.js";
 import { EditorPlugin } from "../EditorPlugin.js";
-import { ControlBackground } from "./controls.js";
+import { ControlBackground, ControlDisplay, ControlSay, ControlShow, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 
 export default class VisualNovelPlugin implements EditorPlugin {
     keyMappings: { [x: string]: () => Instruction; } = {
         "s": () => new InstructionOneLine(new SayInstruction("", "")),
+        "k": () => new InstructionOneLine(new ShowInstruction({
+            visualNovelCtrl: "show",
+            src: ""
+        })),
         "t": () => new InstructionOneLine(new DisplayInstruction("")),
         "b": () => new ChoiceBranchMacro(["a", "b"]),
         "h": () => new InstructionOneLine(new BackgroundInstruction({
@@ -23,6 +28,8 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 return new InstructionOneLine(new SayInstruction(data.char, data.text));
             case "display":
                 return new InstructionOneLine(new DisplayInstruction(data.text));
+            case "show":
+                return new InstructionOneLine(new ShowInstruction(data));
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
@@ -49,7 +56,7 @@ class SayInstruction extends InstructionLine implements OneLineInstruction {
         );
     }
 
-    public serialize() {
+    public serialize(): ControlSay {
         return { visualNovelCtrl: "say", char: this.characterEditable.getValue(), text: this.textEditable.getValue() };
     }
 }
@@ -68,7 +75,7 @@ class DisplayInstruction extends InstructionLine implements OneLineInstruction {
         );
     }
 
-    public serialize() {
+    public serialize(): ControlDisplay {
         return { visualNovelCtrl: "display", text: this.textEditable.getValue() };
     }
 }
@@ -93,7 +100,7 @@ class BackgroundInstruction extends InstructionLine implements OneLineInstructio
         );
     }
 
-    public serialize() {
+    public serialize(): ControlBackground {
         const parts = this.backgroundEditable.getValue().trim().split(" ");
         const data: ControlBackground = { visualNovelCtrl: "background" };
 
@@ -112,6 +119,24 @@ class BackgroundInstruction extends InstructionLine implements OneLineInstructio
         }
 
         return data;
+    }
+}
+
+class ShowInstruction extends InstructionLine implements OneLineInstruction {
+    private editable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(data: ControlShow) {
+        super();
+
+        this.setAreas(
+            "Show: ",
+            this.editable = this.createEditable(data.src)
+        );
+    }
+
+    public serialize(): ControlShow {
+        return { visualNovelCtrl: "show", src: this.editable.getValue() };
     }
 }
 
@@ -196,7 +221,7 @@ class ChoiceBranchMacro extends Instruction {
 
     public export() {
         const choices = this.getChoices();
-        const output: any[] = [{
+        const output: (VisualNovelControlItem | ControlItem)[] = [{
             visualNovelCtrl: "choose",
             options: choices
         }];
