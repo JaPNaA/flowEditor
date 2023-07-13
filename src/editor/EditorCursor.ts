@@ -115,8 +115,10 @@ export class EditorCursor extends Elm<"span"> {
         if (this.lastActiveEditable) {
             this.lastActiveEditable.updateAndDeactivate();
         }
-        const editable = positionStart.group.getLines()[positionStart.line]
-            .getEditableFromIndex(positionStart.editable);
+        const line = positionStart.group.getLines()[positionStart.line];
+        if (!line) { return; }
+
+        const editable = line.getEditableFromIndex(positionStart.editable);
         editable.setActive(positionStart.char, positionEnd.char, this);
         this.lastActiveEditable = editable;
         this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);

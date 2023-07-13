@@ -71,12 +71,16 @@ export class InstructionGroupEditor extends WorldElm {
                 });
             } else {
                 this.requestRemoveLine(targetLine);
-                this.parentEditor.cursor.setPosition({
-                    group: this,
-                    line: 0,
-                    editable: 0,
-                    char: 0
-                });
+                if (this.lines.length <= 0) {
+                    this.parentEditor.removeGroup(this);
+                } else {
+                    this.parentEditor.cursor.setPosition({
+                        group: this,
+                        line: 0,
+                        editable: 0,
+                        char: 0
+                    });
+                }
             }
         }
     }
@@ -354,7 +358,7 @@ export class InstructionGroupEditor extends WorldElm {
             if (previousLine.parentInstruction.insertLine(lineIndex)) {
                 return;
             }
-        const instructionLine = Instruction.fromData({ ctrl: 'nop' });
+            const instructionLine = Instruction.fromData({ ctrl: 'nop' });
             const previousInstructionLines = previousLine.parentInstruction.getLines();
             return this.insertInstruction(instructionLine,
                 previousInstructionLines[previousInstructionLines.length - 1].getCurrentLine() + 1
