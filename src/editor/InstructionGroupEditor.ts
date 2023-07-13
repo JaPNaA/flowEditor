@@ -356,6 +356,42 @@ export class InstructionGroupEditor extends WorldElm {
         this.elm.removeClass("editMode");
     }
 
+    /**
+     * Remove instructions after `instructionIndex`, then move the removed
+     * instructions to a new `InstructionGroupEditor`
+     */
+    public splitAtInstruction(instructionIndex: number) {
+        const movingInstructions = [];
+        const numMoving = this.instructions.length - instructionIndex;
+        for (let i = 0; i < numMoving; i++) {
+            const instruction = this.instructions[this.instructions.length - 1];
+            this.removeInstruction(this.instructions.length - 1);
+            movingInstructions.push(instruction);
+        }
+        movingInstructions.reverse();
+
+        this.updateHeight();
+
+        const newGroup = new InstructionGroupEditor(this.parentEditor, {
+            x: this.rect.x,
+            y: this.rect.bottomY() + 64,
+            branches: [],
+            instructions: []
+        });
+        let i = 0;
+        for (const instruction of movingInstructions) {
+            newGroup.insertInstruction(instruction, i++);
+        }
+        this.parentEditor.addGroup(newGroup);
+
+        // link previous group here
+        const jump = Instruction.fromData({ ctrl: 'jump', offset: 0 });
+        this.insertInstruction(jump, this.instructions.length);
+        jump.setBranchTargets([newGroup]);
+
+        return newGroup;
+    }
+
     public requestNewLine(lineIndex: number) {
         const previousLine = this.lines[lineIndex - 1];
         if (previousLine) {

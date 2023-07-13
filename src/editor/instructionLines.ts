@@ -654,37 +654,20 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 
     public splitGroupHere() {
-        const group = this.parentInstruction.parentGroup;
-        const editor = group.parentEditor;
-        const instructions = this.parentInstruction.parentGroup.getInstructions();
-        const movingInstructions = [];
-        const numMoving = instructions.length - this.parentInstruction.getIndex();
-        for (let i = 0; i < numMoving; i++) {
-            const instruction = instructions[instructions.length - 1];
-            this.parentInstruction.parentGroup.removeInstruction(instructions.length - 1);
-            movingInstructions.push(instruction);
+        const index = this.parentInstruction.getIndex();
+        this.parentInstruction.removeLine(this);
+        const newGroup = this.parentInstruction.parentGroup.splitAtInstruction(index);
+        if (newGroup.getInstructions().length === 0) {
+            newGroup.requestNewLine(0);
         }
-        movingInstructions.pop(); // remove NewInstructionLine
-        movingInstructions.reverse();
+    }
 
-        group.updateHeight();
+    public splitAfterIfNeeded(thisIndex: number) {
+        const nextInstruction = this.parentInstruction.parentGroup.getInstructions()[thisIndex + 1];
 
-        const newGroup = new InstructionGroupEditor(editor, {
-            x: group.rect.x,
-            y: group.rect.bottomY() + 64,
-            branches: [],
-            instructions: []
-        });
-        let i = 0;
-        for (const instruction of movingInstructions) {
-            newGroup.insertInstruction(instruction, i++);
+        if (nextInstruction && !nextInstruction.isBranch()) {
+            this.parentInstruction.parentGroup.splitAtInstruction(thisIndex + 1);
         }
-        editor.addGroup(newGroup);
-
-        // link previous group here
-        const jump = new InstructionOneLine(new ControlJumpLine());
-        group.insertInstruction(jump, instructions.length);
-        jump.setBranchTargets([newGroup]);
     }
 
     public serialize() {
@@ -709,6 +692,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 ...position,
                 char: instruction.getLines()[0].preferredStartingCharOffset
             });
+        }
+
+        if (instruction.isBranch()) {
+            this.splitAfterIfNeeded(currentLine);
         }
     }
 }
