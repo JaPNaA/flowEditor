@@ -359,17 +359,15 @@ export class InstructionGroupEditor extends WorldElm {
                 return;
             }
             const instructionLine = Instruction.fromData({ ctrl: 'nop' });
-            const previousInstructionLines = previousLine.parentInstruction.getLines();
             return this.insertInstruction(instructionLine,
-                previousInstructionLines[previousInstructionLines.length - 1].getCurrentLine() + 1
+                previousLine.parentInstruction.getIndex() + 1
             );
         } else {
             const instructionLine = Instruction.fromData({ ctrl: 'nop' });
-            return this.insertInstruction(instructionLine, lineIndex);
+            return this.insertInstruction(instructionLine, this.instructions.length);
         }
     }
 
-    // todo: update usages
     public insertInstruction(instruction: Instruction, instructionIndex: number) {
         const newLines = instruction.getLines();
         const nextInstruction = this.instructions[instructionIndex];

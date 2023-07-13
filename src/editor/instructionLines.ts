@@ -357,7 +357,7 @@ class JSONLineEditable extends Editable {
         this.setValue(JSON.stringify(lines[0]));
 
         const parentGroup = this.parentLine.parentInstruction.parentGroup;
-        const currentPosition = this.parentLine.getCurrentLine();
+        const currentPosition = this.parentLine.parentInstruction.getIndex();
         let i;
         for (i = 1; i < lines.length; i++) {
             console.log(lines[i]);
@@ -372,7 +372,7 @@ class JSONLineEditable extends Editable {
         this.replaceContents(this.getValue());
         parentGroup.parentEditor.cursor.setPosition({
             group: parentGroup,
-            line: currentPosition + i - 1,
+            line: this.parentLine.getCurrentLine() + i - 1,
             editable: 0,
             char: lines[i - 1].length + 1 // +1 for left quote only
         });
@@ -649,10 +649,11 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 
     public changeView(instruction: Instruction) {
         const currentLine = this.getCurrentLine();
+        const currentInstructionIndex = this.parentInstruction.getIndex();
         const position = this.parentInstruction.parentGroup.parentEditor.cursor.getPosition();
         this.parentInstruction.parentGroup.requestRemoveLine(currentLine);
         this.parentInstruction.parentGroup.insertInstruction(
-            instruction, currentLine
+            instruction, currentInstructionIndex
         );
 
         if (position) {
