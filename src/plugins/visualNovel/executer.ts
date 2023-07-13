@@ -5,7 +5,9 @@ import { Executer } from "../EditorPlugin.js";
 import { ControlBackground, isVisualNovelControlItem } from "./controls.js";
 
 export class VisualNovelExecuter implements Executer {
-    private elm = new Elm().class("visualNovelExecuter").attribute("style", "height: 50vh");
+    private elm = new Elm().class("visualNovelExecuter")
+        .attribute("style", "height: 50vh")
+        .attribute("tabindex", "0");
     private game?: VisualNovelGame;
     private executerContainer!: ExecuterContainer;
 
@@ -13,6 +15,11 @@ export class VisualNovelExecuter implements Executer {
         this.executerContainer = executerContainer;
         this.executerContainer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
+        this.elm.on("keydown", key => {
+            if (key.key === "f") {
+                this.elm.getHTMLElement().requestFullscreen();
+            }
+        });
 
         return Promise.resolve();
     }
