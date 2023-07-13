@@ -30,6 +30,8 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 return new InstructionOneLine(new DisplayInstruction(data.text));
             case "show":
                 return new InstructionOneLine(new ShowInstruction(data));
+            case "choice":
+                return new InstructionOneLine(new ShowInstruction(data));
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
@@ -98,6 +100,7 @@ class BackgroundInstruction extends InstructionLine implements OneLineInstructio
                 ].filter(x => x !== undefined).join(" ")
             )
         );
+        this.elm.class("secondary");
     }
 
     public serialize(): ControlBackground {
@@ -133,6 +136,7 @@ class ShowInstruction extends InstructionLine implements OneLineInstruction {
             "Show: ",
             this.editable = this.createEditable(data.src)
         );
+        this.elm.class("secondary");
     }
 
     public serialize(): ControlShow {

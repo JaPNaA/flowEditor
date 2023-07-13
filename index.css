@@ -96,6 +96,10 @@
     background-color: #cecdf0;
 }
 
+.instructionLine.secondary {
+    color: #004d9f;
+}
+
 .instructionLine.newInstructionLine {
     font-style: italic;
     color: #0000008c;
