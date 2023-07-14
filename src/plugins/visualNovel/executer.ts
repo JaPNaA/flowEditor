@@ -6,7 +6,7 @@ import { ControlBackground, isVisualNovelControlItem } from "./controls.js";
 
 export class VisualNovelExecuter implements Executer {
     private elm = new Elm().class("visualNovelExecuter")
-        .attribute("style", "height: 50vh")
+        .attribute("style", "height: 50vh; font-family: serif;")
         .attribute("tabindex", "0");
     private game?: VisualNovelGame;
     private executerContainer!: ExecuterContainer;
