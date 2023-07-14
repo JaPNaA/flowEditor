@@ -34,6 +34,7 @@ export class Editor extends WorldElmWithComponents {
     private editMode = false;
     private selectedGroups = new Set<InstructionGroupEditor>();
     private movingGroups = false;
+    private tempEditModeGroup?: InstructionGroupEditor;
 
     private selectRectangle = new SelectRectangle();
 
@@ -94,6 +95,7 @@ export class Editor extends WorldElmWithComponents {
         // handle selections
         if (this.engine.keyboard.isDown(["ControlLeft", "ControlRight"])) {
             // ctrl: remove from selection
+            this.unsetTempEditMode();
             if (group && this.selectedGroups.has(group)) {
                 this.selectedGroups.delete(group);
                 group.unsetSelected();
@@ -104,6 +106,7 @@ export class Editor extends WorldElmWithComponents {
                 if (!this.engine.keyboard.isDown(["ShiftLeft", "ShiftRight"])) {
                     for (const group of this.selectedGroups) { group.unsetSelected(); }
                     this.selectedGroups.clear();
+                    this.unsetTempEditMode();
 
                     if (!group) {
                         // clicked on whitespace
@@ -114,6 +117,12 @@ export class Editor extends WorldElmWithComponents {
             // clicked on group: add to selection
             if (group) {
                 this.movingGroups = true;
+
+                if (this.selectedGroups.size === 0) {
+                    this.setTempEditMode(group);
+                } else {
+                }
+
                 if (this.selectedGroups.has(group)) {
                     if (this.selectedGroups.size === 1) {
                         this.setEditMode();
@@ -126,31 +135,59 @@ export class Editor extends WorldElmWithComponents {
         }
     }
 
+    private setTempEditMode(group: InstructionGroupEditor) {
+        if (this.tempEditModeGroup) {
+            this.unsetTempEditMode();
+        }
+        this.tempEditModeGroup = group;
+        this.cursor.show();
+        group.setEditMode();
+    }
+
+    private unsetTempEditMode() {
+        if (this.tempEditModeGroup) {
+            if (!this.editMode) {
+                this.tempEditModeGroup.unsetEditMode();
+                this.cursor.hide();
+            }
+            this.tempEditModeGroup = undefined;
+        }
+    }
+
     public setEditMode() {
+        if (this.editMode) { return; }
         this.cursor.show();
         for (const group of this._groupEditors) {
             group.setEditMode();
         }
+        this.editMode = true;
+        if (this.tempEditModeGroup) {
+            this.unsetTempEditMode();
+        } else {
+            // focus selected group
+            setTimeout(() => {
+                for (const selectedGroup of this.selectedGroups) {
+                    this.cursor.setPosition({
+                        group: selectedGroup,
+                        line: 0,
+                        editable: 0,
+                        char: 0,
+                    });
+                    break; // only one
+                }
+            }, 1);
+        }
 
-        // focus selected group
-        setTimeout(() => {
-            for (const selectedGroup of this.selectedGroups) {
-                this.cursor.setPosition({
-                    group: selectedGroup,
-                    line: 0,
-                    editable: 0,
-                    char: 0,
-                });
-                break; // only one
-            }
-        }, 1);
     }
 
     public unsetEditMode() {
+        if (!this.editMode) { return; }
         this.cursor.hide();
+        this.unsetTempEditMode();
         for (const group of this._groupEditors) {
             group.unsetEditMode();
         }
+        this.editMode = false;
     }
 
     private mousedragHandler(ev: MouseEvent) {
