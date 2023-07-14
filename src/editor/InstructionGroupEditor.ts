@@ -170,7 +170,7 @@ export class InstructionGroupEditor extends WorldElm {
             }
         }
 
-        for (const editor of this.parentEditor.groupEditors) {
+        for (const editor of this.parentEditor.getGroups()) {
             for (const instruction of editor.instructions) {
                 if (!instruction.isBranch()) { continue; }
                 const targets = instruction.getBranchTargets();
@@ -196,7 +196,6 @@ export class InstructionGroupEditor extends WorldElm {
 
         for (const instruction of this.instructions) {
             if (instruction.isBranch()) {
-                console.log(instruction.serialize(), instruction.getBranchTargets());
                 branches.push(instruction.serialize());
                 const branchTargets = instruction.getBranchTargets();
                 if (branchTargets) {
