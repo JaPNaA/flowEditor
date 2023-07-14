@@ -128,6 +128,27 @@ export class AddInstructionAction implements UndoableAction {
     }
 }
 
+export class MarkGroupAsStartAction implements UndoableAction {
+    private previousStartGroup?: InstructionGroupEditor;
+
+    constructor(private group: InstructionGroupEditor | undefined, private editor: Editor) { }
+
+    public perform(): void {
+        this.previousStartGroup = this.editor._startGroup;
+        if (this.previousStartGroup) {
+            this.previousStartGroup._isStartGroup = false;
+        }
+        this.editor._startGroup = this.group;
+        if (this.group) {
+            this.group._isStartGroup = true;
+        }
+    }
+
+    public inverse(): MarkGroupAsStartAction {
+        return new MarkGroupAsStartAction(this.previousStartGroup, this.editor)
+    }
+}
+
 export class RemoveInstructionAction implements UndoableAction {
     private removedInstruction?: Instruction;
 

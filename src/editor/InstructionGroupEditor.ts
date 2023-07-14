@@ -17,6 +17,8 @@ export class InstructionGroupEditor extends WorldElm {
     public _lines: InstructionLine[] = [];
     /** DO NOT USE OUTSIDE `UndoableAction` */
     public _htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
+    /** DO NOT USE OUTSIDE `UndoableAction` */
+    public _isStartGroup = false;
 
     private static fontSize = 16;
     private static collisionType = Symbol();
@@ -249,6 +251,24 @@ export class InstructionGroupEditor extends WorldElm {
             this.render();
         }
 
+        if (this._isStartGroup) {
+            X.fillStyle = "#8e8";
+            X.beginPath();
+            X.moveTo(this.rect.x, this.rect.y);
+            X.lineTo(this.rect.x, this.rect.y - 18);
+            X.lineTo(this.rect.x + 64, this.rect.y - 18);
+            X.lineTo(this.rect.x + 82, this.rect.y - 2);
+            X.lineTo(this.rect.rightX(), this.rect.y - 2);
+            X.lineTo(this.rect.rightX(), this.rect.y);
+            X.fill();
+
+            X.fillStyle = "#000";
+            X.textAlign = "left";
+            X.textBaseline = "bottom";
+            X.font = "14px monospace";
+            X.fillText("Start", this.rect.x + 2, this.rect.y - 2);
+        }
+
         X.fillStyle = "#ddd";
         X.beginPath();
         X.rect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
@@ -257,6 +277,7 @@ export class InstructionGroupEditor extends WorldElm {
             X.lineWidth = 4;
             X.stroke();
         }
+
         X.fill();
 
         elm.style.top = this.rect.y + "px";
@@ -267,11 +288,10 @@ export class InstructionGroupEditor extends WorldElm {
 
         X.globalCompositeOperation = "destination-over";
 
-        const activeGroup = this.parentEditor.cursor.getPosition()?.group;
         let alpha = 0.5;
         let lineWidth = 1;
         let triangleSize = 1;
-        if (this === activeGroup) {
+        if (this.selected) {
             alpha = 1;
             lineWidth = 2.5;
             triangleSize = 1.3;
@@ -293,7 +313,7 @@ export class InstructionGroupEditor extends WorldElm {
                 let currTriangleSize = triangleSize;
 
                 // highlight current connections
-                if (target === activeGroup) {
+                if (target.selected) {
                     X.globalAlpha = 1;
                     X.lineWidth = 2.5;
                     currTriangleSize = 1.5;

@@ -5,16 +5,18 @@ import { Instruction } from "./instructionLines.js";
 import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
-import { AddGroupAction, RemoveGroupAction, UndoLog } from "./actions.js";
+import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./actions.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
     public undoLog = new UndoLog();
 
-    /** DO NOT USE OUTSIDE `UndoableAction` */
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
-    /** DO NOT USE OUTSIDE `UndoableAction` */
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _children = this.addComponent(new ParentComponent());
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
+    public _startGroup?: InstructionGroupEditor;
 
     private subscriptions = this.addComponent(new SubscriptionsComponent());
 
@@ -57,6 +59,7 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.mouse.onMousemove, this.mousedragHandler);
         this.subscriptions.subscribe(this.engine.mouse.onMouseup, this.mouseupHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addGroupHandler);
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyS"), this.markGroupAsStartHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyZ"), () => this.undoLog.undo());
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Backspace", "Delete"]), this.deleteSelectedHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Enter", "NumpadEnter"]), ev => {
@@ -242,6 +245,18 @@ export class Editor extends WorldElmWithComponents {
             editable: 0,
             char: 0
         });
+
+        if (this._groupEditors.length === 1) {
+            this.markGroupAsStart(this._groupEditors[0]);
+        }
+    }
+
+    private markGroupAsStartHandler() {
+        if (this.selectedGroups.size !== 1) { alert("Must select exactly one group to mark as start"); return; }
+        for (const group of this.selectedGroups) {
+            this.markGroupAsStart(group);
+            return;
+        }
     }
 
     private deleteSelectedHandler() {
@@ -286,6 +301,9 @@ export class Editor extends WorldElmWithComponents {
                 }
             }
         }
+
+        this.markGroupAsStart(this._groupEditors[0]);
+
         this.undoLog.thaw();
     }
 
@@ -327,6 +345,10 @@ export class Editor extends WorldElmWithComponents {
             }
         }
 
+        if (data.startGroup !== undefined) {
+            this.markGroupAsStart(idElmMap.get(data.startGroup)!);
+        }
+
         this.undoLog.thaw();
     }
 
@@ -345,13 +367,22 @@ export class Editor extends WorldElmWithComponents {
         this.undoLog.endGroup();
     }
 
+    public markGroupAsStart(group: InstructionGroupEditor) {
+        this.undoLog.startGroup();
+        this.undoLog.perform(new MarkGroupAsStartAction(group, this));
+        this.undoLog.endGroup();
+    }
+
     public serialize(): EditorSaveData {
         const uidGen = new UIDGenerator();
         const elms = [];
         for (const groupEditor of this._groupEditors) {
             elms.push(groupEditor.serialize(uidGen));
         }
-        return { elms: elms };
+        return {
+            elms: elms,
+            startGroup: this._startGroup && uidGen.getId(this._startGroup)
+        };
     }
 
     public compile() {
@@ -361,7 +392,16 @@ export class Editor extends WorldElmWithComponents {
         const groupInstructions: Instruction[][] = [];
         let index = 0;
 
-        for (const group of this._groupEditors) {
+        if (!this._startGroup) { throw new Error("No start group specified."); }
+
+        const groupEditors = [this._startGroup];
+        for (const editor of this._groupEditors) {
+            if (editor !== this._startGroup) {
+                groupEditors.push(editor);
+            }
+        }
+
+        for (const group of groupEditors) {
             startIndicies.set(group, index);
             const instructions = group.getInstructions();
             groupInstructions.push(instructions);
@@ -477,6 +517,7 @@ class SelectRectangle extends WorldElm {
 
 interface EditorSaveData {
     elms: InstructionElmData[];
+    startGroup?: number;
 }
 
 export interface InstructionElmData {
