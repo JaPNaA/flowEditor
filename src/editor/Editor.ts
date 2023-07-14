@@ -120,7 +120,6 @@ export class Editor extends WorldElmWithComponents {
 
                 if (this.selectedGroups.size === 0) {
                     this.setTempEditMode(group);
-                } else {
                 }
 
                 if (this.selectedGroups.has(group)) {
@@ -130,6 +129,9 @@ export class Editor extends WorldElmWithComponents {
                 } else {
                     this.selectedGroups.add(group);
                     group.setSelected();
+                    if (this.selectedGroups.size > 1) {
+                        this.unsetTempEditMode();
+                    }
                 }
             }
         }
