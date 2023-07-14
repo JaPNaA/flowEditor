@@ -153,7 +153,18 @@
     flex-grow: 1;
     padding: 8px;
     font-family: monospace;
-    overflow: auto;
+    word-wrap: break-word;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.executerContainer .outputLog::-webkit-scrollbar {
+    width: 2px;
+    background-color: transparent;
+}
+
+.executerContainer .outputLog::-webkit-scrollbar-thumb {
+    background-color: #ffffff3d;
 }
 
 .executerContainer .outputLog .log.secondary {
