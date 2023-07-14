@@ -162,6 +162,7 @@
 
 .executerContainer .fileOperationsBar {
     background-color: #3a3a3a;
+    line-height: 1;
 }
 
 .executerContainer .fileOperationsBar button {
