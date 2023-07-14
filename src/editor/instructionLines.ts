@@ -246,8 +246,7 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
 
     public removeLine(line: InstructionLine): boolean {
         if (this.line !== line) { throw new Error("Not a line in this instruction"); }
-        this.parentGroup._removeInstruction(this.getIndex());
-        this.parentGroup._removeInstructionLine(this.line.getCurrentLine());
+        this.parentGroup.removeInstruction(this.getIndex());
         return true;
     }
 
@@ -654,20 +653,14 @@ class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     }
 
     public splitGroupHere() {
+        this.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
         const index = this.parentInstruction.getIndex();
         this.parentInstruction.removeLine(this);
         const newGroup = this.parentInstruction.parentGroup.splitAtInstruction(index);
         if (newGroup.getInstructions().length === 0) {
             newGroup.requestNewLine(0);
         }
-    }
-
-    public splitAfterIfNeeded(thisIndex: number) {
-        const nextInstruction = this.parentInstruction.parentGroup.getInstructions()[thisIndex + 1];
-
-        if (nextInstruction && !nextInstruction.isBranch()) {
-            this.parentInstruction.parentGroup.splitAtInstruction(thisIndex + 1);
-        }
+        this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
     }
 
     public serialize() {
@@ -679,6 +672,7 @@ class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     }
 
     public changeView(instruction: Instruction) {
+        this.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
         const currentLine = this.getCurrentLine();
         const currentInstructionIndex = this.parentInstruction.getIndex();
         const position = this.parentInstruction.parentGroup.parentEditor.cursor.getPosition();
@@ -696,6 +690,15 @@ class NewInstructionLine extends InstructionLine implements OneLineInstruction {
 
         if (instruction.isBranch()) {
             this.splitAfterIfNeeded(currentLine);
+        }
+        this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
+    }
+
+    private splitAfterIfNeeded(thisIndex: number) {
+        const nextInstruction = this.parentInstruction.parentGroup.getInstructions()[thisIndex + 1];
+
+        if (nextInstruction && !nextInstruction.isBranch()) {
+            this.parentInstruction.parentGroup.splitAtInstruction(thisIndex + 1);
         }
     }
 }

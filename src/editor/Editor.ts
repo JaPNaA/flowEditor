@@ -207,10 +207,12 @@ export class Editor extends WorldElmWithComponents {
 
     private deleteSelectedHandler() {
         if (this.editMode) { return; }
+        this.undoLog.startGroup();
         for (const group of this.selectedGroups) {
             this.removeGroup(group);
             this.selectedGroups.delete(group);
         }
+        this.undoLog.endGroup();
     }
 
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
@@ -220,6 +222,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public setInstructions(instructionsData: InstructionData[]) {
+        this.undoLog.freeze();
         const instructionToElmMap = new Map<InstructionData, InstructionGroupEditor>();
         for (const instruction of instructionsData) {
             const elm = new InstructionGroupEditor(this, instruction);
@@ -244,6 +247,7 @@ export class Editor extends WorldElmWithComponents {
                 }
             }
         }
+        this.undoLog.thaw();
     }
 
     public deserialize(data: EditorSaveData) {
@@ -295,6 +299,8 @@ export class Editor extends WorldElmWithComponents {
 
     public removeGroup(group: InstructionGroupEditor) {
         this.undoLog.startGroup();
+        group.unsetSelected();
+        this.selectedGroups.delete(group);
         group.relinkParentsToFinalBranch();
         this.undoLog.perform(new RemoveGroupAction(group, this));
         this.undoLog.endGroup();

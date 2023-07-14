@@ -6,10 +6,17 @@ import { InstructionData } from "./flowToInstructionData.js";
 import { BranchInstructionLine, Instruction, InstructionLine, NewInstruction } from "./instructionLines.js";
 import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
+import { AddInstructionAction, RemoveInstructionAction } from "./actions.js";
 
 export class InstructionGroupEditor extends WorldElm {
     public elm: Elm;
     public collisionType = InstructionGroupEditor.collisionType;
+    /** DO NOT USE OUTSIDE `UndoableAction` */
+    public _instructions: Instruction[] = [];
+    /** DO NOT USE OUTSIDE `UndoableAction` */
+    public _lines: InstructionLine[] = [];
+    /** DO NOT USE OUTSIDE `UndoableAction` */
+    public _htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
 
     private static fontSize = 16;
     private static collisionType = Symbol();
@@ -18,9 +25,6 @@ export class InstructionGroupEditor extends WorldElm {
     private rendered = false;
     private selected = false;
     private initBranchTargets: ((InstructionGroupEditor | null)[] | null)[] = [];
-    private instructions: Instruction[] = [];
-    private lines: InstructionLine[] = [];
-    private htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
 
     constructor(public readonly parentEditor: Editor, private data: InstructionData) {
         super();
@@ -62,7 +66,7 @@ export class InstructionGroupEditor extends WorldElm {
         } else {
             if (targetLine > 0) {
                 this.requestRemoveLine(targetLine);
-                const previousLine = this.lines[targetLine - 1];
+                const previousLine = this._lines[targetLine - 1];
                 this.parentEditor.cursor.setPosition({
                     group: this,
                     line: targetLine - 1,
@@ -70,11 +74,13 @@ export class InstructionGroupEditor extends WorldElm {
                     char: previousLine.getLastEditableCharacterIndex()
                 });
             } else {
-                const removedLine = this.lines[targetLine];
+                const removedLine = this._lines[targetLine];
+                this.parentEditor.undoLog.startGroup();
                 this.requestRemoveLine(targetLine);
-                if (this.lines.length <= 0) {
+                if (this._lines.length <= 0) {
                     if (removedLine.parentInstruction instanceof NewInstruction) {
                         this.parentEditor.removeGroup(this);
+                        this.parentEditor.unsetEditMode();
                         return;
                     } else {
                         this.requestNewLine(0);
@@ -86,6 +92,7 @@ export class InstructionGroupEditor extends WorldElm {
                     editable: 0,
                     char: 0
                 });
+                this.parentEditor.undoLog.endGroup();
             }
         }
     }
@@ -99,8 +106,8 @@ export class InstructionGroupEditor extends WorldElm {
             }
         }
         if (change[0] === "down") {
-            if (pos.line + 1 >= this.lines.length) {
-                return { group: this, line: this.lines.length - 1, editable: change[1], char: change[2] };
+            if (pos.line + 1 >= this._lines.length) {
+                return { group: this, line: this._lines.length - 1, editable: change[1], char: change[2] };
             } else {
                 return { group: this, line: pos.line + 1, editable: change[1], char: change[2] };
             }
@@ -109,7 +116,7 @@ export class InstructionGroupEditor extends WorldElm {
             return { group: this, line: 0, editable: 0, char: 0 };
         }
         if (change[0] === "bottom") {
-            return { group: this, line: this.lines.length - 1, editable: change[1], char: change[2] };
+            return { group: this, line: this._lines.length - 1, editable: change[1], char: change[2] };
         }
 
         // pos[0] === 'same'
@@ -119,9 +126,9 @@ export class InstructionGroupEditor extends WorldElm {
     public selectionToPosition(selection: Selection): EditorCursorPositionAbsolute | undefined {
         const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"));
         if (instructionLine) {
-            const instructionLineElm = this.htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
+            const instructionLineElm = this._htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
             if (instructionLineElm) {
-                const index = this.lines.indexOf(instructionLineElm);
+                const index = this._lines.indexOf(instructionLineElm);
                 const newEditable = instructionLineElm.getEditableIndexFromSelection(selection);
                 if (newEditable >= 0) {
                     const characterOffset = instructionLineElm.getEditableFromIndex(newEditable).getCharacterOffset(selection);
@@ -139,11 +146,11 @@ export class InstructionGroupEditor extends WorldElm {
     public getContextForPosition(position: EditorCursorPositionAbsolute): TextareaUserInputCaptureContext {
         return {
             above: position.line - 1 >= 0 ?
-                this.lines[position.line - 1].getAreas() : [],
+                this._lines[position.line - 1].getAreas() : [],
             current: position.line >= 0 ?
-                this.lines[position.line].getAreas() : [],
-            below: position.line + 1 < this.lines.length ?
-                this.lines[position.line + 1].getAreas() : []
+                this._lines[position.line].getAreas() : [],
+            below: position.line + 1 < this._lines.length ?
+                this._lines[position.line + 1].getAreas() : []
         };
     }
 
@@ -164,14 +171,14 @@ export class InstructionGroupEditor extends WorldElm {
         // don't report when they change targets)
         let newTarget: InstructionGroupEditor | null = null;
 
-        for (const instruction of this.instructions) {
+        for (const instruction of this._instructions) {
             if (instruction.isBranch()) {
                 newTarget = instruction.getBranchTargets()?.[0] || null;
             }
         }
 
         for (const editor of this.parentEditor.getGroups()) {
-            for (const instruction of editor.instructions) {
+            for (const instruction of editor._instructions) {
                 if (!instruction.isBranch()) { continue; }
                 const targets = instruction.getBranchTargets();
                 const newTargets = [];
@@ -194,7 +201,7 @@ export class InstructionGroupEditor extends WorldElm {
         const instructions = [];
         const branches = [];
 
-        for (const instruction of this.instructions) {
+        for (const instruction of this._instructions) {
             if (instruction.isBranch()) {
                 branches.push(instruction.serialize());
                 const branchTargets = instruction.getBranchTargets();
@@ -223,11 +230,11 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     public getInstructions() {
-        return this.instructions;
+        return this._instructions;
     }
 
     public getLines() {
-        return this.lines;
+        return this._lines;
     }
 
     public addBranchTargets(targets: (InstructionGroupEditor | null)[] | null) {
@@ -272,7 +279,7 @@ export class InstructionGroupEditor extends WorldElm {
         }
 
         let index = -1;
-        for (const instruction of this.lines) {
+        for (const instruction of this._lines) {
             if (instruction instanceof BranchInstructionLine) {
                 const target = instruction.getBranchTarget();
                 if (!target) { continue; }
@@ -366,10 +373,13 @@ export class InstructionGroupEditor extends WorldElm {
      */
     public splitAtInstruction(instructionIndex: number) {
         const movingInstructions = [];
-        const numMoving = this.instructions.length - instructionIndex;
+        const numMoving = this._instructions.length - instructionIndex;
+
+        this.parentEditor.undoLog.startGroup();
+
         for (let i = 0; i < numMoving; i++) {
-            const instruction = this.instructions[this.instructions.length - 1];
-            this.removeInstruction(this.instructions.length - 1);
+            const instruction = this._instructions[this._instructions.length - 1];
+            this.removeInstruction(this._instructions.length - 1);
             movingInstructions.push(instruction);
         }
         movingInstructions.reverse();
@@ -390,14 +400,16 @@ export class InstructionGroupEditor extends WorldElm {
 
         // link previous group here
         const jump = Instruction.fromData({ ctrl: 'jump', offset: 0 });
-        this.insertInstruction(jump, this.instructions.length);
+        this.insertInstruction(jump, this._instructions.length);
         jump.setBranchTargets([newGroup]);
+
+        this.parentEditor.undoLog.endGroup();
 
         return newGroup;
     }
 
     public requestNewLine(lineIndex: number) {
-        const previousLine = this.lines[lineIndex - 1];
+        const previousLine = this._lines[lineIndex - 1];
         if (previousLine) {
             if (previousLine.parentInstruction.insertLine(lineIndex)) {
                 return;
@@ -413,53 +425,27 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     public insertInstruction(instruction: Instruction, instructionIndex: number) {
-        const newLines = instruction.getLines();
-        const nextInstruction = this.instructions[instructionIndex];
-
-        instruction._setParent(this);
-
-        if (nextInstruction) {
-            const nextLine = nextInstruction.getLines()[0];
-            const nextLineElm = nextLine.elm.getHTMLElement();
-            const lineIndex = this.lines.indexOf(nextLine);
-
-            for (const line of newLines) {
-                this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
-            }
-
-            this.lines.splice(lineIndex, 0, ...newLines);
-            this.instructions.splice(instructionIndex, 0, instruction);
-        } else {
-            for (const line of newLines) {
-                this.elm.append(line);
-            }
-
-            this.lines.push(...newLines);
-            this.instructions.push(instruction);
-        }
-
-        for (const line of newLines) {
-            this.htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
-        }
-
-        return instruction;
+        this.parentEditor.undoLog.startGroup();
+        this.parentEditor.undoLog.perform(
+            new AddInstructionAction(instruction, instructionIndex, this)
+        );
+        this.parentEditor.undoLog.endGroup();
     }
 
     /** Asks the instruction corresponding to the specified line to remove the line */
     public requestRemoveLine(lineIndex: number) {
-        const line = this.lines[lineIndex];
+        const line = this._lines[lineIndex];
         if (!line) { throw new Error("Invalid position"); }
         return line.parentInstruction.removeLine(line);
     }
 
     /** Remove an instruction and corresponding lines */
     public removeInstruction(instructionIndex: number) {
-        const instruction = this.instructions[instructionIndex];
-        this._removeInstruction(instructionIndex);
-        let lineIndex = instruction.getLines()[0].getCurrentLine();
-        for (const _ of instruction.getLines()) {
-            this._removeInstructionLine(lineIndex);
-        }
+        this.parentEditor.undoLog.startGroup();
+        this.parentEditor.undoLog.perform(
+            new RemoveInstructionAction(instructionIndex, this)
+        )
+        this.parentEditor.undoLog.endGroup();
     }
 
     /**
@@ -467,13 +453,13 @@ export class InstructionGroupEditor extends WorldElm {
      * DO NOT USE OUTSIDE `Instruction` and subclasses.
      */
     public _insertInstructionLine(lineIndex: number, line: InstructionLine) {
-        if (lineIndex >= this.lines.length) {
+        if (lineIndex >= this._lines.length) {
             this.elm.append(line);
         } else {
-            this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), this.lines[lineIndex].elm.getHTMLElement());
+            this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), this._lines[lineIndex].elm.getHTMLElement());
         }
 
-        this.lines.splice(lineIndex, 0, line);
+        this._lines.splice(lineIndex, 0, line);
     }
 
     /**
@@ -481,10 +467,10 @@ export class InstructionGroupEditor extends WorldElm {
      * DO NOT USE OUTSIDE `Instruction` and subclasses.
      */
     public _removeInstructionLine(lineIndex: number) {
-        const lines = this.lines.splice(lineIndex, 1);
+        const lines = this._lines.splice(lineIndex, 1);
         if (lines.length < 0) { throw new Error("Invalid position"); }
         for (const line of lines) {
-            this.htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
+            this._htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
             line.elm.remove();
         }
     }
@@ -494,7 +480,7 @@ export class InstructionGroupEditor extends WorldElm {
      * DO NOT USE OUTSIDE `Instruction` and subclasses.
      */
     public _removeInstruction(instructionIndex: number) {
-        const instructions = this.instructions.splice(instructionIndex, 1);
+        const instructions = this._instructions.splice(instructionIndex, 1);
         if (instructions.length < 0) { throw new Error("Invalid position"); }
     }
 
@@ -515,11 +501,11 @@ export class InstructionGroupEditor extends WorldElm {
 
         for (const line of lines) {
             line.appendTo(this.elm);
-            this.lines.push(line);
-            this.htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
+            this._lines.push(line);
+            this._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
         }
 
-        this.instructions.push(instruction);
+        this._instructions.push(instruction);
         return instruction;
     }
 }

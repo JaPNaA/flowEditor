@@ -55,7 +55,7 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
     function endGroup(nextGroupStartIndex: number) {
         if (currGroup.instructions.length === 0 && currGroup.branches.length === 0) { return; }
         groups.push(currGroup);
-        y += 24 * (currGroup.instructions.length + currGroup.branches.length);
+        y += 24 * (currGroup.instructions.length + currGroup.branches.length + 1);
         currGroup = newInstructionData();
         currGroup.y = y;
         indexToGroupMap.set(nextGroupStartIndex, currGroup);
