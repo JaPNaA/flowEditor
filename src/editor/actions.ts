@@ -1,7 +1,7 @@
 import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
 import { Editor } from "./Editor.js";
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
-import { Instruction } from "./instructionLines.js";
+import { BranchInstructionLine, Instruction } from "./instructionLines.js";
 
 export class UndoLog {
     private currLogGroup: UndoableAction[] = [];
@@ -136,7 +136,8 @@ export class RemoveInstructionAction implements UndoableAction {
     public perform(): void {
         const instruction = this.group._instructions[this.index];
         this.removedInstruction = instruction;
-        this.group._removeInstruction(this.index);
+
+        this._removeInstruction(this.index);
         let lineIndex = instruction.getLines()[0].getCurrentLine();
         for (const _ of instruction.getLines()) {
             this.group._removeInstructionLine(lineIndex);
@@ -145,8 +146,28 @@ export class RemoveInstructionAction implements UndoableAction {
         this.group.updateHeight();
     }
 
+    private _removeInstruction(instructionIndex: number) {
+        const instructions = this.group._instructions.splice(instructionIndex, 1);
+        if (instructions.length < 0) { throw new Error("Invalid position"); }
+    }
+
     public inverse(): AddInstructionAction {
         if (!this.removedInstruction) { throw new Error("Cannot inverse before perform"); }
         return new AddInstructionAction(this.removedInstruction, this.index, this.group);
+    }
+}
+
+export class BranchTargetChangeAction implements UndoableAction {
+    private previousBranchTarget?: InstructionGroupEditor | null;
+    constructor(private branchTarget: InstructionGroupEditor | null, private instruction: BranchInstructionLine) { }
+
+    public perform(): void {
+        this.previousBranchTarget = this.instruction.branchTarget;
+        this.instruction.branchTarget = this.branchTarget;
+    }
+
+    public inverse(): UndoableAction {
+        if (this.previousBranchTarget === undefined) { throw new Error("Cannot inverse before perform"); }
+        return new BranchTargetChangeAction(this.previousBranchTarget, this.instruction);
     }
 }

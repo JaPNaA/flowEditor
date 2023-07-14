@@ -335,11 +335,13 @@ export class InstructionGroupEditor extends WorldElm {
             this.addInstructionLine(instruction);
         }
 
+        this.parentEditor.undoLog.freeze();
         let index = 0;
         for (const branch of this.data.branches) {
             const line = this.addInstructionLine(branch.instruction);
             line.setBranchTargets(this.initBranchTargets[index++]);
         }
+        this.parentEditor.undoLog.thaw();
 
         this.rect.width = width;
         this.updateHeight();
@@ -473,15 +475,6 @@ export class InstructionGroupEditor extends WorldElm {
             this._htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
             line.elm.remove();
         }
-    }
-
-    /**
-     * Removes an instruction without removing associated instruction lines.
-     * DO NOT USE OUTSIDE `Instruction` and subclasses.
-     */
-    public _removeInstruction(instructionIndex: number) {
-        const instructions = this._instructions.splice(instructionIndex, 1);
-        if (instructions.length < 0) { throw new Error("Invalid position"); }
     }
 
     private insertLineAndUpdateCursor(lineIndex: number) {

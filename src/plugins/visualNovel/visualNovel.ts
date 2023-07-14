@@ -201,13 +201,7 @@ class ChoiceBranchMacro extends Instruction {
             this.choiceLines.splice(index, 1);
             this.parentGroup._removeInstructionLine(line.getCurrentLine());
         } else {
-            // remove all
-            const index = this.openingLine.getCurrentLine();
-            this.parentGroup._removeInstructionLine(index);
-            for (const _ of this.choiceLines) {
-                this.parentGroup._removeInstructionLine(index);
-            }
-            this.parentGroup._removeInstruction(this.getIndex());
+            this.parentGroup.removeInstruction(this.getIndex());
         }
         return true;
     }

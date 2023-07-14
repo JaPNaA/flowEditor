@@ -5,6 +5,7 @@ import { TextareaUserInputCaptureAreas, UserInputEvent } from "./TextareaUserInp
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 import { pluginHooks } from "../index.js";
+import { BranchTargetChangeAction } from "./actions.js";
 
 export abstract class Instruction {
     public parentGroup!: InstructionGroupEditor;
@@ -299,7 +300,11 @@ export abstract class BranchInstructionLine extends InstructionLine {
     }
 
     public setBranchTarget(target: InstructionGroupEditor | null) {
-        this.branchTarget = target;
+        this.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
+        this.parentInstruction.parentGroup.parentEditor.undoLog.perform(
+            new BranchTargetChangeAction(target, this)
+        );
+        this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
     }
 }
 
