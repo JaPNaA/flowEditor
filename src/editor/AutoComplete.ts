@@ -63,6 +63,10 @@ export class AutoComplete extends Component {
             ]);
         }
 
+        if (this.lastSuggestions.length === 0) {
+            this.lastSuggestions = null;
+            return;
+        }
         this.selectedSuggestion = 0;
         this.lastSuggestions[0][1].class("selected");
     }
