@@ -7,6 +7,7 @@ import { EditorCursor } from "./EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./actions.js";
 import { GridBackground } from "./GridBackground.js";
+import { EditorGroupNavigator } from "./EditorGroupNavigator.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -19,6 +20,7 @@ export class Editor extends WorldElmWithComponents {
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _startGroup?: InstructionGroupEditor;
 
+    private navigator: EditorGroupNavigator;
     private subscriptions = this.addComponent(new SubscriptionsComponent());
 
     /**
@@ -48,6 +50,7 @@ export class Editor extends WorldElmWithComponents {
         this._children.addChild(new DummyText());
         this._children.addChild(this.selectRectangle);
         this._children.addChild(new GridBackground());
+        this.navigator = new EditorGroupNavigator(this.subscriptions, this);
         console.log(this.undoLog);
     }
 
@@ -69,6 +72,7 @@ export class Editor extends WorldElmWithComponents {
             this.setEditMode();
         });
         this.subscriptions.subscribe(this.cursor.focusChangeGroup, group => this.handleClickGroup(group));
+        this.navigator._setEngine(engine);
     }
 
     private mousedownHandler() {
@@ -102,16 +106,13 @@ export class Editor extends WorldElmWithComponents {
             // ctrl: remove from selection
             this.unsetTempEditMode();
             if (group && this.selectedGroups.has(group)) {
-                this.selectedGroups.delete(group);
-                group.unsetSelected();
+                this.deselectGroup(group);
             }
         } else {
             if (!group || !this.selectedGroups.has(group)) {
                 // shift to add to selection; otherwise, clear selection
                 if (!this.engine.keyboard.isDown(["ShiftLeft", "ShiftRight"])) {
-                    for (const group of this.selectedGroups) { group.unsetSelected(); }
-                    this.selectedGroups.clear();
-                    this.unsetTempEditMode();
+                    this.clearSelection();
 
                     if (!group) {
                         // clicked on whitespace
@@ -126,8 +127,8 @@ export class Editor extends WorldElmWithComponents {
                 if (this.selectedGroups.size === 0) {
                     this.engine.mouse.onMouseup.promise().then(() => {
                         if (this.selectedGroups.size === 1) {
-                    this.setTempEditMode(group);
-                }
+                            this.setTempEditMode(group);
+                        }
                     });
                 }
 
@@ -136,14 +137,37 @@ export class Editor extends WorldElmWithComponents {
                         this.setEditMode();
                     }
                 } else {
-                    this.selectedGroups.add(group);
-                    group.setSelected();
+                    this.selectGroup(group);
                     if (this.selectedGroups.size > 1) {
                         this.unsetTempEditMode();
                     }
                 }
             }
         }
+    }
+
+    public getSelectedGroups(): ReadonlySet<InstructionGroupEditor> {
+        return this.selectedGroups;
+    }
+
+    public selectGroup(group: InstructionGroupEditor) {
+        this.selectedGroups.add(group);
+        group.setSelected();
+    }
+
+    public deselectGroup(group: InstructionGroupEditor) {
+        this.selectedGroups.delete(group);
+        group.unsetSelected();
+    }
+
+    public moveCameraToGroup(group: InstructionGroupEditor) {
+        this.engine.camera.centerOn(group);
+    }
+
+    public clearSelection() {
+        for (const group of this.selectedGroups) { group.unsetSelected(); }
+        this.selectedGroups.clear();
+        this.unsetTempEditMode();
     }
 
     private setTempEditMode(group: InstructionGroupEditor) {
