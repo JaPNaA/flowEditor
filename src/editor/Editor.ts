@@ -6,6 +6,7 @@ import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponen
 import { EditorCursor } from "./EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./actions.js";
+import { GridBackground } from "./GridBackground.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -46,6 +47,7 @@ export class Editor extends WorldElmWithComponents {
         super();
         this._children.addChild(new DummyText());
         this._children.addChild(this.selectRectangle);
+        this._children.addChild(new GridBackground());
         console.log(this.undoLog);
     }
 
