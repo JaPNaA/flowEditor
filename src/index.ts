@@ -4,6 +4,10 @@ import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
 import { Instruction } from "./editor/instructionLines.js";
 
 export const appHooks = {
+    focusEditor() {
+        return editorContainer.focus();
+    },
+
     getCompiledFlowFromEditor() {
         return editorContainer.compile();
     },

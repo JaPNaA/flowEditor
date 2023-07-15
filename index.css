@@ -5,6 +5,8 @@
     width: 67%;
     height: 100%;
     z-index: 0;
+    background-color: #0a0a0a;
+    color: #c0c0c0;
 }
 
 .dummyText {
@@ -43,8 +45,8 @@
     position: absolute;
     display: inline;
     width: 2px;
-    background-color: #000000;
-    height: 1.25em;
+    background-color: #6086f0;
+    height: 1.55em;
 }
 
 .instructionGroup .editable .cursor.backwards::after {
@@ -80,34 +82,44 @@
     transform: translateX(500px);
 } */
 
+.instructionLine:first-of-type {
+    padding-top: 8px;
+}
+
+.instructionLine:last-of-type {
+    padding-bottom: 8px;
+}
+
 .instructionLine {
+    padding-left: 12px;
+    padding-right: 12px;
     white-space: pre-wrap;
-    line-height: 1.25;
-    min-height: 1.25em;
+    line-height: 1.55;
+    min-height: 1.55em;
 }
 
 .instructionLine.jump {
-    color: #ce3232;
-    background-color: #f0cdcd;
+    color: #e6647a;
+    background-color: #ff000017;
+}
+
+.instructionLine.jump.hanging {
+    color: #cfa3a9;
+    background-color: #a773732c;
 }
 
 .instructionLine.control {
-    color: #3256ce;
-    background-color: #cecdf0;
+    color: #598ceb;
+    background-color: #2019e623;
 }
 
 .instructionLine.secondary {
-    color: #004d9f;
+    color: #35b39e;
 }
 
 .instructionLine.newInstructionLine {
     font-style: italic;
-    color: #0000008c;
-}
-
-.instructionLine .controlBranchLine .op.eq::before {
-    content: "=";
-    /* sneakily convert '=' to '==' */
+    color: #c0c0c08c;
 }
 
 .instructionLine .editable {
@@ -147,6 +159,7 @@
     background: #222222;
     z-index: 1;
     color: #cfcfcf;
+    box-shadow: 0px 0px 32px #0000008a;
 }
 
 .executerContainer .outputLog {

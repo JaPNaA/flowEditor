@@ -37,10 +37,15 @@ export class EditorContainer extends Component {
         });
 
         console.log(this.engine.world);
+        this.elm.attribute("tabindex", "0");
     }
 
     public compile() {
         return this.editor.compile();
+    }
+
+    public focus() {
+        this.elm.getHTMLElement().focus();
     }
 
     public getSaveData() {

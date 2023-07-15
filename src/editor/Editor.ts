@@ -186,9 +186,9 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public unsetEditMode() {
-        if (!this.editMode) { return; }
         this.cursor.hide();
         this.unsetTempEditMode();
+        if (!this.editMode) { return; }
         for (const group of this._groupEditors) {
             group.unsetEditMode();
         }
@@ -196,7 +196,6 @@ export class Editor extends WorldElmWithComponents {
     }
 
     private mousedragHandler(ev: MouseEvent) {
-
         const scale = this.engine.camera.scale;
         if (this.engine.keyboard.isDown(["Space"]) || this.engine.mouse.rightDown) {
             // move camera
@@ -234,8 +233,13 @@ export class Editor extends WorldElmWithComponents {
     private addGroupHandler() {
         const newData = newInstructionData();
         const newEditor = new InstructionGroupEditor(this, newData);
-        newEditor.rect.x = this.engine.mouse.worldPos.x;
-        newEditor.rect.y = this.engine.mouse.worldPos.y;
+        if (this._groupEditors.length === 0) {
+            newEditor.rect.x = 8;
+            newEditor.rect.y = 24;
+        } else {
+            newEditor.rect.x = this.engine.mouse.worldPos.x;
+            newEditor.rect.y = this.engine.mouse.worldPos.y;
+        }
         this.addGroup(newEditor);
         newEditor.requestNewLine(0);
         this.setEditMode();

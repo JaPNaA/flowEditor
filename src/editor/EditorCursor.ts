@@ -13,6 +13,7 @@ export class EditorCursor extends Elm<"span"> {
     private position?: Readonly<EditorCursorPositionAbsolute>;
 
     private lastActiveEditable?: Editable;
+    private hidden: boolean = false;
 
     constructor() {
         super("span");
@@ -20,6 +21,7 @@ export class EditorCursor extends Elm<"span"> {
 
         document.addEventListener("selectionchange", e => {
             if (!e.isTrusted) { return; }
+            if (this.hidden) { return; }
 
             const selection = getSelection();
             if (!selection) { return; }
@@ -72,10 +74,12 @@ export class EditorCursor extends Elm<"span"> {
 
     public hide() {
         this.class("hidden");
+        this.hidden = true;
         this.inputCapture.unfocus();
     }
 
     public show() {
+        this.hidden = false;
         this.removeClass("hidden");
     }
 

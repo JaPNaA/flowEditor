@@ -4,7 +4,7 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "./TextareaUserInputCapture.js";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
-import { pluginHooks } from "../index.js";
+import { appHooks, pluginHooks } from "../index.js";
 import { BranchTargetChangeAction } from "./actions.js";
 
 export abstract class Instruction {
@@ -272,27 +272,38 @@ export abstract class BranchInstructionLine extends InstructionLine {
 
     constructor() {
         super();
-        this.elm.append(this.branchConnectElm =
-            new Elm().class("branchConnect").on("click", () => {
-                this.parentInstruction.parentGroup.parentEditor.cursor.setPosition({
-                    group: this.parentInstruction.parentGroup,
-                    char: 0,
-                    editable: 0,
-                    line: this.getCurrentLine()
-                });
-                this.branchConnectElm.class("active");
-                this.parentInstruction.requestSelectInstructionGroup()
-                    .then(editor => {
-                        this.branchConnectElm.removeClass("active");
-                        if (editor) {
-                            this.setBranchTarget(editor);
-                        }
-                    });
-            }));
+        this.elm
+            .class("hanging")
+            .append(this.branchConnectElm =
+                new Elm().class("branchConnect").on("click", () => {
+                    this.parentInstruction.parentGroup.parentEditor.unsetEditMode();
+                    appHooks.focusEditor();
+                    this.requestUserToSetBranchTarget();
+                }));
+    }
+
+    public requestUserToSetBranchTarget() {
+        this.branchConnectElm.class("active");
+        this.parentInstruction.requestSelectInstructionGroup()
+            .then(editor => {
+                this.branchConnectElm.removeClass("active");
+                if (editor) {
+                    this.setBranchTarget(editor);
+                }
+            });
     }
 
     public getBranchTarget() {
         return this.branchTarget;
+    }
+
+    /** DO NOT CALL OUTSIDE OF `UndoableAction` */
+    public _updateElmState() {
+        if (this.branchTarget) {
+            this.elm.removeClass("hanging");
+        } else {
+            this.elm.class("hanging");
+        }
     }
 
     public setBranchOffset(branchOffset: number) {

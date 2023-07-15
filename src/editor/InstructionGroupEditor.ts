@@ -252,7 +252,7 @@ export class InstructionGroupEditor extends WorldElm {
         }
 
         if (this._isStartGroup) {
-            X.fillStyle = "#8e8";
+            X.fillStyle = "#35f035";
             X.beginPath();
             X.moveTo(this.rect.x, this.rect.y);
             X.lineTo(this.rect.x, this.rect.y - 18);
@@ -266,36 +266,35 @@ export class InstructionGroupEditor extends WorldElm {
             X.textAlign = "left";
             X.textBaseline = "bottom";
             X.font = "14px monospace";
-            X.fillText("Start", this.rect.x + 2, this.rect.y - 2);
+            X.fillText("Start", this.rect.x + 8, this.rect.y - 2);
         }
 
-        X.fillStyle = "#ddd";
+        X.fillStyle = "#2a2a2a";
         X.beginPath();
         X.rect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
         if (this.selected) {
-            X.strokeStyle = "#66d";
+            X.strokeStyle = "#5a7bd6";
             X.lineWidth = 4;
             X.stroke();
         }
-
         X.fill();
 
         elm.style.top = this.rect.y + "px";
         elm.style.left = this.rect.x + "px";
 
-        X.strokeStyle = "#000";
-        X.fillStyle = "#000";
+        X.strokeStyle = "#aaa";
+        X.fillStyle = "#aaa";
 
         X.globalCompositeOperation = "destination-over";
 
         let alpha = 0.5;
-        let lineWidth = 1;
+        let lineWidth = 1.5;
         let triangleSize = 1;
         if (this.selected) {
             alpha = 1;
             lineWidth = 2.5;
             triangleSize = 1.3;
-            X.strokeStyle = X.fillStyle = "#a00";
+            X.strokeStyle = X.fillStyle = "#a22";
         }
 
         let index = -1;
@@ -345,7 +344,7 @@ export class InstructionGroupEditor extends WorldElm {
     private render() {
         const elm = this.elm.getHTMLElement();
         const font = `${InstructionGroupEditor.fontSize}px monospace`;
-        const width = 720;
+        const width = 720 + 24; // 24 is padding
 
         elm.style.font = font;
         elm.style.width = width + "px";
