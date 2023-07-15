@@ -80,7 +80,6 @@ class VisualNovelGame {
     }
 
     public async characterSay(charName: string, text: string) {
-        console.log(charName, text);
         this.speechBubble.write(charName, text);
 
         if (this.engine.mouse.rightDown) {
@@ -302,7 +301,6 @@ class SpeechBubble extends WorldElmWithComponents {
         this.isDone = false;
         this.characterName = character;
         this.fullText = text;
-        console.log(this);
     }
 
     public showAllChars() {

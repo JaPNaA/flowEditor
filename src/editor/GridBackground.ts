@@ -25,9 +25,9 @@ export class GridBackground extends WorldElm {
 
         X.save();
         X.translate(this.engine.camera.rect.x, this.engine.camera.rect.y);
-        X.strokeStyle = "#ffffff";
+        X.strokeStyle = "#aaffff";
         X.lineWidth = 0.5 / this.engine.camera.getScale();
-        X.globalAlpha = Math.min((scale * cellSize / 500) ** 0.5 * 0.5, 0.5);
+        X.globalAlpha = Math.min((scale * cellSize / 500) ** 0.5 * 0.3, 0.3);
         X.globalCompositeOperation = "destination-over";
         X.beginPath();
 

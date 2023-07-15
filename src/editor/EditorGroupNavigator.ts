@@ -100,7 +100,7 @@ export class EditorGroupNavigator {
         if (!this.focusGroup) { return; }
         if (!this.siblings) { return; }
 
-        const index = (this.siblings.indexOf(this.focusGroup) + 1) % this.siblings.length;
+        const index = (this.siblings.indexOf(this.focusGroup) + this.siblings.length - 1) % this.siblings.length;
         this.focus(this.siblings[index]);
     }
 
@@ -109,7 +109,7 @@ export class EditorGroupNavigator {
         if (!this.focusGroup) { return; }
         if (!this.siblings) { return; }
 
-        const index = (this.siblings.indexOf(this.focusGroup) + this.siblings.length - 1) % this.siblings.length;
+        const index = (this.siblings.indexOf(this.focusGroup) + 1) % this.siblings.length;
         this.focus(this.siblings[index]);
     }
 
