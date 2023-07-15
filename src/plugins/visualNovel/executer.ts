@@ -339,7 +339,8 @@ class SpeechBubbleElm extends Elm {
         this.elm.style.borderRadius = "8px";
         this.elm.style.padding = "16px";
         this.elm.style.color = "#fffc";
-        this.elm.style.backgroundColor = "#0008";
+        this.elm.style.backgroundColor = "#000a";
+        this.elm.style.backdropFilter = "blur(4px)";
     }
 
     public write(character: string, text: string) {
