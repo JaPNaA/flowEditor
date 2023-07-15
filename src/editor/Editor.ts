@@ -122,7 +122,11 @@ export class Editor extends WorldElmWithComponents {
                 this.movingGroups = true;
 
                 if (this.selectedGroups.size === 0) {
+                    this.engine.mouse.onMouseup.promise().then(() => {
+                        if (this.selectedGroups.size === 1) {
                     this.setTempEditMode(group);
+                }
+                    });
                 }
 
                 if (this.selectedGroups.has(group)) {
