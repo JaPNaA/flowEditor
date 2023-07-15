@@ -45,17 +45,19 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
     }
 
     // group instructions, separated by in/out-going
-    let y = 0;
+    let y = 24;
     const groups: InstructionData[] = [];
     const indexToGroupMap = new Map<number, InstructionData>();
     const jumpChildrenParentMap = new Map<number, BranchInstructionData[]>();
     let currGroup: InstructionData = newInstructionData();
+    currGroup.y = y;
     indexToGroupMap.set(0, currGroup);
 
     function endGroup(nextGroupStartIndex: number) {
         if (currGroup.instructions.length === 0 && currGroup.branches.length === 0) { return; }
         groups.push(currGroup);
-        y += 24 * (currGroup.instructions.length + currGroup.branches.length + 1);
+        // 25: line height; +1: extra goto; +16: padding; 32: margin
+        y += 25 * (currGroup.instructions.length + currGroup.branches.length + 1) + 16 + 32;
         currGroup = newInstructionData();
         currGroup.y = y;
         indexToGroupMap.set(nextGroupStartIndex, currGroup);
@@ -135,7 +137,7 @@ export function newInstructionData(): InstructionData {
     return {
         branches: [],
         instructions: [],
-        x: 0,
+        x: 8,
         y: 0
     }
 }
