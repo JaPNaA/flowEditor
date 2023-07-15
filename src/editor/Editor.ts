@@ -73,6 +73,9 @@ export class Editor extends WorldElmWithComponents {
         });
         this.subscriptions.subscribe(this.cursor.focusChangeGroup, group => this.handleClickGroup(group));
         this.navigator._setEngine(engine);
+
+        this.cursor.autocomplete.setEngine(this.engine);
+        this.engine.htmlOverlay.elm.append(this.cursor.autocomplete);
     }
 
     private mousedownHandler() {
@@ -339,6 +342,7 @@ export class Editor extends WorldElmWithComponents {
         this.markGroupAsStart(this._groupEditors[0]);
 
         this.undoLog.thaw();
+        this.populateAutocomplete();
     }
 
     public deserialize(data: EditorSaveData) {
@@ -384,6 +388,26 @@ export class Editor extends WorldElmWithComponents {
         }
 
         this.undoLog.thaw();
+
+        this.populateAutocomplete();
+    }
+
+    private populateAutocomplete() {
+        // todo: make this better
+        // wait for render()
+        setTimeout(() => {
+            for (const group of this._groupEditors) {
+                for (const instruction of group._instructions) {
+                    for (const line of instruction.getLines()) {
+                        for (const editable of line.getEditables()) {
+                            if (editable.autoCompleteType) {
+                                this.cursor.autocomplete.enteredValue(editable);
+                            }
+                        }
+                    }
+                }
+            }
+        }, 20);
     }
 
     public addGroup(group: InstructionGroupEditor) {

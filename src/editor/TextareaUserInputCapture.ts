@@ -16,13 +16,16 @@ export class TextareaUserInputCapture {
     private belowLine: TextareaUserInputCaptureAreas = [];
 
     /** Fired when the cursor position changes */
-    private positionChangeHandler?: (posStart: TextareaUserInputCursorPositionRelative, posEnd: TextareaUserInputCursorPositionRelative, selectBackwards: boolean) => void;
+    public positionChangeHandler?: (posStart: TextareaUserInputCursorPositionRelative, posEnd: TextareaUserInputCursorPositionRelative, selectBackwards: boolean) => void;
 
     /** Fired when an editable is edited */
-    private inputHandler?: (userInputEvent: UserInputEvent) => void;
+    public inputHandler?: (userInputEvent: UserInputEvent) => void;
 
     /** Fired when a line deletion is requested by the user. Event handlers must setup the input capture again, unless the event is rejected. */
-    private lineDeleteHandler?: (lineOp: LineOperationEvent) => void;
+    public lineDeleteHandler?: (lineOp: LineOperationEvent) => void;
+
+    /** Fired on keydown, before changing the textarea. Can preventDefault here. Return 'true' to cancel change check. */
+    public keydownIntercepter?: (event: KeyboardEvent) => boolean | undefined;
 
     private lastSelectionStart: number = 0;
     private lastSelectionEnd: number = 0;
@@ -35,7 +38,10 @@ export class TextareaUserInputCapture {
 
         // chrome support
         // from https://stackoverflow.com/a/53999418
-        this.inputCapture.on("keydown", () => setTimeout(() => this.checkCursorPosition(), 1));
+        this.inputCapture.on("keydown", ev => {
+            if (this.keydownIntercepter && this.keydownIntercepter(ev)) { return; }
+            setTimeout(() => this.checkCursorPosition(), 1);
+        });
         this.inputCapture.on("paste", () => this.checkCursorPosition()); // Clipboard actions
         this.inputCapture.on("cut", () => this.checkCursorPosition());
         this.inputCapture.on("select", () => this.checkCursorPosition()); // Some browsers support this event
@@ -74,18 +80,6 @@ export class TextareaUserInputCapture {
     private updateTextareaValue() {
         this.textarea.value = this.lastTextareaValue = this.generateTextareaText();
         this.lastSelectionStart = this.lastSelectionEnd = -1;
-    }
-
-    public setPositionChangeHandler(changeHandler: (posStart: TextareaUserInputCursorPositionRelative, posEnd: TextareaUserInputCursorPositionRelative, backwards: boolean) => void) {
-        this.positionChangeHandler = changeHandler;
-    }
-
-    public setInputHandler(inputHandler: (inputEvent: UserInputEvent) => void) {
-        this.inputHandler = inputHandler;
-    }
-
-    public setLineDeleteHandler(lineDeleteHandler: (lineOp: LineOperationEvent) => void) {
-        this.lineDeleteHandler = lineDeleteHandler;
     }
 
     public getCurrentPosition() {

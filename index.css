@@ -148,6 +148,30 @@
     outline: none;
 }
 
+.autocomplete {
+    font-family: monospace;
+    font-size: 1em;
+    background: #181818;
+    box-shadow: 0px 2px 8px #000000ad;
+    position: absolute;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    width: auto;
+}
+
+.autocomplete:empty {
+    display: none;
+}
+
+.autocomplete .suggestion {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.autocomplete .suggestion.selected {
+    background-color: #333333;
+}
+
 .executerContainer {
     display: flex;
     flex-direction: column;

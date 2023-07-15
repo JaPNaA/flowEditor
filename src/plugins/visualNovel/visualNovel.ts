@@ -6,6 +6,10 @@ import { EditorPlugin } from "../EditorPlugin.js";
 import { ControlBackground, ControlDisplay, ControlSay, ControlShow, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 
+const autocompleteTypeCharacter = Symbol();
+const autocompleteTypeBackground = Symbol();
+const autocompleteTypeShow = Symbol();
+
 export default class VisualNovelPlugin implements EditorPlugin {
     keyMappings: { [x: string]: () => Instruction; } = {
         "s": () => new InstructionOneLine(new SayInstruction("", "")),
@@ -56,6 +60,8 @@ class SayInstruction extends InstructionLine implements OneLineInstruction {
             this.textEditable = this.createEditable(text),
             '"'
         );
+
+        this.characterEditable.autoCompleteType = autocompleteTypeCharacter;
     }
 
     public serialize(): ControlSay {
@@ -100,6 +106,7 @@ class BackgroundInstruction extends InstructionLine implements OneLineInstructio
                 ].filter(x => x !== undefined).join(" ")
             )
         );
+        this.backgroundEditable.autoCompleteType = autocompleteTypeBackground;
         this.elm.class("secondary");
     }
 
@@ -136,6 +143,7 @@ class ShowInstruction extends InstructionLine implements OneLineInstruction {
             "Show: ",
             this.editable = this.createEditable(data.src)
         );
+        this.editable.autoCompleteType = autocompleteTypeShow;
         this.elm.class("secondary");
     }
 

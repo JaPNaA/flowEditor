@@ -5,6 +5,7 @@ import { UserInputEvent } from "./TextareaUserInputCapture";
 export class Editable extends Elm<"span"> {
     private value: string;
     public onChange = new EventBus<UserInputEvent>();
+    public autoCompleteType?: symbol;
 
     constructor(initialText: string) {
         super("span");

@@ -6,6 +6,7 @@ import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 import { appHooks, pluginHooks } from "../index.js";
 import { BranchTargetChangeAction } from "./actions.js";
+import { globalAutocompleteTypes } from "./AutoComplete.js";
 
 export abstract class Instruction {
     public parentGroup!: InstructionGroupEditor;
@@ -178,6 +179,10 @@ export abstract class InstructionLine extends Component {
         this.spanToEditable.set(editable.getHTMLElement(), editable);
         this.editables.push(editable);
         return editable;
+    }
+
+    public getEditables(): ReadonlyArray<Editable> {
+        return this.editables;
     }
 
     public getEditableFromIndex(index: number) {
@@ -416,6 +421,8 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
             ", goto..."
         ).class("jump");
 
+        this.v1Span.autoCompleteType = globalAutocompleteTypes.variable;
+
         if (data.op == "=") { this.opSpan.class("eq"); }
     }
 
@@ -493,6 +500,8 @@ class ControlInputLine extends InstructionLine implements OneLineInstruction {
             this.choicesSpan = this.createEditable(data.options.join(", ")),
             ']'
         ).class("control");
+
+        this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
     }
 
     public serialize(): ControlInput {
@@ -520,6 +529,7 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
     constructor(data: ControlVariable) {
         super();
         this.variableSpan = this.createEditable(data.v1);
+        this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
         let op: string = data.op;
         let v2 = data.v2;
 
