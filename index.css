@@ -20,10 +20,12 @@
 .instructionGroup {
     position: absolute;
     pointer-events: none;
+    user-select: none;
 }
 
 .instructionGroup.editMode {
     pointer-events: all;
+    user-select: auto;
 }
 
 /* .instructionElm.active {

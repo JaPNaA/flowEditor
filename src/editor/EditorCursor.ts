@@ -10,12 +10,12 @@ export class EditorCursor extends Elm<"span"> {
     public autocomplete = new AutoComplete();
 
     public focusChangeGroup = new EventBus<InstructionGroupEditor>();
+    public clickGroup = new EventBus<InstructionGroupEditor>();
 
     private inputCapture = new TextareaUserInputCapture();
     private position?: Readonly<EditorCursorPositionAbsolute>;
 
     private lastActiveEditable?: Editable;
-    private allowAction = false;
     private allowAutocomplete = false;
 
     constructor() {
@@ -24,7 +24,6 @@ export class EditorCursor extends Elm<"span"> {
 
         document.addEventListener("selectionchange", e => {
             if (!e.isTrusted) { return; }
-            if (!this.allowAction) { return; }
 
             const selection = getSelection();
             if (!selection) { return; }
@@ -46,6 +45,7 @@ export class EditorCursor extends Elm<"span"> {
                         this.setTextareInputCursorPosition(position);
                         position.group.appendInputCapture(this.inputCapture);
                         this.inputCapture.focus();
+                        this.clickGroup.send(group);
                     }
                 }
             }
@@ -131,12 +131,10 @@ export class EditorCursor extends Elm<"span"> {
     }
 
     public unfocus() {
-        this.allowAction = false;
         this.inputCapture.unfocus();
     }
 
     public focus() {
-        this.allowAction = true;
         this.inputCapture.focus();
     }
 

@@ -76,7 +76,7 @@ export class Editor extends WorldElmWithComponents {
             ev.preventDefault();
             this.setEditMode();
         });
-        this.subscriptions.subscribe(this.cursor.focusChangeGroup, group => this.handleClickGroup(group));
+        this.subscriptions.subscribe(this.cursor.clickGroup, group => this.handleClickGroup(group));
         this.navigator._setEngine(engine);
 
         this.cursor.autocomplete.setEngine(this.engine);
@@ -179,11 +179,21 @@ export class Editor extends WorldElmWithComponents {
     }
 
     private setTempEditMode(group: InstructionGroupEditor) {
+        if (this.editMode) { return; }
         if (this.tempEditModeGroup) {
             this.unsetTempEditMode();
         }
         this.tempEditModeGroup = group;
-        this.cursor.focus();
+        if (this.cursor.getPosition()?.group !== group) {
+            // focus selected group
+            this.cursor.setPosition({
+                group: group,
+                line: 0,
+                editable: 0,
+                char: 0,
+            });
+            this.cursor.unfocus();
+        }
         group.setEditMode();
     }
 
@@ -206,21 +216,13 @@ export class Editor extends WorldElmWithComponents {
         this.editMode = true;
         if (this.tempEditModeGroup) {
             this.unsetTempEditMode();
-        } else {
-            // focus selected group
-            setTimeout(() => {
-                for (const selectedGroup of this.selectedGroups) {
-                    this.cursor.setPosition({
-                        group: selectedGroup,
-                        line: 0,
-                        editable: 0,
-                        char: 0,
-                    });
-                    break; // only one
-                }
-            }, 1);
         }
+    }
 
+    public getOneSelectedGroup() {
+        for (const group of this.selectedGroups) {
+            return group;
+        }
     }
 
     public unsetEditMode() {
