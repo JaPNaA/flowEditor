@@ -2,17 +2,19 @@ import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
 import { Instruction } from "./instructionLines.js";
-import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, Vec2M, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./actions.js";
 import { GridBackground } from "./GridBackground.js";
 import { EditorGroupNavigator } from "./EditorGroupNavigator.js";
 import { appHooks } from "../index.js";
+import { SmoothCamera } from "./SmoothCamera.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
     public undoLog = new UndoLog();
+    public smoothCamera = new SmoothCamera();
 
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
@@ -51,6 +53,8 @@ export class Editor extends WorldElmWithComponents {
         this._children.addChild(new DummyText());
         this._children.addChild(this.selectRectangle);
         this._children.addChild(new GridBackground());
+        this._children.addChild(this.smoothCamera);
+
         this.navigator = new EditorGroupNavigator(this.subscriptions, this);
         console.log(this.undoLog);
     }
@@ -173,7 +177,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public moveCameraToGroup(group: InstructionGroupEditor) {
-        this.engine.camera.centerOn(group);
+        this.smoothCamera.moveToCenterOn(group.rect);
     }
 
     public clearSelection() {
