@@ -183,7 +183,7 @@ export class Editor extends WorldElmWithComponents {
             this.unsetTempEditMode();
         }
         this.tempEditModeGroup = group;
-        this.cursor.show();
+        this.cursor.focus();
         group.setEditMode();
     }
 
@@ -191,7 +191,7 @@ export class Editor extends WorldElmWithComponents {
         if (this.tempEditModeGroup) {
             if (!this.editMode) {
                 this.tempEditModeGroup.unsetEditMode();
-                this.cursor.hide();
+                this.cursor.unfocus();
             }
             this.tempEditModeGroup = undefined;
         }
@@ -199,7 +199,7 @@ export class Editor extends WorldElmWithComponents {
 
     public setEditMode() {
         if (this.editMode) { return; }
-        this.cursor.show();
+        this.cursor.focus();
         for (const group of this._groupEditors) {
             group.setEditMode();
         }
@@ -224,7 +224,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public unsetEditMode() {
-        this.cursor.hide();
+        this.cursor.unfocus();
         this.unsetTempEditMode();
         if (!this.editMode) { return; }
         for (const group of this._groupEditors) {

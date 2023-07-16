@@ -11,11 +11,11 @@ export class EditorCursor extends Elm<"span"> {
 
     public focusChangeGroup = new EventBus<InstructionGroupEditor>();
 
-    private inputCapture = new TextareaUserInputCapture(this);
+    private inputCapture = new TextareaUserInputCapture();
     private position?: Readonly<EditorCursorPositionAbsolute>;
 
     private lastActiveEditable?: Editable;
-    private hidden = false;
+    private allowAction = false;
     private allowAutocomplete = false;
 
     constructor() {
@@ -24,7 +24,7 @@ export class EditorCursor extends Elm<"span"> {
 
         document.addEventListener("selectionchange", e => {
             if (!e.isTrusted) { return; }
-            if (this.hidden) { return; }
+            if (!this.allowAction) { return; }
 
             const selection = getSelection();
             if (!selection) { return; }
@@ -76,7 +76,6 @@ export class EditorCursor extends Elm<"span"> {
             this.position.group.onLineDelete(this.position, lineOp);
         };
 
-        // temp
         this.inputCapture.keydownIntercepter = e => {
             if (!this.position) { return; }
             if (!this.autocomplete.isShowingSuggestions()) { return; }
@@ -121,17 +120,24 @@ export class EditorCursor extends Elm<"span"> {
                 return true;
             }
         };
+
+        this.inputCapture.focusHandler = () => {
+            this.removeClass("hidden");
+        };
+
+        this.inputCapture.unfocusHandler = () => {
+            this.class("hidden");
+        };
     }
 
-    public hide() {
-        this.class("hidden");
-        this.hidden = true;
+    public unfocus() {
+        this.allowAction = false;
         this.inputCapture.unfocus();
     }
 
-    public show() {
-        this.hidden = false;
-        this.removeClass("hidden");
+    public focus() {
+        this.allowAction = true;
+        this.inputCapture.focus();
     }
 
     public setSelectedText(text: string) {

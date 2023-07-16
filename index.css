@@ -36,7 +36,7 @@
 }
 
 .instructionGroup .editable .cursor.hidden {
-    display: none;
+    background-color: #6b6b6ba2;
 }
 
 .instructionGroup .editable .cursor::after,
@@ -51,6 +51,11 @@
 
 .instructionGroup .editable .cursor.backwards::after {
     content: '';
+    display: none;
+}
+
+.instructionGroup .editable .cursor.hidden::after,
+.instructionGroup .editable .cursor.hidden::before {
     display: none;
 }
 

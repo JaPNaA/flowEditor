@@ -27,12 +27,20 @@ export class TextareaUserInputCapture {
     /** Fired on keydown, before changing the textarea. Can preventDefault here. Return 'true' to cancel change check. */
     public keydownIntercepter?: (event: KeyboardEvent) => boolean | undefined;
 
+    /** Fired when textarea in focus */
+    public focusHandler?: () => void;
+    /** Fired when textarea is no longer focused */
+    public unfocusHandler?: () => void;
+
     private lastSelectionStart: number = 0;
     private lastSelectionEnd: number = 0;
     private lastTextareaValue = "";
 
-    constructor(private cursor: EditorCursor) {
+    constructor() {
         this.textarea = this.inputCapture.getHTMLElement();
+        this.inputCapture.on("focus", () => this.focusHandler?.());
+        this.inputCapture.on("blur", () => this.unfocusHandler?.());
+
         this.inputCapture.on("input", () => this.onChange());
         this.inputCapture.on("selectionchange", () => this.onChange());
 
