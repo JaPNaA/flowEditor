@@ -456,7 +456,7 @@ export class InstructionGroupEditor extends WorldElm {
     /** Asks the instruction corresponding to the specified line to remove the line */
     public requestRemoveLine(lineIndex: number) {
         const line = this._lines[lineIndex];
-        if (!line) { throw new Error("Invalid position"); }
+        if (!line) { return; }
         return line.parentInstruction.removeLine(line);
     }
 

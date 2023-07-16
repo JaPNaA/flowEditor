@@ -1,5 +1,4 @@
 import { Editable } from "./Editable.js";
-import { EditorCursor } from "./EditorCursor.js";
 import { Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
@@ -214,8 +213,8 @@ export class TextareaUserInputCapture {
                 that.resetChanges(0);
             } else {
                 editable.setValue(newContent);
-                const cursorPos = that.getPosition(that.textarea.selectionStart);
                 if (that.positionChangeHandler) {
+                    const cursorPos = that.getPosition(that.textarea.selectionStart);
                     that.positionChangeHandler(cursorPos, cursorPos, false);
                 }
                 editable.afterChangeApply();

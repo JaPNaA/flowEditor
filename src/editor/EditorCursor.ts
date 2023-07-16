@@ -46,11 +46,17 @@ export class EditorCursor extends Elm<"span"> {
                         position.group.appendInputCapture(this.inputCapture);
                         this.inputCapture.focus();
                         this.clickGroup.send(group);
+
+                        this.allowAutocomplete = false;
+                        this.autocomplete.clearSuggestions();
                     }
                 }
             }
         });
 
+        let justInputted = false;
+        let prevPosStart: EditorCursorPositionAbsolute | undefined;
+        let prevPosEnd: EditorCursorPositionAbsolute | undefined;
         this.inputCapture.positionChangeHandler = (relPosStart, relPosEnd, backwards) => {
             if (!this.position) { return; }
             const newPosStart = this.position.group.calculateNewPosition(this.position, relPosStart);
@@ -62,12 +68,35 @@ export class EditorCursor extends Elm<"span"> {
             }
             this._setPosition(newPosStart);
             this.inputCapture.focus();
-            this.allowAutocomplete = false;
+
+            // filter events duplicate events
+            if (prevPosStart && prevPosEnd &&
+                newPosStart.group === prevPosStart.group &&
+                newPosStart.line === prevPosStart.line &&
+                newPosStart.editable === prevPosStart.editable &&
+                newPosStart.char === prevPosStart.char &&
+                newPosEnd.group === prevPosEnd.group &&
+                newPosEnd.line === prevPosEnd.line &&
+                newPosEnd.editable === prevPosEnd.editable &&
+                newPosEnd.char === prevPosEnd.char
+            ) {
+                return;
+            }
+
+            prevPosStart = newPosStart;
+            prevPosEnd = newPosEnd;
+
+            if (!justInputted) {
+                this.allowAutocomplete = false;
+                this.autocomplete.clearSuggestions();
+            }
+            justInputted = false;
         };
 
         this.inputCapture.inputHandler = input => {
             if (!this.position) { return; }
             this.allowAutocomplete = true;
+            justInputted = true;
             this.position.group.onCursorInput(this.position, input);
         };
 
@@ -85,8 +114,6 @@ export class EditorCursor extends Elm<"span"> {
             switch (e.key) {
                 case "Escape":
                     e.stopPropagation();
-                case "ArrowLeft":
-                case "ArrowRight":
                     this.allowAutocomplete = false;
                     this.autocomplete.clearSuggestions();
                     preventDefault = false;
