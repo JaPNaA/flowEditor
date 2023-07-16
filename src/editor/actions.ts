@@ -173,7 +173,7 @@ export class RemoveInstructionAction implements UndoableAction {
     }
 
     public inverse(): AddInstructionAction {
-        if (!this.removedInstruction) { throw new Error("Cannot inverse before perform"); }
+        if (!this.removedInstruction) { throw new InverseBeforePerformError(); }
         return new AddInstructionAction(this.removedInstruction, this.index, this.group);
     }
 }
@@ -190,5 +190,11 @@ export class BranchTargetChangeAction implements UndoableAction {
 
     public inverse(): UndoableAction {
         return new BranchTargetChangeAction(this.previousBranchTarget || null, this.instruction);
+    }
+}
+
+class InverseBeforePerformError extends Error {
+    constructor() {
+        super("Cannot inverse action before performing the action.");
     }
 }
