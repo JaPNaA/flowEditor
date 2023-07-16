@@ -11,6 +11,7 @@ export class EditorCursor extends Elm<"span"> {
 
     public focusChangeGroup = new EventBus<InstructionGroupEditor>();
     public clickGroup = new EventBus<InstructionGroupEditor>();
+    public keyboardShortcutPress = new EventBus<KeyboardEvent>();
 
     private inputCapture = new TextareaUserInputCapture();
     private position?: Readonly<EditorCursorPositionAbsolute>;
@@ -106,6 +107,12 @@ export class EditorCursor extends Elm<"span"> {
         };
 
         this.inputCapture.keydownIntercepter = e => {
+            if (e.ctrlKey && !["ArrowLeft", "ArrowRight"].includes(e.key)) {
+                this.keyboardShortcutPress.send(e);
+                e.preventDefault();
+                return;
+            }
+
             if (!this.position) { return; }
             if (!this.autocomplete.isShowingSuggestions()) { return; }
             if (!this.lastActiveEditable) { return; }

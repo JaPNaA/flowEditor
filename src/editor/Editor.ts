@@ -67,7 +67,7 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addGroupHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyS"), this.markGroupAsStartHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyZ"), () => this.undoLog.undo());
-        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("F5"), ev => {
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyR"), ev => {
             ev.preventDefault();
             appHooks.runFlow();
         });
@@ -75,6 +75,9 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Enter", "NumpadEnter"]), ev => {
             ev.preventDefault();
             this.setEditMode();
+        });
+        this.subscriptions.subscribe(this.cursor.keyboardShortcutPress, ev => {
+            this.engine.keyboard.pretendPress(ev);
         });
         this.subscriptions.subscribe(this.cursor.clickGroup, group => this.handleClickGroup(group));
         this.navigator._setEngine(engine);
