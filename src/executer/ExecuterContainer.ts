@@ -55,7 +55,7 @@ export class ExecuterContainer extends Component {
         this.outputDisplays.append(elm);
     }
 
-    private execute() {
+    public execute() {
         const compiled = appHooks.getCompiledFlowFromEditor();
         console.log(compiled);
         this.log.clear();

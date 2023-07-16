@@ -8,6 +8,7 @@ import { ControlItem } from "../FlowRunner.js";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./actions.js";
 import { GridBackground } from "./GridBackground.js";
 import { EditorGroupNavigator } from "./EditorGroupNavigator.js";
+import { appHooks } from "../index.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -66,6 +67,10 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addGroupHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyS"), this.markGroupAsStartHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyZ"), () => this.undoLog.undo());
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("F5"), ev => {
+            ev.preventDefault();
+            appHooks.runFlow();
+        });
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Backspace", "Delete"]), this.deleteSelectedHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Enter", "NumpadEnter"]), ev => {
             ev.preventDefault();

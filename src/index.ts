@@ -8,6 +8,10 @@ export const appHooks = {
         return editorContainer.focus();
     },
 
+    runFlow() {
+        return executerContainer.execute();
+    },
+
     getCompiledFlowFromEditor() {
         return editorContainer.compile();
     },
