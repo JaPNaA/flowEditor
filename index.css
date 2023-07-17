@@ -177,6 +177,7 @@ body {
     padding-bottom: 4px;
     width: auto;
     z-index: 1;
+    white-space: pre;
 }
 
 .autocomplete:empty {
