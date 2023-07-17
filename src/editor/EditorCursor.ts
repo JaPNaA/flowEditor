@@ -107,7 +107,7 @@ export class EditorCursor extends Elm<"span"> {
         };
 
         this.inputCapture.keydownIntercepter = e => {
-            if (e.ctrlKey && !["ArrowLeft", "ArrowRight"].includes(e.key)) {
+            if (e.ctrlKey && !["ArrowLeft", "ArrowRight", "Delete", "Backspace"].includes(e.key)) {
                 this.keyboardShortcutPress.send(e);
                 e.preventDefault();
                 return;
