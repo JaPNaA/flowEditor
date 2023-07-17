@@ -11,15 +11,18 @@ export class VisualNovelExecuter implements Executer {
     private game?: VisualNovelGame;
     private executerContainer!: ExecuterContainer;
 
-    public start(executerContainer: ExecuterContainer): Promise<void> {
-        this.executerContainer = executerContainer;
-        this.executerContainer.addOutputDisplay(this.elm);
-        this.game = new VisualNovelGame(this.elm.getHTMLElement());
+    constructor() {
         this.elm.on("keydown", key => {
             if (key.key === "f") {
                 this.elm.getHTMLElement().requestFullscreen();
             }
         });
+    }
+
+    public start(executerContainer: ExecuterContainer): Promise<void> {
+        this.executerContainer = executerContainer;
+        this.executerContainer.addOutputDisplay(this.elm);
+        this.game = new VisualNovelGame(this.elm.getHTMLElement());
 
         return Promise.resolve();
     }
