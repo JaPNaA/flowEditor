@@ -10,12 +10,13 @@ export class ExecuterContainer extends Component {
     private paused = false;
     private lastChoice: any[] = [];
     private outputDisplays: Elm;
+    private resizeHandle = new ResizeHandle(this);
 
     constructor() {
         super("executerContainer");
 
         this.elm.append(
-            new ResizeHandle(this),
+            this.resizeHandle,
             new Elm().class("fileOperationsBar").append(
                 new Elm("button").append("Run").onActivate(() => this.execute()),
                 new Elm("button").append("Save").onActivate(() =>
@@ -40,6 +41,7 @@ export class ExecuterContainer extends Component {
             this.input
         );
 
+        this.resizeHandle.collapse();
         this.input.selectCallback = choice => {
             if (!this.runner) { return; }
             this.runner.input(choice);
@@ -59,6 +61,7 @@ export class ExecuterContainer extends Component {
     public execute() {
         const compiled = appHooks.getCompiledFlowFromEditor();
         console.log(compiled);
+        this.resizeHandle.uncollapse();
         this.log.clear();
         this.input.clear();
         pluginHooks.stopExecution();
@@ -157,31 +160,66 @@ class ChooseInput extends Component {
 
 class ResizeHandle extends Component {
     private dragging = false;
+    private lastWidth = 33;
+    private currWidth = 33;
+    private collapsed = false;
 
-    constructor(private parent: Component) {
+    constructor(private parent: ExecuterContainer) {
         super("resizeHandle");
 
         this.mouseupHandler = this.mouseupHandler.bind(this);
         this.mousemoveHandler = this.mousemoveHandler.bind(this);
 
-        this.elm.on("mousedown", () => {
+        this.elm.on("mousedown", ev => {
+            ev.preventDefault();
             if (this.dragging) { return; }
             this.dragging = true;
             addEventListener("mouseup", this.mouseupHandler);
             addEventListener("mousemove", this.mousemoveHandler);
         });
+
+        this.elm.on("dblclick", () => {
+            if (this.collapsed) {
+                this.uncollapse();
+            } else {
+                this.collapse();
+            }
+        });
+    }
+
+    public collapse() {
+        this.collapsed = true;
+        this.parent.elm.getHTMLElement().style.width = "8px";
+        this.parent.elm.class("collapsed");
+    }
+
+    public uncollapse(width?: number) {
+        this.collapsed = false;
+        this.parent.elm.removeClass("collapsed");
+        this.parent.elm.getHTMLElement().style.width = (width || this.lastWidth) + "%";
     }
 
     private mouseupHandler() {
         removeEventListener("mouseup", this.mouseupHandler);
         removeEventListener("mousemove", this.mousemoveHandler);
         this.dragging = false;
+        if (!this.collapsed) {
+            this.lastWidth = this.currWidth;
+        }
     }
 
     private mousemoveHandler(ev: MouseEvent) {
         ev.preventDefault();
         // "1 -" because executer is on the right
-        const newWidth = Math.min(Math.max(5, (1 - ev.clientX / innerWidth) * 100), 95);
-        this.parent.elm.getHTMLElement().style.width = newWidth + "%";
+        const newWidth = Math.min((1 - ev.clientX / innerWidth) * 100, 95);
+
+        if (newWidth < 5) {
+            if (!this.collapsed) {
+                this.collapse();
+            }
+        } else {
+            this.uncollapse(newWidth);
+            this.currWidth = newWidth;
+        }
     }
 }

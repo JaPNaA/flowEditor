@@ -204,6 +204,20 @@ body {
     box-shadow: 0px 0px 32px #0000008a;
 }
 
+.executerContainer.collapsed .fileOperationsBar {
+    position: absolute;
+    right: 0;
+    width: auto;
+    white-space: pre;
+    z-index: 2;
+}
+
+.executerContainer.collapsed .outputDisplays,
+.executerContainer.collapsed .outputLog,
+.executerContainer.collapsed .chooseInput {
+    display: none;
+}
+
 .executerContainer .outputLog {
     flex-grow: 1;
     padding: 8px;
@@ -227,6 +241,7 @@ body {
 }
 
 .executerContainer .fileOperationsBar {
+    text-align: right;
     background-color: #3a3a3a;
     line-height: 1;
 }
