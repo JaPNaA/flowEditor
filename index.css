@@ -1,12 +1,24 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.main {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+}
+
 .editorContainer {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 67%;
+    position: relative;
+    width: auto;
     height: 100%;
     z-index: 0;
     background-color: #0a0a0a;
     color: #c0c0c0;
+    flex-grow: 1;
 }
 
 .dummyText {
@@ -183,9 +195,7 @@
 .executerContainer {
     display: flex;
     flex-direction: column;
-    position: fixed;
-    left: 67%;
-    top: 0;
+    position: relative;
     width: 33%;
     height: 100%;
     background: #222222;
@@ -236,4 +246,20 @@
 
 .executerContainer .fileOperationsBar button.deleteAndReload {
     color: #ff2d2d;
+}
+
+.executerContainer .resizeHandle {
+    position: absolute;
+    top: 0;
+    left: -3px;
+    height: 100%;
+    width: 6px;
+    background-color: transparent;
+    cursor: col-resize;
+    transition: 0.1s ease background-color;
+}
+
+.executerContainer .resizeHandle:hover {
+    background-color: #3862d8;
+    z-index: 1;
 }

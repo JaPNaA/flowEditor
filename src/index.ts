@@ -2,6 +2,7 @@ import { ExecuterContainer } from "./executer/ExecuterContainer.js";
 import { EditorContainer } from "./editor/EditorContainer.js";
 import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
 import { Instruction } from "./editor/instructionLines.js";
+import { Elm } from "./japnaaEngine2d/elements.js";
 
 export const appHooks = {
     focusEditor() {
@@ -54,10 +55,12 @@ export const pluginHooks = {
 };
 
 const executerContainer = new ExecuterContainer();
-executerContainer.appendTo(document.body);
-
 const editorContainer = new EditorContainer();
-editorContainer.appendTo(document.body);
+
+new Elm().class("main").append(
+    editorContainer,
+    executerContainer
+).appendTo(document.body);
 
 // load visualNovel plugin
 const plugin = new VisualNovelPlugin();
