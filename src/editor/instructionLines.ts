@@ -630,7 +630,7 @@ class NewInstructionLine extends InstructionLine implements OneLineInstruction {
                         // v1: "v1",
                         v1: "choice",
                         // v2: "v2"
-                        v2: "0"
+                        v2: 1
                     });
                     break;
                 // case "i":
@@ -653,7 +653,7 @@ class NewInstructionLine extends InstructionLine implements OneLineInstruction {
                         ctrl: "variable",
                         op: "=",
                         v1: "v1",
-                        v2: "v2"
+                        v2: 1
                     });
                     break;
                 case "d":
