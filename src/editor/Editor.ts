@@ -91,7 +91,8 @@ export class Editor extends WorldElmWithComponents {
         this.engine.htmlOverlay.elm.append(this.cursor.autocomplete);
     }
 
-    private mousedownHandler() {
+    private mousedownHandler(ev: MouseEvent) {
+        ev.preventDefault();
         if (this.engine.keyboard.isDown(["Space"]) || this.engine.mouse.rightDown) { return; }
 
         const collisions = this.engine.collisions.getCollisionsWith(
