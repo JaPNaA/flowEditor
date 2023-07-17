@@ -318,6 +318,7 @@ export class Editor extends WorldElmWithComponents {
         if (this._groupEditors.length === 1) {
             this.markGroupAsStart(this._groupEditors[0]);
         }
+        this.handleClickGroup(newEditor);
     }
 
     private markGroupAsStartHandler() {
