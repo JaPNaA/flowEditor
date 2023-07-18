@@ -68,9 +68,18 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.mouse.onMousedown, this.mousedownHandler);
         this.subscriptions.subscribe(this.engine.mouse.onMousemove, this.mousedragHandler);
         this.subscriptions.subscribe(this.engine.mouse.onMouseup, this.mouseupHandler);
-        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), this.addGroupHandler);
-        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyS"), this.markGroupAsStartHandler);
-        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyZ"), () => this.undoLog.undo());
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyA"), ev => {
+            ev.preventDefault();
+            this.addGroupHandler();
+        });
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyS"), ev => {
+            ev.preventDefault();
+            this.markGroupAsStartHandler();
+        });
+        this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyZ"), ev => {
+            ev.preventDefault();
+            this.undoLog.undo();
+        });
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus("KeyR"), ev => {
             ev.preventDefault();
             appHooks.runFlow();
