@@ -1,4 +1,4 @@
-import { WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 
 // reused from https://github.com/JaPNaA/Thingy_2021/blob/master/physicsSimulationLibrary/engine/components/Grid.js
 export class GridBackground extends WorldElm {

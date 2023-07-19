@@ -1,12 +1,15 @@
 import { Editor, InstructionElmData } from "./Editor.js";
-import { EditorCursorPositionAbsolute } from "./EditorCursor.js";
-import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./TextareaUserInputCapture.js";
-import { UIDGenerator } from "./UIDGenerator.js";
-import { InstructionData } from "./flowToInstructionData.js";
-import { BranchInstructionLine, Instruction, InstructionLine, NewInstruction } from "./instructionLines.js";
+import { EditorCursorPositionAbsolute } from "./editing/EditorCursor.js";
+import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture.js";
+import { UIDGenerator } from "./toolchain/UIDGenerator.js";
+import { InstructionData } from "./toolchain/flowToInstructionData.js";
 import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
-import { AddInstructionAction, RemoveInstructionAction } from "./actions.js";
+import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions.js";
+import { NewInstruction } from "./instruction/NewInstruction.js";
+import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes.js";
+import { isControlItem } from "../FlowRunner.js";
+import { pluginHooks } from "../index.js";
 
 export class InstructionGroupEditor extends WorldElm {
     public elm: Elm;
@@ -420,7 +423,7 @@ export class InstructionGroupEditor extends WorldElm {
         this.parentEditor.addGroup(newGroup);
 
         // link previous group here
-        const jump = Instruction.fromData({ ctrl: 'jump', offset: 0 });
+        const jump = this.instructionFromData({ ctrl: 'jump', offset: 0 });
         this.insertInstruction(jump, this._instructions.length);
         jump.setBranchTargets([newGroup]);
 
@@ -435,12 +438,12 @@ export class InstructionGroupEditor extends WorldElm {
             if (previousLine.parentInstruction.insertLine(lineIndex)) {
                 return;
             }
-            const instructionLine = Instruction.fromData({ ctrl: 'nop' });
+            const instructionLine = this.instructionFromData({ ctrl: 'nop' });
             return this.insertInstruction(instructionLine,
                 previousLine.parentInstruction.getIndex() + 1
             );
         } else {
-            const instructionLine = Instruction.fromData({ ctrl: 'nop' });
+            const instructionLine = this.instructionFromData({ ctrl: 'nop' });
             return this.insertInstruction(instructionLine, 0);
         }
     }
@@ -507,7 +510,7 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     private addInstructionLine(data: any) {
-        const instruction = Instruction.fromData(data);
+        const instruction = this.instructionFromData(data);
         const lines = instruction.getLines();
         instruction._setParent(this);
 
@@ -519,5 +522,9 @@ export class InstructionGroupEditor extends WorldElm {
 
         this._instructions.push(instruction);
         return instruction;
+    }
+
+    private instructionFromData(data: any): Instruction {
+        return this.parentEditor.deserializer.deserialize(data);
     }
 }

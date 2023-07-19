@@ -1,8 +1,8 @@
 import { FlowData } from "../FlowRunner.js";
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EditorPlugin } from "../plugins/EditorPlugin.js";
 import { Editor } from "./Editor.js";
-import { InstructionBlueprintMin } from "./InstructionBlueprintRegistery.js";
-import { InstructionData, constructInstructionData } from "./flowToInstructionData.js";
+import { InstructionData, constructInstructionData } from "./toolchain/flowToInstructionData.js";
 
 export class EditorContainer extends Component {
     public preventSaveOnExit = false;
@@ -51,8 +51,9 @@ export class EditorContainer extends Component {
         this.elm.attribute("tabindex", "0");
     }
 
-    public registerBlueprints(blueprints: InstructionBlueprintMin[], plugin: string) {
-        this.editor.blueprintRegistery.registerBlueprints(blueprints, plugin);
+    public registerPlugin(plugin: EditorPlugin) {
+        this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
+        this.editor.deserializer.registerDeserializer(plugin.parse);
     }
 
     public compile() {

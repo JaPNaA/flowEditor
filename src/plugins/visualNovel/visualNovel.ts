@@ -1,12 +1,12 @@
 import { ControlItem } from "../../FlowRunner.js";
-import { globalAutocompleteTypes } from "../../editor/AutoComplete.js";
-import { Editable } from "../../editor/Editable.js";
+import { globalAutocompleteTypes } from "../../editor/ui/AutoComplete.js";
+import { Editable } from "../../editor/editing/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
-import { InstructionBlueprint, InstructionBlueprintMin } from "../../editor/InstructionBlueprintRegistery.js";
-import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instructionLines.js";
+import { InstructionBlueprintMin } from "../../editor/instruction/InstructionBlueprintRegistery.js";
 import { EditorPlugin } from "../EditorPlugin.js";
 import { ControlBackground, ControlBackgroundMusic, ControlChoose, ControlSay, ControlSayAdd, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
+import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instruction/instructionTypes.js";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
@@ -14,6 +14,8 @@ const autocompleteTypeBackgroundMusic = Symbol();
 const autocompleteTypeShow = Symbol();
 
 export default class VisualNovelPlugin implements EditorPlugin {
+    name = "Visual Novel";
+
     instructionBlueprints: InstructionBlueprintMin[] = [{
         instructionName: "say",
         description: "Display text indicating a character talking",

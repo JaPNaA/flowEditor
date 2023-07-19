@@ -1,22 +1,24 @@
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
-import { UIDGenerator } from "./UIDGenerator.js";
-import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
-import { Instruction, registerDefaultBlueprints } from "./instructionLines.js";
-import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, Vec2M, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { EditorCursor } from "./EditorCursor.js";
+import { UIDGenerator } from "./toolchain/UIDGenerator.js";
+import { InstructionData, newInstructionData } from "./toolchain/flowToInstructionData.js";
+import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EditorCursor } from "./editing/EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
-import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./actions.js";
-import { GridBackground } from "./GridBackground.js";
-import { EditorGroupNavigator } from "./EditorGroupNavigator.js";
+import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions.js";
+import { GridBackground } from "./ui/GridBackground.js";
+import { EditorGroupNavigator } from "./ui/EditorGroupNavigator.js";
 import { appHooks } from "../index.js";
-import { SmoothCamera } from "./SmoothCamera.js";
-import { InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
+import { SmoothCamera } from "./ui/SmoothCamera.js";
+import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprintRegistery.js";
+import { Instruction } from "./instruction/instructionTypes.js";
+import { InstructionDeserializer } from "./toolchain/InstructionDeserializer.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
     public undoLog = new UndoLog();
     public smoothCamera = new SmoothCamera();
     public blueprintRegistery = new InstructionBlueprintRegistery();
+    public deserializer = new InstructionDeserializer();
 
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
@@ -69,8 +71,6 @@ export class Editor extends WorldElmWithComponents {
         });
         this.subscriptions.subscribe(this.cursor.onClickGroup, group => this.handleClickGroup(group));
         this.subscriptions.subscribe(this.cursor.onInput, () => this.dirty = true);
-
-        registerDefaultBlueprints(this.blueprintRegistery);
     }
 
     public getGroups(): ReadonlyArray<InstructionGroupEditor> {

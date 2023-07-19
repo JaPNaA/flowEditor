@@ -1,8 +1,8 @@
-import { JaPNaAEngine2d, Vec2M } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { Component, Elm } from "../japnaaEngine2d/elements.js";
-import { looseStartsWith } from "../utils.js";
-import { Editable } from "./Editable.js";
-import { EditorCursor } from "./EditorCursor.js";
+import { JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Component, Elm } from "../../japnaaEngine2d/elements.js";
+import { looseStartsWith } from "../../utils.js";
+import { Editable } from "../editing/Editable.js";
+import { EditorCursor } from "../editing/EditorCursor.js";
 
 export interface AutoCompleteSuggester {
     learn(editable: Editable): void;

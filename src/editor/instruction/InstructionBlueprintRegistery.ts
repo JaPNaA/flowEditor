@@ -1,4 +1,4 @@
-import { Instruction } from "./instructionLines";
+import { Instruction } from "./instructionTypes.js";
 
 export type InstructionBlueprintMin = Omit<InstructionBlueprint, "plugin">;
 

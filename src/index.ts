@@ -1,8 +1,8 @@
 import { ExecuterContainer } from "./executer/ExecuterContainer.js";
 import { EditorContainer } from "./editor/EditorContainer.js";
 import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
-import { Instruction } from "./editor/instructionLines.js";
 import { Elm } from "./japnaaEngine2d/elements.js";
+import { DefaultPlugin } from "./plugins/default/default.js";
 
 export const appHooks = {
     focusEditor() {
@@ -29,20 +29,16 @@ export const appHooks = {
 };
 
 export const pluginHooks = {
-    parseInstruction(instruction: any): undefined | Instruction {
-        return plugin.parse(instruction);
-    },
-
     startExecution(): Promise<void> {
-        return plugin.executer.start(executerContainer);
+        return visualNovelPlugin.executer.start(executerContainer);
     },
 
     runInstruction(instruction: any) {
-        return plugin.executer.run(instruction);
+        return visualNovelPlugin.executer.run(instruction);
     },
 
     stopExecution() {
-        return plugin.executer.stop();
+        return visualNovelPlugin.executer.stop();
     }
 };
 
@@ -54,7 +50,9 @@ new Elm().class("main").append(
     executerContainer
 ).appendTo(document.body);
 
-// load visualNovel plugin
-const plugin = new VisualNovelPlugin();
+// load plugins
+const defaultPlugin = new DefaultPlugin();
+const visualNovelPlugin = new VisualNovelPlugin();
 
-editorContainer.registerBlueprints(plugin.instructionBlueprints, "visual novel");
+editorContainer.registerPlugin(defaultPlugin);
+editorContainer.registerPlugin(visualNovelPlugin);

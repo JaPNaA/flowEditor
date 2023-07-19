@@ -1,11 +1,12 @@
-import { InstructionBlueprintMin } from "../editor/InstructionBlueprintRegistery";
-import { Instruction } from "../editor/instructionLines";
+import { InstructionBlueprintMin } from "../editor/instruction/InstructionBlueprintRegistery";
+import { Instruction } from "../editor/instruction/instructionTypes";
 import { ExecuterContainer } from "../executer/ExecuterContainer";
 
 export interface EditorPlugin {
+    name: string;
     instructionBlueprints: InstructionBlueprintMin[];
     parse(data: any): Instruction | undefined;
-    executer: Executer;
+    executer?: Executer;
 }
 
 export interface Executer {

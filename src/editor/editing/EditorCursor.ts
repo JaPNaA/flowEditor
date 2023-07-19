@@ -1,9 +1,9 @@
 import { TextareaUserInputCapture } from "./TextareaUserInputCapture.js";
-import { Elm, EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
-import { getAncestorWhich, isAncestor } from "../utils.js";
-import { Editable } from "./Editable";
-import { AutoComplete } from "./AutoComplete.js";
+import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
+import { getAncestorWhich, isAncestor } from "../../utils.js";
+import { Editable } from "./Editable.js";
+import { AutoComplete } from "../ui/AutoComplete.js";
 
 export class EditorCursor extends Elm<"span"> {
     public groupEditorsElmsMap = new WeakMap<HTMLDivElement, InstructionGroupEditor>();
@@ -12,6 +12,7 @@ export class EditorCursor extends Elm<"span"> {
     public onFocusChangeGroup = new EventBus<InstructionGroupEditor>();
     public onClickGroup = new EventBus<InstructionGroupEditor>();
     public onKeyboardShortcutPress = new EventBus<KeyboardEvent>();
+    public onKeydownIntercept = new EventBus<KeyboardEvent>();
     public onInput = new EventBus();
 
     private inputCapture = new TextareaUserInputCapture();
@@ -111,9 +112,10 @@ export class EditorCursor extends Elm<"span"> {
         this.inputCapture.keydownIntercepter = e => {
             if (e.ctrlKey && !["ArrowLeft", "ArrowRight", "Delete", "Backspace", "C", "c", "V", "v", "X", "x"].includes(e.key)) {
                 this.onKeyboardShortcutPress.send(e);
-                e.preventDefault();
                 return;
             }
+
+            this.onKeydownIntercept.send(e);
 
             if (!this.position) { return; }
             if (!this.autocomplete.isShowingSuggestions()) { return; }

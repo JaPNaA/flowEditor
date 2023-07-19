@@ -1,4 +1,4 @@
-import { Rectangle, Vec2, Vec2M, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Rectangle, Vec2, Vec2M, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 
 export class SmoothCamera extends WorldElm {
     private targetPos?: Vec2;

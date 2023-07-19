@@ -1,6 +1,6 @@
 import { EditorCursor } from "./EditorCursor.js";
-import { Elm, EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { UserInputEvent } from "./TextareaUserInputCapture";
+import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { UserInputEvent } from "./TextareaUserInputCapture.js";
 
 export class Editable extends Elm<"span"> {
     private value: string;
