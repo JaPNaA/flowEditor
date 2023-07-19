@@ -183,11 +183,8 @@ export class TextareaUserInputCapture {
                                 lastValue.slice(currI, currI + value.length),
                                 currentValue.slice(currI, currI + value.length + deltaLength)
                             );
-                        } else {
-                            this.resetChanges(0);
                             return;
                         }
-                        return;
                     }
                     currI += value.length;
                 } else {
