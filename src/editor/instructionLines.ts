@@ -7,6 +7,7 @@ import { getAncestorWhich } from "../utils.js";
 import { appHooks, pluginHooks } from "../index.js";
 import { BranchTargetChangeAction } from "./actions.js";
 import { globalAutocompleteTypes } from "./AutoComplete.js";
+import { InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
 
 export abstract class Instruction {
     public parentGroup!: InstructionGroupEditor;
@@ -609,6 +610,54 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     }
 }
 
+export function registerDefaultBlueprints(registery: InstructionBlueprintRegistery) {
+    registery.registerBlueprints([{
+        instructionName: "branch",
+        description: "Goto somewhere if a variable satisfies a condition",
+        shortcutKey: "i",
+        create: () => new InstructionOneLine(new ControlBranchLine({
+            ctrl: "branch",
+            offset: 1,
+            op: "=",
+            v1: "choice",
+            v2: 1
+        }))
+    }, {
+        instructionName: "input",
+        description: "Give a choice and save it in a variable",
+        shortcutKey: "j",
+        create: () => new InstructionOneLine(new ControlInputLine({
+            ctrl: "input",
+            options: ["option"],
+            variable: "choice"
+        }))
+    }, {
+        instructionName: "jump",
+        description: "Continue in at a different instruction",
+        shortcutKey: "g",
+        create: () => new InstructionOneLine(new ControlJumpLine())
+    }, {
+        instructionName: "end",
+        description: "End the flow",
+        shortcutKey: "e",
+        create: () => new InstructionOneLine(new ControlJumpLine())
+    }, {
+        instructionName: "variable",
+        description: "Change a variable's value",
+        shortcutKey: "v",
+        create: () => new InstructionOneLine(new ControlVariableLine({
+            ctrl: "variable",
+            op: "=",
+            v1: "v1",
+            v2: 1
+        }))
+    }, {
+        instructionName: "default",
+        shortcutKey: "1",
+        create: () => new InstructionOneLine(new JSONLine(""))
+    }], "default");
+}
+
 class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     private editable: Editable;
     public isBranch: boolean = false;
@@ -620,66 +669,24 @@ class NewInstructionLine extends InstructionLine implements OneLineInstruction {
         this.elm.append(
             // this.editable = this.createEditable("Press one of [ibjved]...")
             this.editable = this.registerEditable(new NewInstructionEditable()),
-            `Press one of [divceg${pluginHooks.getKeyInstructionMappingKeys().join("")}]...`
+            `Press shortcut or capitalize to search...`
         );
 
         this.editable.onChange.subscribe(changes => {
-            let newView: OneLineInstruction;
-            switch (changes.newContent && changes.newContent[0].toLowerCase()) {
-                // case "b":
-                case "i":
-                    newView = new ControlBranchLine({
-                        ctrl: "branch",
-                        offset: 1,
-                        op: "=",
-                        // v1: "v1",
-                        v1: "choice",
-                        // v2: "v2"
-                        v2: 1
-                    });
-                    break;
-                // case "i":
-                case "c":
-                    newView = new ControlInputLine({
-                        ctrl: "input",
-                        options: ["option"],
-                        variable: "choice"
-                    });
-                    break;
-                // case "j":
-                case "g":
-                    newView = new ControlJumpLine();
-                    break;
-                case "e":
-                    newView = new ControlEndLine();
-                    break;
-                case "v":
-                    newView = new ControlVariableLine({
-                        ctrl: "variable",
-                        op: "=",
-                        v1: "v1",
-                        v2: 1
-                    });
-                    break;
-                case "d":
-                    newView = new JSONLine("");
-                    break;
-                case "\n":
-                    this.splitGroupHere();
-                    return;
-                default:
-                    changes.reject(); // prevent updating
-                    if (!changes.newContent) { return; }
-                    const instruction = pluginHooks.getInstructionFromKeyMappingKey(
-                        changes.newContent[0].toLowerCase()
-                    );
-                    if (instruction) {
-                        this.changeView(instruction);
-                    }
-                    return;
+            if (!changes.newContent) { changes.reject(); return; }
+            if (changes.newContent[0] === "\n") {
+                this.splitGroupHere();
+                return;
             }
 
-            this.changeView(new InstructionOneLine(newView));
+            const blueprint = this.parentInstruction.parentGroup.parentEditor.blueprintRegistery
+                .getBlueprintByShortcut(changes.newContent[0]);
+            if (blueprint) {
+                const instruction = blueprint.create();
+                this.changeView(instruction);
+            } else {
+                changes.reject();
+            }
         });
     }
 
@@ -742,5 +749,9 @@ class NewInstructionEditable extends Editable {
     public checkInput(event: UserInputEvent): void {
         // allow all
         this.onChange.send(event);
+    }
+
+    public setValue(value: string): void {
+        // do nothing
     }
 }

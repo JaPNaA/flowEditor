@@ -1,6 +1,7 @@
 import { FlowData } from "../FlowRunner.js";
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Editor } from "./Editor.js";
+import { InstructionBlueprintMin } from "./InstructionBlueprintRegistery.js";
 import { InstructionData, constructInstructionData } from "./flowToInstructionData.js";
 
 export class EditorContainer extends Component {
@@ -48,6 +49,10 @@ export class EditorContainer extends Component {
 
         console.log(this.engine.world);
         this.elm.attribute("tabindex", "0");
+    }
+
+    public registerBlueprints(blueprints: InstructionBlueprintMin[], plugin: string) {
+        this.editor.blueprintRegistery.registerBlueprints(blueprints, plugin);
     }
 
     public compile() {

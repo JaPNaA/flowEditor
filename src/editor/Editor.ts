@@ -1,7 +1,7 @@
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./flowToInstructionData.js";
-import { Instruction } from "./instructionLines.js";
+import { Instruction, registerDefaultBlueprints } from "./instructionLines.js";
 import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, Vec2M, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
@@ -10,11 +10,13 @@ import { GridBackground } from "./GridBackground.js";
 import { EditorGroupNavigator } from "./EditorGroupNavigator.js";
 import { appHooks } from "../index.js";
 import { SmoothCamera } from "./SmoothCamera.js";
+import { InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
     public undoLog = new UndoLog();
     public smoothCamera = new SmoothCamera();
+    public blueprintRegistery = new InstructionBlueprintRegistery();
 
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
@@ -67,6 +69,8 @@ export class Editor extends WorldElmWithComponents {
         });
         this.subscriptions.subscribe(this.cursor.onClickGroup, group => this.handleClickGroup(group));
         this.subscriptions.subscribe(this.cursor.onInput, () => this.dirty = true);
+
+        registerDefaultBlueprints(this.blueprintRegistery);
     }
 
     public getGroups(): ReadonlyArray<InstructionGroupEditor> {

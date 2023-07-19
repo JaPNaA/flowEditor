@@ -2,6 +2,7 @@ import { ControlItem } from "../../FlowRunner.js";
 import { globalAutocompleteTypes } from "../../editor/AutoComplete.js";
 import { Editable } from "../../editor/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
+import { InstructionBlueprint, InstructionBlueprintMin } from "../../editor/InstructionBlueprintRegistery.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instructionLines.js";
 import { EditorPlugin } from "../EditorPlugin.js";
 import { ControlBackground, ControlBackgroundMusic, ControlChoose, ControlSay, ControlSayAdd, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
@@ -13,31 +14,70 @@ const autocompleteTypeBackgroundMusic = Symbol();
 const autocompleteTypeShow = Symbol();
 
 export default class VisualNovelPlugin implements EditorPlugin {
-    keyMappings: { [x: string]: () => Instruction; } = {
-        "s": () => new InstructionOneLine(new SayInstruction("", "")),
-        "u": () => new InstructionOneLine(new SayAddInstruction("")),
-        "k": () => new InstructionOneLine(new ShowInstruction({
+    instructionBlueprints: InstructionBlueprintMin[] = [{
+        instructionName: "say",
+        description: "Display text indicating a character talking",
+        shortcutKey: "s",
+        create: () => new InstructionOneLine(new SayInstruction("", "")),
+    }, {
+        instructionName: "say-add",
+        description: "Add more text to the previous 'say' or 'display' command",
+        shortcutKey: "a",
+        create: () => new InstructionOneLine(new SayAddInstruction("")),
+    }, {
+        instructionName: "show",
+        description: "Show an image in the foreground",
+        shortcutKey: "k",
+        create: () => new InstructionOneLine(new ShowInstruction({
             visualNovelCtrl: "show",
             src: ""
         })),
-        "t": () => new InstructionOneLine(new DisplayMacro("")),
-        "b": () => new ChoiceBranchMacro(["a", "b"]),
-        "h": () => new InstructionOneLine(new BackgroundInstruction({
+    }, {
+        instructionName: "display",
+        description: "Display text indicating narration",
+        shortcutKey: "t",
+        create: () => new InstructionOneLine(new DisplayMacro("")),
+    }, {
+        instructionName: "choose branch",
+        description: "Macro. Display buttons that allow the player to choose which instructions to execute",
+        shortcutKey: "b",
+        create: () => new ChoiceBranchMacro(["a", "b"]),
+    }, {
+        instructionName: "background",
+        description: "Set the background",
+        shortcutKey: "h",
+        create: () => new InstructionOneLine(new BackgroundInstruction({
             visualNovelCtrl: "background",
             color: "000"
         })),
-        "r": () => new InstructionOneLine(new SetTextRevealSpeedInstruction(50)),
-        "f": () => new InstructionOneLine(new ChooseInstruction({
+    }, {
+        instructionName: "set text reveal speed",
+        description: "Sets the speed of revealing text in a `say` or `display` command",
+        shortcutKey: "r",
+        create: () => new InstructionOneLine(new SetTextRevealSpeedInstruction(50)),
+    }, {
+        instructionName: "choose",
+        description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
+        shortcutKey: "c",
+        create: () => new InstructionOneLine(new ChooseInstruction({
             visualNovelCtrl: "choose",
             variable: "choice",
             options: ['a', 'b']
         })),
-        "w": () => new InstructionOneLine(new WaitInstruction(1000)),
-        "m": () => new InstructionOneLine(new BackgroundMusicInstruction({
+    }, {
+        instructionName: "wait",
+        description: "Do nothing for a specified amount of time",
+        shortcutKey: "w",
+        create: () => new InstructionOneLine(new WaitInstruction(1000)),
+    }, {
+        instructionName: "background music",
+        description: "Set the background music",
+        shortcutKey: "m",
+        create: () => new InstructionOneLine(new BackgroundMusicInstruction({
             visualNovelCtrl: "bgm",
             src: ""
         }))
-    };
+    }];
     executer = new VisualNovelExecuter();
 
     parse(data: any): Instruction | undefined {

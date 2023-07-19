@@ -33,14 +33,6 @@ export const pluginHooks = {
         return plugin.parse(instruction);
     },
 
-    getKeyInstructionMappingKeys(): string[] {
-        return Object.keys(plugin.keyMappings);
-    },
-
-    getInstructionFromKeyMappingKey(key: string) {
-        return plugin.keyMappings[key]?.();
-    },
-
     startExecution(): Promise<void> {
         return plugin.executer.start(executerContainer);
     },
@@ -64,3 +56,5 @@ new Elm().class("main").append(
 
 // load visualNovel plugin
 const plugin = new VisualNovelPlugin();
+
+editorContainer.registerBlueprints(plugin.instructionBlueprints, "visual novel");
