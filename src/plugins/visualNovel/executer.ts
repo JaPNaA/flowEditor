@@ -2,7 +2,7 @@ import { ExecuterContainer } from "../../executer/ExecuterContainer.js";
 import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
 import { Executer } from "../EditorPlugin.js";
-import { ControlBackground, isVisualNovelControlItem } from "./controls.js";
+import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
 
 export class VisualNovelExecuter implements Executer {
     private elm = new Elm().class("visualNovelExecuter")
@@ -35,13 +35,13 @@ export class VisualNovelExecuter implements Executer {
             case "say":
                 this.executerContainer.log.log(`${data.char}: "${data.text}"`);
                 return this.game.characterSay(data.char, data.text);
+            case "say-add":
+                this.executerContainer.log.log('"' + data.text + '"');
+                return this.game.characterSayAdd(data.text);
             case "show":
                 this.executerContainer.log.log(`Show ${data.src}`);
                 this.game.showImage(data.src);
                 return Promise.resolve();
-            case "display":
-                this.executerContainer.log.log(data.text);
-                return this.game.characterSay("", data.text);
             case "background":
                 this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
                 this.game.setBackground(data);
@@ -50,8 +50,16 @@ export class VisualNovelExecuter implements Executer {
                 return this.game.requestChoice(data.options)
                     .then(val => {
                         this.executerContainer.log.logSecondary(`<- ${data.options[val]}`);
-                        this.executerContainer.writeVariable("__choice__", val);
+                        this.executerContainer.writeVariable(data.variable, val);
                     });
+            case "speechBubbleSettings":
+                this.game.setSpeechBubbleSettings(data);
+                return Promise.resolve();
+            case "wait":
+                return new Promise(res => setTimeout(() => res(), data.time));
+            case "bgm":
+                this.game.setBackgroundMusic(data.src);
+                return Promise.resolve();
             default:
                 return null;
         }
@@ -70,6 +78,7 @@ class VisualNovelGame {
     private speechBubble = new SpeechBubble();
     private background = new Background();
     private imageDisplayer = new ImageDisplayer();
+    private bgm?: HTMLAudioElement;
 
     constructor(parentElm: HTMLElement) {
         this.engine = new JaPNaAEngine2d({
@@ -84,6 +93,20 @@ class VisualNovelGame {
 
     public async characterSay(charName: string, text: string) {
         this.speechBubble.write(charName, text);
+
+        if (this.engine.mouse.rightDown) {
+            // skip
+            this.speechBubble.showAllChars();
+            return new Promise<void>(res => {
+                setTimeout(res, 50);
+            });
+        }
+
+        await this.speechBubble.onNextRequested.promise();
+    }
+
+    public async characterSayAdd(text: string) {
+        this.speechBubble.writeAdd(text);
 
         if (this.engine.mouse.rightDown) {
             // skip
@@ -111,7 +134,44 @@ class VisualNovelGame {
         this.imageDisplayer.showImage(image);
     }
 
+    public setSpeechBubbleSettings(settings: ControlSpeechBubbleSettings) {
+        if (settings.visible !== undefined) {
+            this.speechBubble.setVisible(settings.visible);
+        }
+        if (settings.positionX) { }
+        if (settings.positionY) { }
+        if (settings.width) { }
+        if (settings.height) { }
+        if (settings.revealSpeed !== undefined) {
+            this.speechBubble.setSpeed(settings.revealSpeed);
+        }
+        if (settings.advanceType) { }
+        if (settings.autoAdvanceDelay) { }
+        if (settings.style) { }
+        if (settings.tagStyles) { }
+    }
+
+    public setBackgroundMusic(src: string) {
+        if (!src && this.bgm) {
+            this.bgm.pause();
+            return;
+        }
+        if (!src) { return; }
+        if (!this.bgm) {
+            this.bgm = new Audio(src);
+            this.bgm.volume = 0.4;
+            this.bgm.play();
+        } else {
+            this.bgm.src = src;
+            this.bgm.play();
+        }
+    }
+
     public dispose() {
+        if (this.bgm) {
+            this.bgm.pause();
+            this.bgm = undefined;
+        }
         this.engine.dispose();
     }
 }
@@ -271,7 +331,6 @@ class ImageDisplayer extends WorldElm {
 class SpeechBubble extends WorldElmWithComponents {
     public onNextRequested = new EventBus();
 
-    public static secondsPerChar = 0.020;
     public timePassed = 0;
     public charsShowing = 0;
 
@@ -281,6 +340,11 @@ class SpeechBubble extends WorldElmWithComponents {
     private fullText: string = "";
     private characterName: string = "";
     private isDone = true;
+
+    private charsPerSecond = 50;
+    private secondsPerChar = 1 / this.charsPerSecond;
+
+    private visible = true;
 
     constructor() {
         super();
@@ -298,34 +362,78 @@ class SpeechBubble extends WorldElmWithComponents {
         });
     }
 
+    public setSpeed(charsPerSecond: number) {
+        this.charsPerSecond = charsPerSecond;
+        if (charsPerSecond > 0) {
+            this.secondsPerChar = 1 / charsPerSecond;
+        } else {
+            this.secondsPerChar = 0;
+        }
+    }
+
+    public getSpeed() {
+        return this.charsPerSecond;
+    }
+
+    public setVisible(visible: boolean) {
+        if (this.visible === visible) { return; }
+        this.visible = visible;
+        if (visible) {
+            this.elm.setVisible();
+        } else {
+            this.elm.setInvisible();
+        }
+    }
+
     public write(character: string, text: string) {
         this.timePassed = 0;
         this.charsShowing = 0;
         this.isDone = false;
         this.characterName = character;
         this.fullText = text;
+
+        if (this.charsPerSecond === 0) {
+            this.showAllChars();
+        }
+    }
+
+    public writeAdd(text: string) {
+        this.timePassed = 0;
+        this.charsShowing = this.fullText.length + 1;
+        this.isDone = false;
+        this.fullText = this.fullText + "\n" + text;
+
+        if (this.charsPerSecond === 0) {
+            this.showAllChars();
+        }
     }
 
     public showAllChars() {
         this.charsShowing = this.fullText.length;
+        this.render();
+        this.isDone = true;
     }
 
     public tick(): void {
         if (this.isDone) { return; }
 
         this.timePassed += this.engine.ticker.timeElapsed;
-        this.charsShowing += Math.floor(this.timePassed / SpeechBubble.secondsPerChar);
-        this.timePassed %= SpeechBubble.secondsPerChar;
+        this.charsShowing += Math.floor(this.timePassed / this.secondsPerChar);
+        this.timePassed %= this.secondsPerChar;
         if (this.charsShowing >= this.fullText.length) {
             this.charsShowing = this.fullText.length;
             this.isDone = true;
         }
-        this.elm.write(this.characterName, this.fullText.slice(0, this.charsShowing));
+        this.render();
     }
 
     public remove(): void {
         super.remove();
         this.elm.remove();
+    }
+
+    private render() {
+        this.elm.write(this.characterName, this.fullText.slice(0, this.charsShowing));
     }
 }
 
@@ -344,6 +452,7 @@ class SpeechBubbleElm extends Elm {
         this.elm.style.color = "#fffc";
         this.elm.style.backgroundColor = "#000a";
         this.elm.style.backdropFilter = "blur(4px)";
+        this.elm.style.whiteSpace = "pre-wrap";
     }
 
     public write(character: string, text: string) {
@@ -351,5 +460,13 @@ class SpeechBubbleElm extends Elm {
             new Elm().append(character).attribute("style", "font-weight: bold"),
             text
         );
+    }
+
+    public setVisible() {
+        this.elm.style.display = "block";
+    }
+
+    public setInvisible() {
+        this.elm.style.display = "none";
     }
 }

@@ -1,27 +1,41 @@
 import { ControlItem } from "../../FlowRunner.js";
+import { globalAutocompleteTypes } from "../../editor/AutoComplete.js";
 import { Editable } from "../../editor/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instructionLines.js";
 import { EditorPlugin } from "../EditorPlugin.js";
-import { ControlBackground, ControlDisplay, ControlSay, ControlShow, VisualNovelControlItem } from "./controls.js";
+import { ControlBackground, ControlBackgroundMusic, ControlChoose, ControlSay, ControlSayAdd, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
+const autocompleteTypeBackgroundMusic = Symbol();
 const autocompleteTypeShow = Symbol();
 
 export default class VisualNovelPlugin implements EditorPlugin {
     keyMappings: { [x: string]: () => Instruction; } = {
         "s": () => new InstructionOneLine(new SayInstruction("", "")),
+        "u": () => new InstructionOneLine(new SayAddInstruction("")),
         "k": () => new InstructionOneLine(new ShowInstruction({
             visualNovelCtrl: "show",
             src: ""
         })),
-        "t": () => new InstructionOneLine(new DisplayInstruction("")),
+        "t": () => new InstructionOneLine(new DisplayMacro("")),
         "b": () => new ChoiceBranchMacro(["a", "b"]),
         "h": () => new InstructionOneLine(new BackgroundInstruction({
             visualNovelCtrl: "background",
             color: "000"
+        })),
+        "r": () => new InstructionOneLine(new SetTextRevealSpeedInstruction(50)),
+        "f": () => new InstructionOneLine(new ChooseInstruction({
+            visualNovelCtrl: "choose",
+            variable: "choice",
+            options: ['a', 'b']
+        })),
+        "w": () => new InstructionOneLine(new WaitInstruction(1000)),
+        "m": () => new InstructionOneLine(new BackgroundMusicInstruction({
+            visualNovelCtrl: "bgm",
+            src: ""
         }))
     };
     executer = new VisualNovelExecuter();
@@ -31,15 +45,21 @@ export default class VisualNovelPlugin implements EditorPlugin {
             case "say":
                 return new InstructionOneLine(new SayInstruction(data.char, data.text));
             case "display":
-                return new InstructionOneLine(new DisplayInstruction(data.text));
+                return new InstructionOneLine(new DisplayMacro(data.text));
+            case "textRevealSpeed":
+                return new InstructionOneLine(new SetTextRevealSpeedInstruction(data.speed));
             case "show":
                 return new InstructionOneLine(new ShowInstruction(data));
-            case "choice":
-                return new InstructionOneLine(new ShowInstruction(data));
+            case "choose":
+                return new InstructionOneLine(new ChooseInstruction(data));
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
                 return new InstructionOneLine(new BackgroundInstruction(data));
+            case "wait":
+                return new InstructionOneLine(new WaitInstruction(data.time));
+            case "bgm":
+                return new InstructionOneLine(new BackgroundMusicInstruction(data));
             default:
                 return;
         }
@@ -69,7 +89,26 @@ class SayInstruction extends InstructionLine implements OneLineInstruction {
     }
 }
 
-class DisplayInstruction extends InstructionLine implements OneLineInstruction {
+class SayAddInstruction extends InstructionLine implements OneLineInstruction {
+    private textEditable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(text: string) {
+        super();
+
+        this.setAreas(
+            'Add: "',
+            this.textEditable = this.createEditable(text),
+            '"'
+        );
+    }
+
+    public serialize(): ControlSayAdd {
+        return { visualNovelCtrl: "say-add", text: this.textEditable.getValue() };
+    }
+}
+
+class DisplayMacro extends InstructionLine implements OneLineInstruction {
     private textEditable: Editable;
     public isBranch: boolean = false;
 
@@ -83,8 +122,62 @@ class DisplayInstruction extends InstructionLine implements OneLineInstruction {
         );
     }
 
-    public serialize(): ControlDisplay {
+    public serialize() {
         return { visualNovelCtrl: "display", text: this.textEditable.getValue() };
+    }
+
+    public export(): ControlSay {
+        return { visualNovelCtrl: "say", char: "", text: this.textEditable.getValue() };
+    }
+}
+
+class WaitInstruction extends InstructionLine implements OneLineInstruction {
+    private editable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(time: number) {
+        super();
+
+        this.setAreas(
+            'Wait: ',
+            this.editable = this.createEditable(time),
+            'ms'
+        );
+        this.elm.class("secondary");
+    }
+
+    public serialize(): ControlWait {
+        const time = parseFloat(this.editable.getValue());
+        if (isNaN(time)) { throw new Error("Not a number"); }
+        return { visualNovelCtrl: "wait", time };
+    }
+}
+
+class SetTextRevealSpeedInstruction extends InstructionLine implements OneLineInstruction {
+    private editable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(speed: number) {
+        super();
+
+        this.setAreas(
+            'Set text reveal speed: ',
+            this.editable = this.createEditable(speed),
+            ''
+        );
+        this.elm.class("secondary");
+    }
+
+    public export(): ControlSpeechBubbleSettings {
+        const speed = parseFloat(this.editable.getValue());
+        if (isNaN(speed)) { throw new Error("Not a number"); }
+        return { visualNovelCtrl: "speechBubbleSettings", revealSpeed: speed };
+    }
+
+    public serialize() {
+        const speed = parseFloat(this.editable.getValue());
+        if (isNaN(speed)) { throw new Error("Not a number"); }
+        return { visualNovelCtrl: "textRevealSpeed", speed };
     }
 }
 
@@ -149,6 +242,57 @@ class ShowInstruction extends InstructionLine implements OneLineInstruction {
 
     public serialize(): ControlShow {
         return { visualNovelCtrl: "show", src: this.editable.getValue() };
+    }
+}
+
+
+class BackgroundMusicInstruction extends InstructionLine implements OneLineInstruction {
+    private editable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(data: ControlBackgroundMusic) {
+        super();
+
+        this.setAreas(
+            "Set background music: ",
+            this.editable = this.createEditable(data.src)
+        );
+        this.editable.autoCompleteType = autocompleteTypeBackgroundMusic;
+        this.elm.class("secondary");
+    }
+
+    public serialize(): ControlBackgroundMusic {
+        return {
+            visualNovelCtrl: "bgm",
+            src: this.editable.getValue()
+        };
+    }
+}
+
+class ChooseInstruction extends InstructionLine implements OneLineInstruction {
+    private variableSpan: Editable;
+    private choicesSpan: Editable;
+    public isBranch: boolean = false;
+
+    constructor(data: ControlChoose) {
+        super();
+
+        this.setAreas(
+            this.variableSpan = this.createEditable(data.variable),
+            ' <- choose from [',
+            this.choicesSpan = this.createEditable(data.options.join(", ")),
+            ']'
+        );
+        this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
+        this.elm.class("control");
+    }
+
+    public serialize(): ControlChoose {
+        return {
+            visualNovelCtrl: "choose",
+            options: this.choicesSpan.getValue().split(",").map(e => e.trim()),
+            variable: this.variableSpan.getValue()
+        };
     }
 }
 
@@ -229,6 +373,7 @@ class ChoiceBranchMacro extends Instruction {
         const choices = this.getChoices();
         const output: (VisualNovelControlItem | ControlItem)[] = [{
             visualNovelCtrl: "choose",
+            variable: "__choice__",
             options: choices
         }];
         for (let i = 0; i < choices.length - 1; i++) {
