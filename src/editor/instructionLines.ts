@@ -204,6 +204,7 @@ export abstract class InstructionLine extends Component {
 
 export interface OneLineInstruction extends InstructionLine {
     serialize(): any;
+    export?(): any;
     isBranch: boolean;
 }
 
@@ -265,7 +266,11 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
     }
 
     public export(): any[] {
-        return [this.serialize()];
+        if (this.line.export) {
+            return [this.line.export()];
+        } else {
+            return [this.line.serialize()];
+        }
     }
 }
 
