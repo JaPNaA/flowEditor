@@ -159,6 +159,7 @@ class VisualNovelGame {
         if (!src) { return; }
         if (!this.bgm) {
             this.bgm = new Audio(src);
+            this.bgm.loop = true;
             this.bgm.volume = 0.4;
             this.bgm.play();
         } else {
