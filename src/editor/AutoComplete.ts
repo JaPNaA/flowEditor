@@ -1,5 +1,6 @@
 import { JaPNaAEngine2d, Vec2M } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Component, Elm } from "../japnaaEngine2d/elements.js";
+import { looseStartsWith } from "../utils.js";
 import { Editable } from "./Editable.js";
 import { EditorCursor } from "./EditorCursor.js";
 
@@ -132,42 +133,11 @@ export class AutoComplete extends Component {
         const map = this.defaultHandlerPreviousValues.get(type);
         if (!map) { return null; }
         for (const [previousValue, _] of map) {
-            const score = this.looseStartsWith(value, previousValue);
+            const score = looseStartsWith(value, previousValue);
             if (score >= 0) {
                 suggestions.push([previousValue, score]);
             }
         }
         return suggestions.sort((a, b) => a[1] - b[1]).map(x => x[0]);
-    }
-
-    /**
-     * Loosely checks if a string starts with another string
-     * @see https://github.com/JaPNaA/JaPNaA.github.io/blob/source/src/utils/looseStartsWith.ts
-     * @param start Check the string starts with
-     * @param str The string to check with
-     * @returns score - larger is worse, -1 means it doesn't match
-     */
-    private looseStartsWith(start: string, str: string): number {
-        const strLength = str.length;
-        const startLower = start.toLowerCase();
-        const strLower = str.toLowerCase();
-        let currStrIndex = 0;
-        let skipped = 0;
-
-        outer: for (const char of startLower) {
-            for (; currStrIndex < strLength;) {
-                if (strLower[currStrIndex] === char) {
-                    currStrIndex++;
-                    continue outer;
-                } else {
-                    skipped++;
-                    currStrIndex++;
-                }
-            }
-
-            return -1;
-        }
-
-        return skipped;
     }
 }
