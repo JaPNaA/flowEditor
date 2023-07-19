@@ -124,78 +124,88 @@ export class TextareaUserInputCapture {
 
     private getChanges() {
         const that = this;
-        const currentValue = this.textarea.value;
         const lastValue = this.lastTextareaValue;
+        const currentValue = this.textarea.value;
+        const currentValueLen = currentValue.length;
+        const lastValueLen = lastValue.length;
         const deltaLength = currentValue.length - lastValue.length;
 
+        const maxStartMatch = Math.min(this.lastSelectionStart, this.textarea.selectionStart);
+        const maxEndMatch = Math.min(
+            lastValueLen - this.lastSelectionStart,
+            currentValueLen - this.textarea.selectionStart
+        );
+
+        let i: number;
+        for (i = 0; i < maxStartMatch; i++) {
+            if (currentValue[i] !== this.lastTextareaValue[i]) {
+                break;
+            }
+        }
+
+
+        let j: number;
+        for (j = 1; j < maxEndMatch; j++) {
+            if (currentValue[currentValueLen - j] !== this.lastTextareaValue[lastValueLen - j]) {
+                break;
+            }
+        }
+
         let currI = 0;
-        let lastI = 0;
 
         // \n
-        if (currentValue[currI++] !== lastValue[lastI++]) { console.log('a'); return null; }
+        if (i <= currI++) { console.log('a'); return null; }
 
         // aboveLine, currentLine, belowLine
         for (const [posStr, areas] of [["up", this.aboveLine], ["same", this.currentLine], ["down", this.belowLine]] as ['up' | 'same' | 'down', TextareaUserInputCaptureAreas][]) {
             let editableIndex = -1;
 
             // first extra space in front of line to capture moves to start of line
-            if (currentValue[currI++] !== lastValue[lastI++]) {
-                // enter at end of line
-                applyLineOperation(true, true);
-                return;
-            }
-
             // second extra space in front of line to capture moves to the previous line by moving left
-            if (currentValue[currI++] !== lastValue[lastI++]) {
-                // backspace at start of line
+            currI += 2;
+            if (i < currI) {
+                // probably backspaced at start of line
                 applyLineOperation(false, false);
                 return;
             }
 
             let seenEditable = false;
-            for (let i = 0; i < areas.length; i++) {
-                const area = areas[i];
+            for (let areaIndex = 0; areaIndex < areas.length; areaIndex++) {
+                const area = areas[areaIndex];
                 const isEditable = area instanceof Editable;
                 if (isEditable) {
                     seenEditable = true;
                     const value = area.getValue();
-                    for (let j = 0; j < value.length; j++) {
-                        if (currentValue[currI++] !== lastValue[lastI++]) {
+                    if (i <= currI + value.length) {
+                        if (lastValueLen - j <= currI + value.length) {
                             applyChange(
                                 area,
-                                lastValue.slice(currI - 1 - j, currI - 1 - j + value.length),
-                                currentValue.slice(currI - j - 1, currI - j - 1 + value.length + deltaLength)
+                                lastValue.slice(currI, currI + value.length),
+                                currentValue.slice(currI, currI + value.length + deltaLength)
                             );
-                            currI += deltaLength;
+                        } else {
+                            this.resetChanges(0);
+                            return;
+                        }
+                        return;
+                    }
+                    currI += value.length;
+                } else {
+                    if (i < currI + area) {
+                        if (!seenEditable) {
+                            // backspace on the first space
+                            applyLineOperation(false, false);
+                            return;
+                        } else {
+                            this.resetChanges(deltaLength);
                             return;
                         }
                     }
-                    if (deltaLength > 0 && currentValue[currI] !== lastValue[lastI]) {
-                        // insert after editable
-                        applyChange(area,
-                            lastValue.slice(currI - value.length, currI),
-                            currentValue.slice(currI - value.length, currI + deltaLength)
-                        );
-                        currI += deltaLength;
-                        return;
-                    }
-                } else {
-                    for (let j = 0; j < area; j++) {
-                        if (currentValue[currI++] !== lastValue[lastI++]) {
-                            if (!seenEditable) {
-                                // backspace on the first space
-                                applyLineOperation(false, false);
-                                return;
-                            } else {
-                                this.resetChanges(deltaLength);
-                                return;
-                            }
-                        }
-                    }
+                    currI += area;
                 }
             }
 
-            if (currentValue[currI++] !== lastValue[lastI++]) {
+            if (i <= currI++) {
                 // delete at end of line
                 applyLineOperation(true, false);
                 return;
@@ -203,10 +213,11 @@ export class TextareaUserInputCapture {
         }
 
         function applyChange(editable: Editable, original: string, newContent: string) {
-            const diff = that.singleDiff(original, newContent);
-            if (!diff) { return; }
-
-            const event = new UserInputEvent(diff.added, diff.removed, newContent);
+            const event = new UserInputEvent(
+                currentValue.slice(i, currentValueLen - j),
+                that.lastTextareaValue.slice(i, lastValueLen - j),
+                newContent
+            );
             editable.checkInput(event);
             that.inputHandler?.(event);
             if (event.isRejected()) {
