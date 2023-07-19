@@ -60,24 +60,26 @@ body {
     background-color: #6b6b6ba2;
 }
 
-.instructionGroup .editable .cursor::after,
-.instructionGroup .editable .cursor.backwards::before {
-    content: '';
-    position: absolute;
-    display: inline;
-    width: 2px;
-    background-color: #6086f0;
-    height: 1.55em;
+.instructionGroup .editable .cursor {
+    margin-right: -2px;
+    border-width: 0px;
+    border-color: #6086f0;
+    border-style: solid;
+    border-right-width: 2px;
 }
 
-.instructionGroup .editable .cursor.backwards::after {
-    content: '';
-    display: none;
+.instructionGroup .editable .cursor.backwards {
+    margin-left: -2px;
+    margin-right: 0;
+    border-left-width: 2px;
+    border-right-width: 0;
 }
 
-.instructionGroup .editable .cursor.hidden::after,
-.instructionGroup .editable .cursor.hidden::before {
-    display: none;
+.instructionGroup .editable .cursor.hidden {
+    margin-left: 0;
+    margin-right: 0;
+    border-left-width: 0;
+    border-right-width: 0;
 }
 
 .instructionGroup .inputCapture {
