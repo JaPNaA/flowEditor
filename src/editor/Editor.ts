@@ -23,6 +23,11 @@ export class Editor extends WorldElmWithComponents {
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _startGroup?: InstructionGroupEditor;
 
+    /**
+     * Has there been changes? If true, allows autosave every 10 minutes.
+     */
+    public dirty = false;
+
     private navigator: EditorGroupNavigator;
     private subscriptions = this.addComponent(new SubscriptionsComponent());
 
@@ -56,7 +61,12 @@ export class Editor extends WorldElmWithComponents {
         this._children.addChild(this.smoothCamera);
 
         this.navigator = new EditorGroupNavigator(this.subscriptions, this);
-        console.log(this.undoLog);
+
+        this.subscriptions.subscribe(this.cursor.onKeyboardShortcutPress, ev => {
+            this.engine.keyboard.pretendPress(ev);
+        });
+        this.subscriptions.subscribe(this.cursor.onClickGroup, group => this.handleClickGroup(group));
+        this.subscriptions.subscribe(this.cursor.onInput, () => this.dirty = true);
     }
 
     public getGroups(): ReadonlyArray<InstructionGroupEditor> {
@@ -90,10 +100,6 @@ export class Editor extends WorldElmWithComponents {
             this.ensureCursorInSelectedGroup();
             this.setEditMode();
         });
-        this.subscriptions.subscribe(this.cursor.keyboardShortcutPress, ev => {
-            this.engine.keyboard.pretendPress(ev);
-        });
-        this.subscriptions.subscribe(this.cursor.clickGroup, group => this.handleClickGroup(group));
         this.navigator._setEngine(engine);
 
         this.cursor.autocomplete.setEngine(this.engine);

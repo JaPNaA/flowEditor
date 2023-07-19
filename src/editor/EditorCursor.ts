@@ -9,9 +9,10 @@ export class EditorCursor extends Elm<"span"> {
     public groupEditorsElmsMap = new WeakMap<HTMLDivElement, InstructionGroupEditor>();
     public autocomplete = new AutoComplete();
 
-    public focusChangeGroup = new EventBus<InstructionGroupEditor>();
-    public clickGroup = new EventBus<InstructionGroupEditor>();
-    public keyboardShortcutPress = new EventBus<KeyboardEvent>();
+    public onFocusChangeGroup = new EventBus<InstructionGroupEditor>();
+    public onClickGroup = new EventBus<InstructionGroupEditor>();
+    public onKeyboardShortcutPress = new EventBus<KeyboardEvent>();
+    public onInput = new EventBus();
 
     private inputCapture = new TextareaUserInputCapture();
     private position?: Readonly<EditorCursorPositionAbsolute>;
@@ -46,7 +47,7 @@ export class EditorCursor extends Elm<"span"> {
                         this.setTextareInputCursorPosition(position);
                         position.group.appendInputCapture(this.inputCapture);
                         this.inputCapture.focus();
-                        this.clickGroup.send(group);
+                        this.onClickGroup.send(group);
 
                         this.allowAutocomplete = false;
                         this.autocomplete.clearSuggestions();
@@ -98,6 +99,7 @@ export class EditorCursor extends Elm<"span"> {
             if (!this.position) { return; }
             this.allowAutocomplete = true;
             justInputted = true;
+            this.onInput.send();
             this.position.group.onCursorInput(this.position, input);
         };
 
@@ -108,7 +110,7 @@ export class EditorCursor extends Elm<"span"> {
 
         this.inputCapture.keydownIntercepter = e => {
             if (e.ctrlKey && !["ArrowLeft", "ArrowRight", "Delete", "Backspace", "C", "c", "V", "v", "X", "x"].includes(e.key)) {
-                this.keyboardShortcutPress.send(e);
+                this.onKeyboardShortcutPress.send(e);
                 e.preventDefault();
                 return;
             }
@@ -200,7 +202,7 @@ export class EditorCursor extends Elm<"span"> {
         const lastPosition = this.position;
         this.position = position;
         if (!lastPosition || position.group !== lastPosition.group) {
-            this.focusChangeGroup.send(position.group);
+            this.onFocusChangeGroup.send(position.group);
         }
     }
 
