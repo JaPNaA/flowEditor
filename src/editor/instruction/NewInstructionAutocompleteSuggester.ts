@@ -13,7 +13,11 @@ export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggeste
     public suggest(editable: Editable) {
         const value = editable.getValue();
         return sortAndFilterByLooseStart(value,
-            this.blueprintRegistery.getAllBlueprints().map(x => x.instructionName)
+            this.blueprintRegistery.getAllBlueprints().map(x =>
+                (x.shortcutKey ? "[" + x.shortcutKey + "] " : "") +
+                x.instructionName +
+                (x.plugin ? " (" + x.plugin + ")" : "")
+            )
         );
     }
 }
