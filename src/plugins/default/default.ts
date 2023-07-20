@@ -40,7 +40,7 @@ export class DefaultPlugin implements EditorPlugin {
         instructionName: "end",
         description: "End the flow",
         shortcutKey: "KeyE",
-        create: () => new InstructionOneLine(new ControlJumpLine())
+        create: () => new InstructionOneLine(new ControlEndLine())
     }, {
         instructionName: "variable",
         description: "Change a variable's value",
