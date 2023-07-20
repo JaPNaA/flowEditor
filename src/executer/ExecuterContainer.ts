@@ -40,7 +40,8 @@ export class ExecuterContainer extends Component {
                         );
                         return;
                     }
-                    const handle = await showDirectoryPicker();
+                    const handle = await showDirectoryPicker({ mode: "readwrite" });
+                    await handle.requestPermission({ mode: "readwrite" });
                     const project = new FileProject(handle);
                     appHooks.editorOpenProject(project);
                 }),
