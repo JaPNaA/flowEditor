@@ -4,13 +4,54 @@ import { Elm } from "../../japnaaEngine2d/elements.js";
 import { Project } from "../../project/Project.js";
 import { Executer } from "../EditorPlugin.js";
 import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
+import { replaceVariables, visualNovelMdToHTML } from "./visualNovelMd.js";
 
 export class VisualNovelExecuter implements Executer {
     private elm = new Elm().class("visualNovelExecuter")
         .attribute("style", "height: 50vh; font-family: serif; user-select: none;")
-        .attribute("tabindex", "0");
+        .attribute("tabindex", "0")
+        .append(new Elm("style").withSelf(s => {
+            s.getHTMLElement().innerHTML = `
+            .visualNovelMD .volume[level='#'] {
+                font-size: 0.6em;
+                opacity: 0.4;
+                font-style: italic;
+            }
+
+            .visualNovelMD .volume[level='##'] {
+                font-size: 0.7em;
+                opacity: 0.8;
+                font-style: italic;
+            }
+
+            .visualNovelMD .volume[level='###'] {
+                font-size: 0.8em;
+            }
+
+            .visualNovelMD .volume[level='####'] {
+                font-size: 1.2em;
+                font-weight: 600;
+                color: #fff;
+            }
+
+            .visualNovelMD .volume[level='#####'] {
+                font-size: 2em;
+                font-weight: 600;
+                color: #fff;
+            }
+
+            .visualNovelMD .volume[level='######'] {
+                font-size: 6em;
+                font-weight: 1000;
+                color: #fff;
+                line-height: 0.92;
+            }
+            `;
+        }));
     private game?: VisualNovelGame;
     private executerContainer!: ExecuterContainer;
+
+    private stringVariables = new Map();
 
     constructor() {
         this.elm.on("keydown", key => {
@@ -18,6 +59,8 @@ export class VisualNovelExecuter implements Executer {
                 this.elm.getHTMLElement().requestFullscreen();
             }
         });
+
+        this.getVariable = this.getVariable.bind(this);
     }
 
     public start(executerContainer: ExecuterContainer): Promise<void> {
@@ -25,6 +68,7 @@ export class VisualNovelExecuter implements Executer {
         this.executerContainer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
         this.game.setProject(executerContainer.getProject());
+        this.stringVariables.clear();
 
         return Promise.resolve();
     }
@@ -36,29 +80,33 @@ export class VisualNovelExecuter implements Executer {
         switch (data.visualNovelCtrl) {
             case "say":
                 this.executerContainer.log.log(`${data.char}: "${data.text}"`);
-                return this.game.characterSay(data.char, data.text);
+                return this.game.characterSay(data.char, visualNovelMdToHTML(data.text, this.getVariable));
             case "say-add":
                 this.executerContainer.log.log('"' + data.text + '"');
-                return this.game.characterSayAdd(data.text);
+                return this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
             case "show":
                 this.executerContainer.log.log(`Show ${data.src}`);
-                return this.game.showImage(data.src);
+                return this.game.showImage(replaceVariables(data.src, this.getVariable));
             case "background":
                 this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
-                return this.game.setBackground(data);
+                return this.game.setBackground({
+                    ...data,
+                    src: data.src && replaceVariables(data.src, this.getVariable)
+                });
             case "choose":
-                return this.game.requestChoice(data.options)
-                    .then(val => {
-                        this.executerContainer.log.logSecondary(`<- ${data.options[val]}`);
-                        this.executerContainer.writeVariable(data.variable, val);
-                    });
+                return this.game.requestChoice(
+                    data.options.map(v => visualNovelMdToHTML(v, this.getVariable))
+                ).then(val => {
+                    this.executerContainer.log.logSecondary(`<- ${data.options[val]}`);
+                    this.executerContainer.writeVariable(data.variable, val);
+                });
             case "speechBubbleSettings":
                 this.game.setSpeechBubbleSettings(data);
                 return Promise.resolve();
             case "wait":
                 return new Promise(res => setTimeout(() => res(), data.time));
             case "bgm":
-                this.game.setBackgroundMusic(data.src);
+                this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
                 return Promise.resolve();
             default:
                 return null;
@@ -68,6 +116,13 @@ export class VisualNovelExecuter implements Executer {
     public stop(): Promise<void> {
         this.game?.dispose();
         return Promise.resolve();
+    }
+
+    /** Function used to map flow variable to string */
+    private getVariable(str: string): string | undefined {
+        const pointer = this.executerContainer.getVariable(str);
+        if (pointer === undefined) { return; }
+        return this.stringVariables.get(pointer) || pointer.toString();
     }
 }
 
@@ -227,7 +282,7 @@ class Chooser extends WorldElmWithComponents {
 }
 
 class ChooserChoice extends Elm {
-    constructor(public text: string, public index: number, private parent: Chooser) {
+    constructor(public html: string, public index: number, private parent: Chooser) {
         super();
         this.elm.style.width = "500px";
         this.elm.style.margin = "16px auto";
@@ -243,7 +298,7 @@ class ChooserChoice extends Elm {
             this.parent.onChosen.send(index);
         });
 
-        this.append(text);
+        this.elm.innerHTML = html;
     }
 }
 
@@ -483,12 +538,13 @@ class SpeechBubbleElm extends Elm {
         this.elm.style.backgroundColor = "#000a";
         this.elm.style.backdropFilter = "blur(4px)";
         this.elm.style.whiteSpace = "pre-wrap";
+        this.elm.style.overflow = "hidden"; // prevent very large text from expanding hitbox
     }
 
     public write(character: string, text: string) {
         this.replaceContents(
             new Elm().append(character).attribute("style", "font-weight: bold"),
-            text
+            new Elm().withSelf(elm => elm.getHTMLElement().innerHTML = text)
         );
     }
 

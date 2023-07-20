@@ -78,6 +78,10 @@ export class ExecuterContainer extends Component {
         this.runner?.setVariable(key, value);
     }
 
+    public getVariable(key: string): number | undefined {
+        return this.runner?.getVariable(key);
+    }
+
     public addOutputDisplay(elm: Elm) {
         this.outputDisplays.append(elm);
     }
