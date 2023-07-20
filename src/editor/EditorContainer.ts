@@ -7,6 +7,8 @@ import { Editor } from "./Editor.js";
 export class EditorContainer extends Component {
     public preventSaveOnExit = false;
 
+    private plugins: EditorPlugin[] = [];
+
     private engine = new JaPNaAEngine2d({
         canvas: { alpha: true },
         htmlOverlay: { relativeToWorld: true },
@@ -65,12 +67,18 @@ export class EditorContainer extends Component {
         this.editor = new Editor();
         this.engine.world.addElm(this.editor);
 
+        for (const plugin of this.plugins) {
+            this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
+            this.editor.deserializer.registerDeserializer(plugin.parse);
+        }
+
         return this.setup();
     }
 
     public registerPlugin(plugin: EditorPlugin) {
         this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
         this.editor.deserializer.registerDeserializer(plugin.parse);
+        this.plugins.push(plugin);
     }
 
     public compile() {
