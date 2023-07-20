@@ -12,6 +12,8 @@ import { SmoothCamera } from "./ui/SmoothCamera.js";
 import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprintRegistery.js";
 import { Instruction } from "./instruction/instructionTypes.js";
 import { InstructionDeserializer } from "./toolchain/InstructionDeserializer.js";
+import { NewInstruction } from "./instruction/NewInstruction.js";
+import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -107,6 +109,10 @@ export class Editor extends WorldElmWithComponents {
         this.navigator._setEngine(engine);
 
         this.cursor.autocomplete.setEngine(this.engine);
+        this.cursor.autocomplete.registerSuggester(
+            NewInstructionAutocompleteSuggester.symbol,
+            new NewInstructionAutocompleteSuggester(this.blueprintRegistery)
+        );
         this.engine.htmlOverlay.elm.append(this.cursor.autocomplete);
     }
 

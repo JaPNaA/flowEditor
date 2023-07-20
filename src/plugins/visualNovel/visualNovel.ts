@@ -19,17 +19,17 @@ export default class VisualNovelPlugin implements EditorPlugin {
     instructionBlueprints: InstructionBlueprintMin[] = [{
         instructionName: "say",
         description: "Display text indicating a character talking",
-        shortcutKey: "s",
+        shortcutKey: "KeyS",
         create: () => new InstructionOneLine(new SayInstruction("", "")),
     }, {
         instructionName: "say-add",
         description: "Add more text to the previous 'say' or 'display' command",
-        shortcutKey: "a",
+        shortcutKey: "KeyA",
         create: () => new InstructionOneLine(new SayAddInstruction("")),
     }, {
         instructionName: "show",
         description: "Show an image in the foreground",
-        shortcutKey: "k",
+        shortcutKey: "KeyK",
         create: () => new InstructionOneLine(new ShowInstruction({
             visualNovelCtrl: "show",
             src: ""
@@ -37,17 +37,17 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }, {
         instructionName: "display",
         description: "Display text indicating narration",
-        shortcutKey: "t",
+        shortcutKey: "KeyT",
         create: () => new InstructionOneLine(new DisplayMacro("")),
     }, {
         instructionName: "choose branch",
         description: "Macro. Display buttons that allow the player to choose which instructions to execute",
-        shortcutKey: "b",
+        shortcutKey: "KeyB",
         create: () => new ChoiceBranchMacro(["a", "b"]),
     }, {
         instructionName: "background",
         description: "Set the background",
-        shortcutKey: "h",
+        shortcutKey: "KeyH",
         create: () => new InstructionOneLine(new BackgroundInstruction({
             visualNovelCtrl: "background",
             color: "000"
@@ -55,12 +55,12 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }, {
         instructionName: "set text reveal speed",
         description: "Sets the speed of revealing text in a `say` or `display` command",
-        shortcutKey: "r",
+        shortcutKey: "KeyR",
         create: () => new InstructionOneLine(new SetTextRevealSpeedInstruction(50)),
     }, {
         instructionName: "choose",
         description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
-        shortcutKey: "c",
+        shortcutKey: "KeyC",
         create: () => new InstructionOneLine(new ChooseInstruction({
             visualNovelCtrl: "choose",
             variable: "choice",
@@ -69,12 +69,12 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }, {
         instructionName: "wait",
         description: "Do nothing for a specified amount of time",
-        shortcutKey: "w",
+        shortcutKey: "KeyW",
         create: () => new InstructionOneLine(new WaitInstruction(1000)),
     }, {
         instructionName: "background music",
         description: "Set the background music",
-        shortcutKey: "m",
+        shortcutKey: "KeyM",
         create: () => new InstructionOneLine(new BackgroundMusicInstruction({
             visualNovelCtrl: "bgm",
             src: ""

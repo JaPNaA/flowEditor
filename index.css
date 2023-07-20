@@ -147,7 +147,14 @@ body {
 
 .instructionLine.newInstructionLine {
     font-style: italic;
+}
+
+.instructionLine.newInstructionLine .placeholder {
     color: #c0c0c08c;
+}
+
+.instructionLine.newInstructionLine .placeholder.hidden {
+    display: none;
 }
 
 .instructionLine .editable {

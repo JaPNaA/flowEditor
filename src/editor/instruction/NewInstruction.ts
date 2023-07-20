@@ -2,7 +2,8 @@ import { Editable } from "../editing/Editable.js";
 import { EditorCursor } from "../editing/EditorCursor.js";
 import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } from "./instructionTypes.js";
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture.js";
-
+import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester.js";
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     constructor() {
         super(new NewInstructionLine());
@@ -17,6 +18,8 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
 export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     private editable: NewInstructionEditable;
     public isBranch: boolean = false;
+    private placeholderText: Elm<'span'>;
+    private isEmpty = true;
 
     constructor() {
         super();
@@ -24,23 +27,34 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.elm.class("newInstructionLine");
         this.elm.append(
             this.editable = this.registerEditable(new NewInstructionEditable()),
-            `Press shortcut or capitalize to search...`
+            this.placeholderText = new Elm('span').class("placeholder").append(`Press shortcut or hold shift and type to search...`)
         );
 
         this.editable.onChange.subscribe(changes => {
-            if (!changes.newContent) { changes.reject(); return; }
-            if (changes.newContent[0] === "\n") {
+            if (changes.newContent && changes.newContent[0] === "\n") {
                 this.splitGroupHere();
                 return;
             }
 
+            if (changes.newContent) {
+                this.placeholderText.class("hidden");
+                this.isEmpty = false;
+            } else {
+                this.placeholderText.removeClass("hidden");
+                this.isEmpty = true;
+            }
+        });
+
+        this.editable.onKeyIntercepted.subscribe(event => {
+            if (!this.isEmpty) { return; }
+            if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) { return; }
+
             const blueprint = this.parentInstruction.parentGroup.parentEditor.blueprintRegistery
-                .getBlueprintByShortcut(changes.newContent[0]);
+                .getBlueprintByShortcut(event.code);
             if (blueprint) {
                 const instruction = blueprint.create();
                 this.changeView(instruction);
-            } else {
-                changes.reject();
+                event.preventDefault();
             }
         });
     }
@@ -103,19 +117,17 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 
 class NewInstructionEditable extends Editable {
     public parentInstruction!: Instruction;
+    public onKeyIntercepted = new EventBus<KeyboardEvent>();
 
     constructor() {
         super("");
         this.intercepter = this.intercepter.bind(this);
+        this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
     }
 
     public checkInput(event: UserInputEvent): void {
         // allow all
         this.onChange.send(event);
-    }
-
-    public setValue(value: string): void {
-        // do nothing
     }
 
     public setActive(offsetStart: number, offsetEnd: number, cursor: EditorCursor): void {
@@ -129,6 +141,6 @@ class NewInstructionEditable extends Editable {
     }
 
     private intercepter(ev: KeyboardEvent) {
-        console.log(ev);
+        this.onKeyIntercepted.send(ev);
     }
 }

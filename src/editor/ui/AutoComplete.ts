@@ -1,6 +1,6 @@
 import { JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Component, Elm } from "../../japnaaEngine2d/elements.js";
-import { looseStartsWith } from "../../utils.js";
+import { looseStartsWith, sortAndFilterByLooseStart } from "../../utils.js";
 import { Editable } from "../editing/Editable.js";
 import { EditorCursor } from "../editing/EditorCursor.js";
 
@@ -129,15 +129,8 @@ export class AutoComplete extends Component {
 
     private defaultSuggester(editable: Editable, type: symbol) {
         const value = editable.getValue();
-        const suggestions: [string, number][] = [];
         const map = this.defaultHandlerPreviousValues.get(type);
         if (!map) { return null; }
-        for (const [previousValue, _] of map) {
-            const score = looseStartsWith(value, previousValue);
-            if (score >= 0) {
-                suggestions.push([previousValue, score]);
-            }
-        }
-        return suggestions.sort((a, b) => a[1] - b[1]).map(x => x[0]);
+        return sortAndFilterByLooseStart(value, Array.from(map.keys()));
     }
 }
