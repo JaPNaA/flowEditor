@@ -1,8 +1,8 @@
-import { FlowData } from "../FlowRunner.js";
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorPlugin } from "../plugins/EditorPlugin.js";
+import { NullProject } from "../project/NullProject.js";
+import { Project } from "../project/Project.js";
 import { Editor } from "./Editor.js";
-import { InstructionData, constructInstructionData } from "./toolchain/flowToInstructionData.js";
 
 export class EditorContainer extends Component {
     public preventSaveOnExit = false;
@@ -14,30 +14,26 @@ export class EditorContainer extends Component {
     });
 
     private editor = new Editor();
+    private editorOpenFile?: string;
     private autoSaveInterval: number;
+    private project: Project = new NullProject();
 
     constructor() {
         super("editorContainer");
 
-        if (localStorage['flowEditorSave']) {
-            this.editor.deserialize(JSON.parse(localStorage['flowEditorSave']));
-        } else {
-            fetch("/data/exampleFlow.json").then(e => e.json()).then((flowData: FlowData) => {
-                const instructions: InstructionData[] = constructInstructionData(flowData);
-                this.editor.setInstructions(instructions);
-            });
-        }
-
+        console.log(this.engine.world);
         this.engine.world.addElm(this.editor);
 
-        addEventListener("beforeunload", () => {
+        addEventListener("beforeunload", async () => {
             if (this.preventSaveOnExit) { return; }
-            this.setSaveData(this.getSaveData());
+            await this.setSaveData(this.getSaveData());
         });
 
         addEventListener("wheel", ev => {
             this.engine.camera.zoomInto(ev.deltaY > 0 ? 1 / 1.2 : 1.2, this.engine.mouse.worldPos);
         });
+
+        this.elm.attribute("tabindex", "0");
 
         this.autoSaveInterval = setInterval(() => {
             if (this.preventSaveOnExit) { return; }
@@ -47,8 +43,15 @@ export class EditorContainer extends Component {
             this.editor.dirty = false;
         }, 600e3);
 
-        console.log(this.engine.world);
-        this.elm.attribute("tabindex", "0");
+        this.setup();
+    }
+
+    public async setup() {
+        if (!this.project.isReady()) { await this.project.onReady.promise(); }
+        const startFile = this.project.getStartFlowPath();
+        const save = await this.project.getFlowSave(startFile);
+        this.editor.deserialize(save);
+        this.editorOpenFile = startFile;
     }
 
     public registerPlugin(plugin: EditorPlugin) {
@@ -69,6 +72,12 @@ export class EditorContainer extends Component {
     }
 
     public setSaveData(saveData: any) {
-        localStorage['flowEditorSave'] = saveData ? JSON.stringify(saveData) : "";
+        if (!this.editorOpenFile) { return; }
+        if (saveData) {
+            const str = JSON.stringify(saveData);
+            return this.project.writeFlowSave(this.editorOpenFile, str);
+        } else {
+            return this.project.writeFlowSave(this.editorOpenFile, "");
+        }
     }
 }

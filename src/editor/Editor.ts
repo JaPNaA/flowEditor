@@ -631,7 +631,7 @@ class SelectRectangle extends WorldElm {
     }
 }
 
-interface EditorSaveData {
+export interface EditorSaveData {
     elms: InstructionElmData[];
     startGroup?: number;
 }
