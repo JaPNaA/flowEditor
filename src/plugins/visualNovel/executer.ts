@@ -417,7 +417,8 @@ class SpeechBubble extends WorldElmWithComponents {
     private subs = new SubscriptionsComponent();
 
     private elm = new SpeechBubbleElm();
-    private fullText: string = "";
+    private fullHTML: string = "";
+    private numChars: number = 0;
     private characterName: string = "";
     private isDone = true;
 
@@ -470,23 +471,25 @@ class SpeechBubble extends WorldElmWithComponents {
         }
     }
 
-    public write(character: string, text: string) {
+    public write(character: string, html: string) {
         this.timePassed = 0;
         this.charsShowing = 0;
         this.isDone = false;
         this.characterName = character;
-        this.fullText = text;
+        this.fullHTML = html;
+        this.numChars = this.elm.setFullHTML(this.characterName, html);
 
         if (this.charsPerSecond === 0) {
             this.showAllChars();
         }
     }
 
-    public writeAdd(text: string) {
+    public writeAdd(html: string) {
         this.timePassed = 0;
-        this.charsShowing = this.fullText.length + 1;
+        this.charsShowing = this.numChars + 1;
         this.isDone = false;
-        this.fullText = this.fullText + "\n" + text;
+        this.fullHTML = this.fullHTML + "\n" + html;
+        this.numChars = this.elm.setFullHTML(this.characterName, this.fullHTML);
 
         if (this.charsPerSecond === 0) {
             this.showAllChars();
@@ -494,7 +497,7 @@ class SpeechBubble extends WorldElmWithComponents {
     }
 
     public showAllChars() {
-        this.charsShowing = this.fullText.length;
+        this.charsShowing = this.numChars;
         this.render();
         this.isDone = true;
     }
@@ -505,8 +508,8 @@ class SpeechBubble extends WorldElmWithComponents {
         this.timePassed += this.engine.ticker.timeElapsed;
         this.charsShowing += Math.floor(this.timePassed / this.secondsPerChar);
         this.timePassed %= this.secondsPerChar;
-        if (this.charsShowing >= this.fullText.length) {
-            this.charsShowing = this.fullText.length;
+        if (this.charsShowing >= this.numChars) {
+            this.charsShowing = this.numChars;
             this.isDone = true;
         }
         this.render();
@@ -518,11 +521,14 @@ class SpeechBubble extends WorldElmWithComponents {
     }
 
     private render() {
-        this.elm.write(this.characterName, this.fullText.slice(0, this.charsShowing));
+        this.elm.showChars(this.charsShowing);
     }
 }
 
 class SpeechBubbleElm extends Elm {
+    /** [revealed text, hidden text][] */
+    private revealNodes?: [Text, HTMLSpanElement][];
+
     constructor() {
         super();
         this.elm.style.position = "absolute";
@@ -541,11 +547,71 @@ class SpeechBubbleElm extends Elm {
         this.elm.style.overflow = "hidden"; // prevent very large text from expanding hitbox
     }
 
-    public write(character: string, text: string) {
+    /**
+     * Set the full html to show.
+     * Returns the number of characters that are showable.
+     */
+    public setFullHTML(character: string, html: string): number {
+        console.log(html);
+        let elm;
         this.replaceContents(
             new Elm().append(character).attribute("style", "font-weight: bold"),
-            new Elm().withSelf(elm => elm.getHTMLElement().innerHTML = text)
+            elm = new Elm().withSelf(elm => elm.getHTMLElement().innerHTML = html)
         );
+
+        let numChars = 0;
+        const htmlElm = elm.getHTMLElement();
+        const textNodes: Text[] = [];
+        this.revealNodes = [];
+        this.recursiveAddTextNodes(textNodes, htmlElm);
+
+        for (const node of textNodes) {
+            numChars += node.textContent ? node.textContent.length : 0;
+
+            const hiddenText = document.createElement("span");
+            hiddenText.style.opacity = "0";
+            node.replaceWith(hiddenText);
+            hiddenText.appendChild(node);
+
+            const revealedText = document.createTextNode("");
+            hiddenText.parentElement!.insertBefore(revealedText, hiddenText);
+
+            this.revealNodes.push([revealedText, hiddenText]);
+        }
+
+        return numChars;
+    }
+
+    public showChars(upTo: number) {
+        if (!this.revealNodes) { return; }
+        let remaining = upTo;
+        for (const [revealed, hidden] of this.revealNodes) {
+            if (revealed.textContent) {
+                remaining -= revealed.textContent.length;
+            }
+            if (remaining <= 0) { return; }
+            if (hidden.innerText.length > 0) {
+                if (hidden.innerText.length < remaining) {
+                    revealed.textContent = (revealed.textContent || "") + hidden.innerText;
+                    remaining -= hidden.innerText.length;
+                    hidden.innerText = "";
+                } else {
+                    revealed.textContent = (revealed.textContent || "") + hidden.innerText.slice(0, remaining);
+                    hidden.innerText = hidden.innerText.slice(remaining);
+                    return;
+                }
+            }
+        }
+    }
+
+    private recursiveAddTextNodes(nodes: Text[], node: Element) {
+        for (const child of node.childNodes) {
+            if (child instanceof Text) {
+                nodes.push(child);
+            } else if (child instanceof Element) {
+                this.recursiveAddTextNodes(nodes, child);
+            }
+        }
     }
 
     public setPositionY(y: number) {
