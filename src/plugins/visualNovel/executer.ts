@@ -7,7 +7,7 @@ import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlIte
 
 export class VisualNovelExecuter implements Executer {
     private elm = new Elm().class("visualNovelExecuter")
-        .attribute("style", "height: 50vh; font-family: serif;")
+        .attribute("style", "height: 50vh; font-family: serif; user-select: none;")
         .attribute("tabindex", "0");
     private game?: VisualNovelGame;
     private executerContainer!: ExecuterContainer;
