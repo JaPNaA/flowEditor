@@ -31,13 +31,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        
+      - name: Checkout JaPNaAEngine
+        uses: actions/checkout@v3
+        with:
+          path: japnaaEngine2d
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18.x'
+      - run: rm src/japnaaEngine2d
+      - run: ln -s japnaaEngine2d/src src/japnaaEngine2d
       - run: npm install typescript
       - run: npx tsc
       - name: Upload artifact
