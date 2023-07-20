@@ -8,8 +8,6 @@ import { getAncestorWhich } from "../utils.js";
 import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions.js";
 import { NewInstruction } from "./instruction/NewInstruction.js";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes.js";
-import { isControlItem } from "../FlowRunner.js";
-import { pluginHooks } from "../index.js";
 
 export class InstructionGroupEditor extends WorldElm {
     public elm: Elm;
