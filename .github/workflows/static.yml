@@ -42,7 +42,8 @@ jobs:
         with:
           node-version: '18.x'
       - run: rm src/japnaaEngine2d
-      - run: ln -s japnaaEngine2d/src src/japnaaEngine2d
+      - run: mv japnaaEngine2d/src src/japnaaEngine2d
+      - run: rm -r japnaaEngine2d
       - run: npm install typescript
       - run: npx tsc
       - name: Upload artifact
