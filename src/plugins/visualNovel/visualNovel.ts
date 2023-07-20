@@ -58,6 +58,11 @@ export default class VisualNovelPlugin implements EditorPlugin {
         shortcutKey: "KeyR",
         create: () => new InstructionOneLine(new SetTextRevealSpeedInstruction(50)),
     }, {
+        instructionName: "set speech bubble position",
+        description: "Sets the position of the speech bubble",
+        shortcutKey: "KeyP",
+        create: () => new InstructionOneLine(new SetSpeechBubblePositionInstruction(50, 100))
+    }, {
         instructionName: "choose",
         description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
         shortcutKey: "KeyC",
@@ -86,10 +91,14 @@ export default class VisualNovelPlugin implements EditorPlugin {
         switch (data.visualNovelCtrl) {
             case "say":
                 return new InstructionOneLine(new SayInstruction(data.char, data.text));
+            case "say-add":
+                return new InstructionOneLine(new SayAddInstruction(data.text));
             case "display":
                 return new InstructionOneLine(new DisplayMacro(data.text));
             case "textRevealSpeed":
                 return new InstructionOneLine(new SetTextRevealSpeedInstruction(data.speed));
+            case "speechBubblePosition":
+                return new InstructionOneLine(new SetSpeechBubblePositionInstruction(data.positionX, data.positionY));
             case "show":
                 return new InstructionOneLine(new ShowInstruction(data));
             case "choose":
@@ -220,6 +229,39 @@ class SetTextRevealSpeedInstruction extends InstructionLine implements OneLineIn
         const speed = parseFloat(this.editable.getValue());
         if (isNaN(speed)) { throw new Error("Not a number"); }
         return { visualNovelCtrl: "textRevealSpeed", speed };
+    }
+}
+
+
+class SetSpeechBubblePositionInstruction extends InstructionLine implements OneLineInstruction {
+    private xEditable: Editable;
+    private yEditable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(x: number, y: number) {
+        super();
+
+        this.setAreas(
+            'Position speech bubble x: ',
+            this.xEditable = this.createEditable(x),
+            ', y: ',
+            this.yEditable = this.createEditable(y)
+        );
+        this.elm.class("secondary");
+    }
+
+    public export(): ControlSpeechBubbleSettings {
+        const x = parseFloat(this.xEditable.getValue());
+        const y = parseFloat(this.yEditable.getValue());
+        if (isNaN(x) || isNaN(y)) { throw new Error("Not a number"); }
+        return { visualNovelCtrl: "speechBubbleSettings", positionX: x, positionY: y };
+    }
+
+    public serialize() {
+        const x = parseFloat(this.xEditable.getValue());
+        const y = parseFloat(this.yEditable.getValue());
+        if (isNaN(x) || isNaN(y)) { throw new Error("Not a number"); }
+        return { visualNovelCtrl: "speechBubblePosition", positionX: x, positionY: y };
     }
 }
 

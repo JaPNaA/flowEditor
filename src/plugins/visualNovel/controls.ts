@@ -60,9 +60,9 @@ export interface ControlSpeechBubbleSettings {
     visualNovelCtrl: "speechBubbleSettings";
     /** Bubble visible or hidden */
     visible?: boolean;
-    /** Bubble position X */
+    /** 0 to 100 -- Bubble position X */
     positionX?: number;
-    /** Bubble position Y */
+    /** 0 to 100 -- Bubble position Y */
     positionY?: number;
     /** Bubble width */
     width?: number;

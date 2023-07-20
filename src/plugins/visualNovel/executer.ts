@@ -138,10 +138,12 @@ class VisualNovelGame {
         if (settings.visible !== undefined) {
             this.speechBubble.setVisible(settings.visible);
         }
-        if (settings.positionX) { }
-        if (settings.positionY) { }
-        if (settings.width) { }
-        if (settings.height) { }
+        if (settings.positionX !== undefined) { }
+        if (settings.positionY !== undefined) {
+            this.speechBubble.setPositionY(settings.positionY);
+        }
+        if (settings.width !== undefined) { }
+        if (settings.height !== undefined) { }
         if (settings.revealSpeed !== undefined) {
             this.speechBubble.setSpeed(settings.revealSpeed);
         }
@@ -363,6 +365,11 @@ class SpeechBubble extends WorldElmWithComponents {
         });
     }
 
+    /** @param y 0 to 100 */
+    public setPositionY(y: number) {
+        this.elm.setPositionY(y);
+    }
+
     public setSpeed(charsPerSecond: number) {
         this.charsPerSecond = charsPerSecond;
         if (charsPerSecond > 0) {
@@ -461,6 +468,14 @@ class SpeechBubbleElm extends Elm {
             new Elm().append(character).attribute("style", "font-weight: bold"),
             text
         );
+    }
+
+    public setPositionY(y: number) {
+        const percent = y / 100;
+        // screen height - height - margin - padding - border
+        const margin = 720 - 180 - 16 * 2 * 2 - 2 * 2;
+        this.elm.style.top = (16 + percent * margin) + "px";
+        this.elm.style.bottom = "";
     }
 
     public setVisible() {
