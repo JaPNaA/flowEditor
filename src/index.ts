@@ -4,6 +4,7 @@ import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
 import { Elm } from "./japnaaEngine2d/elements.js";
 import { DefaultPlugin } from "./plugins/default/default.js";
 import { Project } from "./project/Project.js";
+import { NullProject } from "./project/NullProject.js";
 
 export const appHooks = {
     focusEditor() {
@@ -32,8 +33,10 @@ export const appHooks = {
         location.reload();
     },
 
-    editorOpenProject(project: Project) {
-        editorContainer.setProject(project);
+    openProject(newProject: Project) {
+        editorContainer.setProject(newProject);
+        executerContainer.setProject(newProject);
+        project = newProject;
     }
 };
 
@@ -51,8 +54,9 @@ export const pluginHooks = {
     }
 };
 
-const executerContainer = new ExecuterContainer();
-const editorContainer = new EditorContainer();
+let project = new NullProject();
+const executerContainer = new ExecuterContainer(project);
+const editorContainer = new EditorContainer(project);
 
 new Elm().class("main").append(
     editorContainer,

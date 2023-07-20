@@ -1,6 +1,7 @@
 import { ExecuterContainer } from "../../executer/ExecuterContainer.js";
 import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
+import { Project } from "../../project/Project.js";
 import { Executer } from "../EditorPlugin.js";
 import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
 
@@ -23,6 +24,7 @@ export class VisualNovelExecuter implements Executer {
         this.executerContainer = executerContainer;
         this.executerContainer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
+        this.game.setProject(executerContainer.getProject());
 
         return Promise.resolve();
     }
@@ -40,12 +42,10 @@ export class VisualNovelExecuter implements Executer {
                 return this.game.characterSayAdd(data.text);
             case "show":
                 this.executerContainer.log.log(`Show ${data.src}`);
-                this.game.showImage(data.src);
-                return Promise.resolve();
+                return this.game.showImage(data.src);
             case "background":
                 this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
-                this.game.setBackground(data);
-                return Promise.resolve();
+                return this.game.setBackground(data);
             case "choose":
                 return this.game.requestChoice(data.options)
                     .then(val => {
@@ -79,6 +79,7 @@ class VisualNovelGame {
     private background = new Background();
     private imageDisplayer = new ImageDisplayer();
     private bgm?: HTMLAudioElement;
+    private project!: Project;
 
     constructor(parentElm: HTMLElement) {
         this.engine = new JaPNaAEngine2d({
@@ -89,6 +90,12 @@ class VisualNovelGame {
         this.engine.world.addElm(this.imageDisplayer);
         this.engine.world.addElm(this.speechBubble);
         this.engine.world.addElm(this.chooser);
+    }
+
+    public setProject(project: Project) {
+        this.project = project;
+        this.background.project = project;
+        this.imageDisplayer.project = project;
     }
 
     public async characterSay(charName: string, text: string) {
@@ -127,11 +134,11 @@ class VisualNovelGame {
     }
 
     public setBackground(background: ControlBackground) {
-        this.background.set(background);
+        return this.background.set(background);
     }
 
     public showImage(image: string) {
-        this.imageDisplayer.showImage(image);
+        return this.imageDisplayer.showImage(image);
     }
 
     public setSpeechBubbleSettings(settings: ControlSpeechBubbleSettings) {
@@ -153,18 +160,23 @@ class VisualNovelGame {
         if (settings.tagStyles) { }
     }
 
-    public setBackgroundMusic(src: string) {
+    public async setBackgroundMusic(src: string) {
         if (!src && this.bgm) {
             this.bgm.pause();
             return;
         }
         if (!src) { return; }
         if (!this.bgm) {
-            this.bgm = new Audio(src);
+            this.bgm = new Audio(
+                URL.createObjectURL(
+                    await this.project.getAsset(src)
+                )
+            );
             this.bgm.loop = true;
             this.bgm.volume = 0.4;
             this.bgm.play();
         } else {
+            if (this.bgm.src) { URL.revokeObjectURL(this.bgm.src); }
             this.bgm.src = src;
             this.bgm.play();
         }
@@ -236,6 +248,8 @@ class ChooserChoice extends Elm {
 }
 
 class Background extends WorldElm {
+    public project!: Project;
+
     private color: string = "#000";
     private image?: HTMLImageElement;
     private zoom: number = 1;
@@ -268,10 +282,13 @@ class Background extends WorldElm {
         }
     }
 
-    public set(background: ControlBackground) {
+    public async set(background: ControlBackground) {
+        if (this.image) { URL.revokeObjectURL(this.image.src); }
         if (background.src) {
             this.image = new Image();
-            this.image.src = background.src;
+            this.image.src = URL.createObjectURL(
+                await this.project.getAsset(background.src)
+            );
             this.imageLoaded = false;
             this.image.onload = () => this.imageLoaded = true;
         } else {
@@ -286,6 +303,8 @@ class Background extends WorldElm {
 }
 
 class ImageDisplayer extends WorldElm {
+    public project!: Project;
+
     private image?: HTMLImageElement;
     private zoom: number = 1;
     private focusX: number = 0.5;
@@ -315,10 +334,13 @@ class ImageDisplayer extends WorldElm {
         }
     }
 
-    public showImage(src: string) {
+    public async showImage(src: string) {
+        if (this.image) { URL.revokeObjectURL(this.image.src); }
         if (src) {
             this.image = new Image();
-            this.image.src = src;
+            this.image.src = URL.createObjectURL(
+                await this.project.getAsset(src)
+            );
             this.imageLoaded = false;
             this.image.onload = () => this.imageLoaded = true;
         } else {

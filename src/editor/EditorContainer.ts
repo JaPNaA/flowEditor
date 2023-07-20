@@ -1,6 +1,5 @@
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorPlugin } from "../plugins/EditorPlugin.js";
-import { NullProject } from "../project/NullProject.js";
 import { Project } from "../project/Project.js";
 import { Editor } from "./Editor.js";
 
@@ -18,9 +17,8 @@ export class EditorContainer extends Component {
     private editor = new Editor();
     private editorOpenFile?: string;
     private autoSaveInterval: number;
-    private project: Project = new NullProject();
 
-    constructor() {
+    constructor(private project: Project) {
         super("editorContainer");
 
         console.log(this.engine.world);

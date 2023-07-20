@@ -2,7 +2,8 @@ import { FlowRunner, FlowRunnerOutput } from "../FlowRunner.js";
 import { appHooks, pluginHooks } from "../index.js";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { FileProject } from "../project/FileProject.js";
-import { download, requestFile, stringToBlob } from "../utils.js";
+import { Project } from "../project/Project.js";
+import { requestFile } from "../utils.js";
 
 export class ExecuterContainer extends Component {
     public log = new OutputLog();
@@ -13,7 +14,7 @@ export class ExecuterContainer extends Component {
     private outputDisplays: Elm;
     private resizeHandle = new ResizeHandle(this);
 
-    constructor() {
+    constructor(private project: Project) {
         super("executerContainer");
 
         this.elm.append(
@@ -43,7 +44,7 @@ export class ExecuterContainer extends Component {
                     const handle = await showDirectoryPicker({ mode: "readwrite" });
                     await handle.requestPermission({ mode: "readwrite" });
                     const project = new FileProject(handle);
-                    appHooks.editorOpenProject(project);
+                    appHooks.openProject(project);
                 }),
                 new Elm("button").append("Delete all").class("deleteAndReload").onActivate(() => {
                     if (confirm("Delete editor contents and reload?")) {
@@ -63,6 +64,14 @@ export class ExecuterContainer extends Component {
             this.log.logSecondary("<- " + this.lastChoice[choice]);
             this.continueExecute();
         };
+    }
+
+    public getProject() {
+        return this.project;
+    }
+
+    public setProject(project: Project) {
+        this.project = project;
     }
 
     public writeVariable(key: string, value: number) {
