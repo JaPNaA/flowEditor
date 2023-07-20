@@ -21,10 +21,11 @@ export class ExecuterContainer extends Component {
             new Elm().class("fileOperationsBar").append(
                 new Elm("button").append("Run").onActivate(() => this.execute()),
                 new Elm("button").append("Save").onActivate(() =>
-                    download(
-                        stringToBlob(JSON.stringify(appHooks.getEditorSaveData())),
-                        "flowEditorSave.json"
-                    )
+                    appHooks.saveEditor()
+                    // download(
+                    //     stringToBlob(JSON.stringify(appHooks.getEditorSaveData())),
+                    //     "flowEditorSave.json"
+                    // )
                 ),
                 new Elm("button").append("Load").onActivate(() =>
                     requestFile()
@@ -40,7 +41,8 @@ export class ExecuterContainer extends Component {
                         return;
                     }
                     const handle = await showDirectoryPicker();
-                    console.log(new FileProject(handle));
+                    const project = new FileProject(handle);
+                    appHooks.editorOpenProject(project);
                 }),
                 new Elm("button").append("Delete all").class("deleteAndReload").onActivate(() => {
                     if (confirm("Delete editor contents and reload?")) {

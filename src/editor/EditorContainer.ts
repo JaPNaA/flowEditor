@@ -26,7 +26,7 @@ export class EditorContainer extends Component {
 
         addEventListener("beforeunload", async () => {
             if (this.preventSaveOnExit) { return; }
-            await this.setSaveData(this.getSaveData());
+            await this.save();
         });
 
         addEventListener("wheel", ev => {
@@ -39,7 +39,7 @@ export class EditorContainer extends Component {
             if (this.preventSaveOnExit) { return; }
             if (!this.editor.dirty) { return; }
             console.log("autosave");
-            this.setSaveData(this.getSaveData());
+            this.save();
             this.editor.dirty = false;
         }, 600e3);
 
@@ -49,9 +49,23 @@ export class EditorContainer extends Component {
     public async setup() {
         if (!this.project.isReady()) { await this.project.onReady.promise(); }
         const startFile = this.project.getStartFlowPath();
-        const save = await this.project.getFlowSave(startFile);
-        this.editor.deserialize(save);
+        try {
+            const save = await this.project.getFlowSave(startFile);
+            this.editor.deserialize(save);
+        } catch (err) {
+            console.error(err);
+        }
         this.editorOpenFile = startFile;
+    }
+
+    public async setProject(project: Project) {
+        this.setSaveData(this.getSaveData());
+        this.project = project;
+        this.editor.remove();
+        this.editor = new Editor();
+        this.engine.world.addElm(this.editor);
+
+        return this.setup();
     }
 
     public registerPlugin(plugin: EditorPlugin) {
@@ -69,6 +83,10 @@ export class EditorContainer extends Component {
 
     public getSaveData() {
         return this.editor.serialize();
+    }
+
+    public save() {
+        return this.setSaveData(this.getSaveData());
     }
 
     public setSaveData(saveData: any) {

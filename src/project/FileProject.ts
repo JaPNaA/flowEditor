@@ -43,7 +43,7 @@ export class FileProject implements Project {
     }
 
     public async writeFlowSave(path: string, content: string): Promise<void> {
-        return this.flowsDirectory.getFileHandle(path)
+        return this.flowsDirectory.getFileHandle(path, { create: true })
             .then(handle => handle.createWritable())
             .then(async writable => {
                 await writable.write(content);

@@ -3,6 +3,7 @@ import { EditorContainer } from "./editor/EditorContainer.js";
 import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
 import { Elm } from "./japnaaEngine2d/elements.js";
 import { DefaultPlugin } from "./plugins/default/default.js";
+import { Project } from "./project/Project.js";
 
 export const appHooks = {
     focusEditor() {
@@ -21,10 +22,18 @@ export const appHooks = {
         return editorContainer.getSaveData();
     },
 
+    saveEditor() {
+        return editorContainer.save();
+    },
+
     setEditorSaveData(data: any) {
         editorContainer.preventSaveOnExit = true;
         editorContainer.setSaveData(data);
         location.reload();
+    },
+
+    editorOpenProject(project: Project) {
+        editorContainer.setProject(project);
     }
 };
 
