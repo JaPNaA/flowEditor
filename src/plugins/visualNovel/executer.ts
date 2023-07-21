@@ -262,8 +262,13 @@ class Chooser extends WorldElmWithComponents {
     constructor() {
         super();
         const style = this.elm.getHTMLElement().style;
+        style.display = "flex";
+        style.flexDirection = "column";
+        style.flexWrap = "wrap";
+        style.margin = "0 auto";
+        style.maxHeight = "450px";
         style.textAlign = "center";
-        style.paddingTop = "64px";
+        style.columnGap = "32px";
     }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
@@ -272,6 +277,22 @@ class Chooser extends WorldElmWithComponents {
     }
 
     public requestChoice(choices: string[]) {
+        const style = this.elm.getHTMLElement().style;
+        if (choices.length <= 4) {
+            style.paddingTop = "64px";
+            style.rowGap = "16px";
+            style.width = "500px";
+        } else if (choices.length <= 5) {
+            style.paddingTop = "24px";
+            style.rowGap = "12px";
+            style.width = "500px";
+        } else {
+            style.paddingTop = "64px";
+            style.rowGap = "16px";
+            style.width = "1000px";
+        }
+
+
         let i = 0;
         for (const choice of choices) {
             const cc = new ChooserChoice(choice, i, this);
@@ -293,8 +314,8 @@ class Chooser extends WorldElmWithComponents {
 class ChooserChoice extends Elm {
     constructor(public html: string, public index: number, private parent: Chooser) {
         super();
-        this.elm.style.width = "500px";
-        this.elm.style.margin = "16px auto";
+        this.elm.style.boxSizing = "border-box";
+        this.elm.style.maxWidth = "500px";
         this.elm.style.backgroundColor = "#000a";
         this.elm.style.fontSize = "32px";
         this.elm.style.color = "#fffc";
