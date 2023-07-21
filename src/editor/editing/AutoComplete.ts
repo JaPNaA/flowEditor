@@ -7,7 +7,14 @@ import { EditorCursor } from "./EditorCursor.js";
 export interface AutoCompleteSuggester {
     learn(editable: Editable): void;
     unlearn(editable: Editable): void;
-    suggest(editable: Editable): string[] | null;
+    suggest(editable: Editable): AutoCompleteSuggestion[] | null;
+}
+
+export interface AutoCompleteSuggestion {
+    title: string;
+    fill: string | (() => string | void);
+    subtitle?: string;
+    description?: string;
 }
 
 export const globalAutocompleteTypes = {
@@ -19,7 +26,7 @@ export class AutoComplete extends Component {
 
     private map = new Map<symbol, AutoCompleteSuggester>();
     private defaultHandlerPreviousValues = new Map<symbol, Map<string, number>>();
-    private lastSuggestions: [string, Elm][] | null = null;
+    private lastSuggestions: [AutoCompleteSuggestion, Elm][] | null = null;
     private selectedSuggestion: number = 0;
 
 
@@ -27,9 +34,20 @@ export class AutoComplete extends Component {
         super("autocomplete");
     }
 
-    public getSelectedSuggestion() {
+    public acceptSuggestion(): string | undefined {
         if (!this.lastSuggestions) { return; }
-        return this.lastSuggestions[this.selectedSuggestion]?.[0];
+        const suggestion = this.lastSuggestions[this.selectedSuggestion];
+        if (!suggestion) { return; }
+        if (typeof suggestion[0].fill === "function") {
+            const ret = suggestion[0].fill();
+            if (ret !== undefined) {
+                return ret;
+            } else {
+                return;
+            }
+        } else {
+            return suggestion[0].fill;
+        }
     }
 
     public isShowingSuggestions() {
@@ -60,7 +78,7 @@ export class AutoComplete extends Component {
         for (const suggestion of suggestions) {
             this.lastSuggestions.push([
                 suggestion,
-                new Elm().class("suggestion").append(suggestion).appendTo(this.elm)
+                new SuggestionElm(suggestion).appendTo(this.elm)
             ]);
         }
 
@@ -91,7 +109,7 @@ export class AutoComplete extends Component {
         this.lastSuggestions[this.selectedSuggestion][1].class("selected");
     }
 
-    public getSuggestions(editable: Editable): string[] | null {
+    public getSuggestions(editable: Editable): AutoCompleteSuggestion[] | null {
         const type = editable.autoCompleteType;
         if (!type) { return null; }
         const suggester = this.map.get(type);
@@ -127,10 +145,28 @@ export class AutoComplete extends Component {
         }
     }
 
-    private defaultSuggester(editable: Editable, type: symbol) {
+    private defaultSuggester(editable: Editable, type: symbol): AutoCompleteSuggestion[] | null {
         const value = editable.getValue();
         const map = this.defaultHandlerPreviousValues.get(type);
         if (!map) { return null; }
-        return sortAndFilterByLooseStart(value, Array.from(map.keys()));
+        return sortAndFilterByLooseStart(value, Array.from(map.keys())).map(v => ({
+            title: v,
+            fill: v
+        }));
+    }
+}
+
+class SuggestionElm extends Elm {
+    constructor(suggestion: AutoCompleteSuggestion) {
+        super();
+        this.class("suggestion");
+
+        this.append(
+            new Elm().class("headingLine").append(
+                new Elm("span").class("title").append(suggestion.title),
+                new Elm("span").class("subtitle").append(suggestion.subtitle || "")
+            ),
+            new Elm().class("description").append(suggestion.description || "")
+        );
     }
 }

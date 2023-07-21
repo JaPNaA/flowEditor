@@ -1,7 +1,7 @@
-import { sortAndFilterByLooseStart } from "../../utils.js";
+import { looseStartsWith } from "../../utils.js";
 import { Editable } from "../editing/Editable.js";
 import { AutoCompleteSuggester } from "../editing/AutoComplete.js";
-import { InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
+import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
 
 export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggester {
     public static symbol = Symbol();
@@ -12,12 +12,28 @@ export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggeste
     public unlearn() { }
     public suggest(editable: Editable) {
         const value = editable.getValue();
-        return sortAndFilterByLooseStart(value,
-            this.blueprintRegistery.getAllBlueprints().map(x =>
-                (x.shortcutKey ? "[" + x.shortcutKey + "] " : "") +
-                x.instructionName +
-                (x.plugin ? " (" + x.plugin + ")" : "")
-            )
-        );
+        const instructions = this.blueprintRegistery.getAllBlueprints();
+        const suggestions: [number, InstructionBlueprint][] = [];
+
+        for (const instruction of instructions) {
+            let matchText = instruction.instructionName;
+            if (instruction.plugin) {
+                matchText += " (" + instruction.plugin + ")";
+            }
+            const score = looseStartsWith(value, matchText);
+            if (score >= 0) {
+                suggestions.push([score, instruction]);
+            }
+        }
+
+        suggestions.sort((a, b) => a[0] - b[0]);
+
+        return suggestions.map(x => ({
+            title: x[1].instructionName,
+            subtitle: x[1].plugin,
+            description: (x[1].shortcutKey ? "[" + x[1].shortcutKey + "] " : "") +
+                x[1].description,
+            fill: x[1].instructionName
+        }));
     }
 }

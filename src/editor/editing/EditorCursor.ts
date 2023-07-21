@@ -138,7 +138,7 @@ export class EditorCursor extends Elm<"span"> {
                 case "Enter":
                 case "Tab":
                     // accept suggestion
-                    const text = this.autocomplete.getSelectedSuggestion();
+                    const text = this.autocomplete.acceptSuggestion();
                     this.autocomplete.clearSuggestions();
                     if (!text) { preventDefault = false; break; }
                     this.lastActiveEditable.setValue(text);

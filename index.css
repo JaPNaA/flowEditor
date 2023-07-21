@@ -185,7 +185,7 @@ body {
 
 .autocomplete {
     font-family: monospace;
-    font-size: 1em;
+    font-size: 14px;
     background: #181818;
     box-shadow: 0px 2px 8px #000000ad;
     position: absolute;
@@ -203,10 +203,40 @@ body {
 .autocomplete .suggestion {
     padding-left: 4px;
     padding-right: 4px;
+    max-width: 460px;
+}
+
+.autocomplete .suggestion .headingLine {
+    display: flex;
+    align-items: center;
+}
+
+.autocomplete .suggestion .headingLine .title {
+    flex-grow: 1;
+}
+
+.autocomplete .suggestion .headingLine .subtitle {
+    font-size: 0.85em;
+    line-height: 14px;
+    opacity: 0.8;
+}
+
+.autocomplete .suggestion .description {
+    height: 0;
+    font-size: 0.85em;
+    opacity: 0;
+    overflow: hidden;
+    white-space: pre-wrap;
 }
 
 .autocomplete .suggestion.selected {
     background-color: #333333;
+}
+
+.autocomplete .suggestion.selected .description {
+    height: auto;
+    display: block;
+    opacity: 0.8;
 }
 
 .executerContainer {
