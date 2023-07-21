@@ -35,7 +35,7 @@ export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggeste
             title: x[1].instructionName,
             subtitle: x[1].plugin,
             description: (x[1].shortcutKey ? "[" + x[1].shortcutKey + "] " : "") +
-                x[1].description,
+                (x[1].description || ""),
             fill: () => editable.acceptAutocomplete(x[1])
         }));
     }
