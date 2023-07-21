@@ -10,6 +10,8 @@ export class UndoLog {
     private groupDepth = 0;
     private frozen = false;
 
+    public onAfterActionPerform!: Function;
+
     public undo() {
         this.flushLogGroup();
         const logs = this.log.pop();
@@ -18,6 +20,7 @@ export class UndoLog {
         while (log = logs.pop()) {
             log.inverse().perform();
         }
+        this.onAfterActionPerform();
     }
 
     public freeze() {
@@ -44,6 +47,7 @@ export class UndoLog {
     public perform(action: UndoableAction) {
         if (!this.frozen) { this.currLogGroup.push(action); }
         action.perform();
+        this.onAfterActionPerform();
     }
 
     private flushLogGroup() {

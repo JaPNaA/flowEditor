@@ -370,14 +370,20 @@ export class InstructionGroupEditor extends WorldElm {
     }
 
     public updateHeight() {
-        this.rect.height = this.elm.getHTMLElement().clientHeight;
+        const newHeight = this.elm.getHTMLElement().clientHeight;
+        if (this.rect.height !== newHeight) {
+            this.rect.height = newHeight;
+            this.engine?.ticker.requestTick();
+        }
     }
 
     public setSelected() {
+        if (!this.selected) { this.engine?.ticker.requestTick(); }
         this.selected = true;
     }
 
     public unsetSelected() {
+        if (this.selected) { this.engine?.ticker.requestTick(); }
         this.selected = false;
     }
 

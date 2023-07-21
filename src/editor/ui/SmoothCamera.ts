@@ -13,6 +13,7 @@ export class SmoothCamera extends WorldElm {
             new Vec2M(this.engine.camera.rect.x, this.engine.camera.rect.y)
                 .lerp(0.3, this.targetPos)
         );
+        this.engine.ticker.requestTick();
 
         if (new Vec2M(this.engine.camera.rect.x - this.targetPos.x, this.engine.camera.rect.y - this.targetPos.y).getLength() < 1) {
             this.targetPos = undefined;

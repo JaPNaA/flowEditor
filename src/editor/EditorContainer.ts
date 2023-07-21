@@ -11,6 +11,7 @@ export class EditorContainer extends Component {
     private engine = new JaPNaAEngine2d({
         canvas: { alpha: true },
         htmlOverlay: { relativeToWorld: true },
+        ticks: { fixedTick: false, enableDirtySystem: true },
         parentElement: this.elm.getHTMLElement()
     });
 
@@ -31,6 +32,7 @@ export class EditorContainer extends Component {
 
         addEventListener("wheel", ev => {
             this.engine.camera.zoomInto(ev.deltaY > 0 ? 1 / 1.2 : 1.2, this.engine.mouse.worldPos);
+            this.engine.ticker.requestTick();
         });
 
         this.elm.attribute("tabindex", "0");

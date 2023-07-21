@@ -72,6 +72,8 @@ export class Editor extends WorldElmWithComponents {
         });
         this.subscriptions.subscribe(this.cursor.onClickGroup, group => this.handleClickGroup(group));
         this.subscriptions.subscribe(this.cursor.onInput, () => this.dirty = true);
+
+        this.undoLog.onAfterActionPerform = () => this.engine.ticker.requestTick();
     }
 
     public getGroups(): ReadonlyArray<InstructionGroupEditor> {
@@ -293,6 +295,7 @@ export class Editor extends WorldElmWithComponents {
         if (this.engine.keyboard.isDown(["Space"]) || this.engine.mouse.rightDown) {
             // move camera
             this.engine.camera.move(-ev.movementX / scale, -ev.movementY / scale);
+            this.engine.ticker.requestTick();
         } else if (this.engine.mouse.leftDown) {
             if (this.movingGroups) {
                 // drag selected
@@ -300,6 +303,7 @@ export class Editor extends WorldElmWithComponents {
                     group.rect.x += ev.movementX / scale;
                     group.rect.y += ev.movementY / scale;
                 }
+                this.engine.ticker.requestTick();
             } else {
                 // select rectangle
                 this.selectRectangle.setVisible();
@@ -490,6 +494,7 @@ export class Editor extends WorldElmWithComponents {
         this.undoLog.startGroup();
         this.undoLog.perform(new MarkGroupAsStartAction(group, this));
         this.undoLog.endGroup();
+        this.engine.ticker.requestTick();
     }
 
     public serialize(): EditorSaveData {
@@ -599,10 +604,12 @@ class SelectRectangle extends WorldElm {
     }
 
     public setVisible() {
+        if (!this.visible) { this.engine.ticker.requestTick(); }
         this.visible = true;
     }
 
     public release() {
+        this.engine.ticker.requestTick();
         this.visible = false;
         this.startSet = false;
     }
@@ -621,6 +628,7 @@ class SelectRectangle extends WorldElm {
     }
 
     public onDrag() {
+        this.engine.ticker.requestTick();
         if (this.startSet) {
             this.rect.width = this.engine.mouse.worldPos.x - this.rect.x;
             this.rect.height = this.engine.mouse.worldPos.y - this.rect.y;
