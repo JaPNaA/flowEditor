@@ -1,6 +1,6 @@
 import { sortAndFilterByLooseStart } from "../../utils.js";
 import { Editable } from "../editing/Editable.js";
-import { AutoCompleteSuggester } from "../ui/AutoComplete.js";
+import { AutoCompleteSuggester } from "../editing/AutoComplete.js";
 import { InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
 
 export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggester {

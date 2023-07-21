@@ -5,7 +5,7 @@ import { EditorPlugin } from "../EditorPlugin.js";
 import { Editable } from "../../editor/editing/Editable.js";
 import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "../../FlowRunner.js";
 import { TextareaUserInputCaptureAreas } from "../../editor/editing/TextareaUserInputCapture.js";
-import { globalAutocompleteTypes } from "../../editor/ui/AutoComplete.js";
+import { globalAutocompleteTypes } from "../../editor/editing/AutoComplete.js";
 import { NewInstruction } from "../../editor/instruction/NewInstruction.js";
 
 export class DefaultPlugin implements EditorPlugin {

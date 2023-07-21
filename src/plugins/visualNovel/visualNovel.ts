@@ -1,5 +1,5 @@
 import { ControlItem } from "../../FlowRunner.js";
-import { globalAutocompleteTypes } from "../../editor/ui/AutoComplete.js";
+import { globalAutocompleteTypes } from "../../editor/editing/AutoComplete.js";
 import { Editable } from "../../editor/editing/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { InstructionBlueprintMin } from "../../editor/instruction/InstructionBlueprintRegistery.js";

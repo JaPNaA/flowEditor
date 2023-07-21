@@ -3,7 +3,7 @@ import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
 import { getAncestorWhich, isAncestor } from "../../utils.js";
 import { Editable } from "./Editable.js";
-import { AutoComplete } from "../ui/AutoComplete.js";
+import { AutoComplete } from "./AutoComplete.js";
 
 export class EditorCursor extends Elm<"span"> {
     public groupEditorsElmsMap = new WeakMap<HTMLDivElement, InstructionGroupEditor>();
