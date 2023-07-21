@@ -132,10 +132,13 @@ export class Editor extends WorldElmWithComponents {
             }
         }
 
-        this.handleClickGroup(clickedGroup);
+        this.handleClickGroup(clickedGroup, ev);
     }
 
-    private handleClickGroup(group: InstructionGroupEditor | null) {
+    private handleClickGroup(
+        group: InstructionGroupEditor | null,
+        keyboard: { ctrlKey: boolean, shiftKey: boolean } = { ctrlKey: false, shiftKey: false }
+    ) {
         // handle select handlers
         for (const handler of this.requestedInstructionGroupSelectHandlers) {
             handler(group);
@@ -143,7 +146,7 @@ export class Editor extends WorldElmWithComponents {
         this.requestedInstructionGroupSelectHandlers.length = 0;
 
         // handle selections
-        if (this.engine.keyboard.isDown(["ControlLeft", "ControlRight"])) {
+        if (keyboard.ctrlKey) {
             // ctrl: remove from selection
             this.unsetTempEditMode();
             if (group && this.selectedGroups.has(group)) {
@@ -152,7 +155,7 @@ export class Editor extends WorldElmWithComponents {
         } else {
             if (!group || !this.selectedGroups.has(group)) {
                 // shift to add to selection; otherwise, clear selection
-                if (!this.engine.keyboard.isDown(["ShiftLeft", "ShiftRight"])) {
+                if (!keyboard.shiftKey) {
                     this.clearSelection();
 
                     if (!group) {
