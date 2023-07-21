@@ -1,4 +1,5 @@
 import { EditorSaveData } from "../editor/Editor.js";
+import { newInstructionData } from "../editor/toolchain/flowToInstructionData.js";
 import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Project } from "./Project.js";
 
@@ -25,7 +26,10 @@ export class NullProject implements Project {
         if (localStorage['flowEditorSave']) {
             return JSON.parse(localStorage['flowEditorSave']);
         } else {
-            return { elms: [] };
+            return {
+                startGroup: 0,
+                elms: [{ branches: [], children: [], instructions: [{ ctrl: 'nop' }, { ctrl: 'end' }], id: 0, x: 8, y: 24 }]
+            };
         }
     }
 
