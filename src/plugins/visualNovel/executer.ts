@@ -51,7 +51,7 @@ export class VisualNovelExecuter implements Executer {
     private game?: VisualNovelGame;
     private executerContainer!: ExecuterContainer;
 
-    private stringVariables = new Map();
+    private stringVariables: string[] = [];
 
     constructor() {
         this.elm.on("keydown", key => {
@@ -68,7 +68,7 @@ export class VisualNovelExecuter implements Executer {
         this.executerContainer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
         this.game.setProject(executerContainer.getProject());
-        this.stringVariables.clear();
+        this.stringVariables.length = 0;
 
         return Promise.resolve();
     }
@@ -80,7 +80,10 @@ export class VisualNovelExecuter implements Executer {
         switch (data.visualNovelCtrl) {
             case "say":
                 this.executerContainer.log.log(`${data.char}: "${data.text}"`);
-                return this.game.characterSay(data.char, visualNovelMdToHTML(data.text, this.getVariable));
+                return this.game.characterSay(
+                    visualNovelMdToHTML(data.char, this.getVariable),
+                    visualNovelMdToHTML(data.text, this.getVariable)
+                );
             case "say-add":
                 this.executerContainer.log.log('"' + data.text + '"');
                 return this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
@@ -108,6 +111,11 @@ export class VisualNovelExecuter implements Executer {
             case "bgm":
                 this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
                 return Promise.resolve();
+            case "strset":
+                const index = this.stringVariables.length;
+                this.stringVariables.push(data.str);
+                this.executerContainer.writeVariable(data.v, index);
+                return Promise.resolve();
             default:
                 return null;
         }
@@ -122,7 +130,8 @@ export class VisualNovelExecuter implements Executer {
     private getVariable(str: string): string | undefined {
         const pointer = this.executerContainer.getVariable(str);
         if (pointer === undefined) { return; }
-        return this.stringVariables.get(pointer) || pointer.toString();
+        return this.stringVariables[pointer] === undefined ?
+            pointer.toString() : this.stringVariables[pointer];
     }
 }
 
@@ -153,8 +162,8 @@ class VisualNovelGame {
         this.imageDisplayer.project = project;
     }
 
-    public async characterSay(charName: string, text: string) {
-        this.speechBubble.write(charName, text);
+    public async characterSay(charHTML: string, text: string) {
+        this.speechBubble.write(charHTML, text);
 
         if (this.engine.mouse.rightDown) {
             // skip
@@ -419,7 +428,7 @@ class SpeechBubble extends WorldElmWithComponents {
     private elm = new SpeechBubbleElm();
     private fullHTML: string = "";
     private numChars: number = 0;
-    private characterName: string = "";
+    private characterNameHTML: string = "";
     private isDone = true;
 
     private charsPerSecond = 50;
@@ -471,13 +480,13 @@ class SpeechBubble extends WorldElmWithComponents {
         }
     }
 
-    public write(character: string, html: string) {
+    public write(characterHTML: string, html: string) {
         this.timePassed = 0;
         this.charsShowing = 0;
         this.isDone = false;
-        this.characterName = character;
+        this.characterNameHTML = characterHTML;
         this.fullHTML = html;
-        this.numChars = this.elm.setFullHTML(this.characterName, html);
+        this.numChars = this.elm.setFullHTML(this.characterNameHTML, html);
 
         if (this.charsPerSecond === 0) {
             this.showAllChars();
@@ -489,7 +498,7 @@ class SpeechBubble extends WorldElmWithComponents {
         this.charsShowing = this.numChars + 1;
         this.isDone = false;
         this.fullHTML = this.fullHTML + "\n" + html;
-        this.numChars = this.elm.setFullHTML(this.characterName, this.fullHTML);
+        this.numChars = this.elm.setFullHTML(this.characterNameHTML, this.fullHTML);
 
         if (this.charsPerSecond === 0) {
             this.showAllChars();
@@ -551,10 +560,11 @@ class SpeechBubbleElm extends Elm {
      * Set the full html to show.
      * Returns the number of characters that are showable.
      */
-    public setFullHTML(character: string, html: string): number {
+    public setFullHTML(characterHTML: string, html: string): number {
         let elm;
         this.replaceContents(
-            new Elm().append(character).attribute("style", "font-weight: bold"),
+            new Elm().attribute("style", "font-weight: bold")
+                .withSelf(elm => elm.getHTMLElement().innerHTML = characterHTML),
             elm = new Elm().withSelf(elm => elm.getHTMLElement().innerHTML = html)
         );
 

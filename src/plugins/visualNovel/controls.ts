@@ -1,4 +1,4 @@
-export type VisualNovelControlItem = ControlBackground | ControlShow | ControlSay | ControlSayAdd | ControlChoose | ControlSpeechBubbleSettings | ControlWait | ControlBackgroundMusic;
+export type VisualNovelControlItem = ControlBackground | ControlShow | ControlSay | ControlSayAdd | ControlChoose | ControlSpeechBubbleSettings | ControlWait | ControlBackgroundMusic | ControlSetVariableString;
 
 export function isVisualNovelControlItem(item: any): item is VisualNovelControlItem {
     return typeof item.visualNovelCtrl === "string";
@@ -105,4 +105,10 @@ export interface ControlWait {
 export interface ControlBackgroundMusic {
     visualNovelCtrl: "bgm";
     src: string;
+}
+
+export interface ControlSetVariableString {
+    visualNovelCtrl: "strset";
+    v: string;
+    str: string;
 }

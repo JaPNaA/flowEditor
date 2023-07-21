@@ -4,7 +4,7 @@ import { Editable } from "../../editor/editing/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { InstructionBlueprintMin } from "../../editor/instruction/InstructionBlueprintRegistery.js";
 import { EditorPlugin } from "../EditorPlugin.js";
-import { ControlBackground, ControlBackgroundMusic, ControlChoose, ControlSay, ControlSayAdd, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
+import { ControlBackground, ControlBackgroundMusic, ControlChoose, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instruction/instructionTypes.js";
 
@@ -12,6 +12,7 @@ const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
 const autocompleteTypeBackgroundMusic = Symbol();
 const autocompleteTypeShow = Symbol();
+const autocompleteTypeStringVariable = Symbol();
 
 export default class VisualNovelPlugin implements EditorPlugin {
     name = "Visual Novel";
@@ -84,6 +85,15 @@ export default class VisualNovelPlugin implements EditorPlugin {
             visualNovelCtrl: "bgm",
             src: ""
         }))
+    }, {
+        instructionName: "set variable to string",
+        description: "Sets the value of a variable to string (by setting the value to a number identifying the string.)",
+        shortcutKey: "KeyX",
+        create: () => new InstructionOneLine(new SetVariableStringInstruction({
+            visualNovelCtrl: "strset",
+            v: "string",
+            str: ""
+        }))
     }];
     executer = new VisualNovelExecuter();
 
@@ -111,6 +121,8 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 return new InstructionOneLine(new WaitInstruction(data.time));
             case "bgm":
                 return new InstructionOneLine(new BackgroundMusicInstruction(data));
+            case "strset":
+                return new InstructionOneLine(new SetVariableStringInstruction(data));
             default:
                 return;
         }
@@ -515,5 +527,28 @@ class ChoiceBranchMacroLineOption extends BranchInstructionLine {
         super();
         this.setAreas("-> ", this.editable = this.createEditable(choice));
         this.elm.class("jump");
+    }
+}
+
+class SetVariableStringInstruction extends InstructionLine implements OneLineInstruction {
+    private variableEditable: Editable;
+    private stringEditable: Editable;
+
+    isBranch: boolean = false;
+
+    constructor(data: ControlSetVariableString) {
+        super();
+        this.setAreas(
+            this.variableEditable = this.createEditable(data.v),
+            ' <- "',
+            this.stringEditable = this.createEditable(data.str),
+            '"'
+        );
+        this.variableEditable.autoCompleteType = autocompleteTypeStringVariable;
+        this.elm.class("control");
+    }
+
+    serialize(): ControlSetVariableString {
+        return { visualNovelCtrl: "strset", str: this.stringEditable.getValue(), v: this.variableEditable.getValue() };
     }
 }
