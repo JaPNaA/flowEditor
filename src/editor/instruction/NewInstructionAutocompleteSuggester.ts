@@ -15,6 +15,8 @@ export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggeste
         if (!(editable instanceof NewInstructionEditable)) { return null; }
 
         const value = editable.getValue();
+        if (!value) { return null; } // don't show suggestions when empty
+
         const instructions = this.blueprintRegistery.getAllBlueprints();
         const suggestions: [number, InstructionBlueprint][] = [];
 

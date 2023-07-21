@@ -165,6 +165,7 @@ export class EditorCursor extends Elm<"span"> {
 
         this.inputCapture.unfocusHandler = () => {
             this.class("hidden");
+            this.autocomplete.clearSuggestions();
         };
     }
 

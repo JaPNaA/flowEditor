@@ -131,6 +131,7 @@ export class AutoComplete extends Component {
             suggester.learn(editable);
         } else {
             const value = editable.getValue();
+            if (!value) { return; } // ignore empty values
             let counts = this.defaultHandlerPreviousValues.get(editable.autoCompleteType);
             if (!counts) {
                 counts = new Map();
