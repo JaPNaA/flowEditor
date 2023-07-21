@@ -12,7 +12,7 @@ export class DefaultPlugin implements EditorPlugin {
     name = "Default";
 
     instructionBlueprints: InstructionBlueprintMin[] = [{
-        instructionName: "branch",
+        instructionName: "if",
         description: "Goto somewhere if a variable satisfies a condition",
         shortcutKey: "KeyI",
         create: () => new InstructionOneLine(new ControlBranchLine({
@@ -32,7 +32,7 @@ export class DefaultPlugin implements EditorPlugin {
             variable: "choice"
         }))
     }, {
-        instructionName: "jump",
+        instructionName: "goto",
         description: "Continue in at a different instruction",
         shortcutKey: "KeyG",
         create: () => new InstructionOneLine(new ControlJumpLine())
@@ -53,7 +53,6 @@ export class DefaultPlugin implements EditorPlugin {
         }))
     }, {
         instructionName: "default",
-        shortcutKey: ["Digit1", "Numpad1"],
         create: () => new JSONInstruction("")
     }];
 

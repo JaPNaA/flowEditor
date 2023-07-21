@@ -55,12 +55,10 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }, {
         instructionName: "set text reveal speed",
         description: "Sets the speed of revealing text in a `say` or `display` command",
-        shortcutKey: "KeyR",
         create: () => new InstructionOneLine(new SetTextRevealSpeedInstruction(50)),
     }, {
         instructionName: "set speech bubble position",
         description: "Sets the position of the speech bubble",
-        shortcutKey: "KeyP",
         create: () => new InstructionOneLine(new SetSpeechBubblePositionInstruction(50, 100))
     }, {
         instructionName: "choose",
@@ -87,7 +85,6 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }, {
         instructionName: "set variable to string",
         description: "Sets the value of a variable to string (by setting the value to a number identifying the string.)",
-        shortcutKey: "KeyX",
         create: () => new InstructionOneLine(new SetVariableStringInstruction({
             visualNovelCtrl: "strset",
             v: "string",
@@ -253,7 +250,7 @@ class SetSpeechBubblePositionInstruction extends InstructionLine implements OneL
         super();
 
         this.setAreas(
-            'Position speech bubble x: ',
+            'Set speech bubble position x: ',
             this.xEditable = this.createEditable(x),
             ', y: ',
             this.yEditable = this.createEditable(y)
