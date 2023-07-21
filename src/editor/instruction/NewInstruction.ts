@@ -4,6 +4,7 @@ import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } 
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture.js";
 import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester.js";
+import { InstructionBlueprint } from "./InstructionBlueprintRegistery.js";
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     constructor() {
         super(new NewInstructionLine());
@@ -57,11 +58,11 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 event.preventDefault();
             }
         });
+        this.editable.parentLine = this;
     }
 
     public _setParent(instruction: Instruction): void {
         super._setParent(instruction);
-        this.editable.parentInstruction = this.parentInstruction;
     }
 
     public splitGroupHere() {
@@ -115,8 +116,8 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 }
 
-class NewInstructionEditable extends Editable {
-    public parentInstruction!: Instruction;
+export class NewInstructionEditable extends Editable {
+    public parentLine!: NewInstructionLine;
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
 
     constructor() {
@@ -132,12 +133,17 @@ class NewInstructionEditable extends Editable {
 
     public setActive(offsetStart: number, offsetEnd: number, cursor: EditorCursor): void {
         super.setActive(offsetStart, offsetEnd, cursor);
-        this.parentInstruction.parentGroup.parentEditor.cursor.onKeydownIntercept.subscribe(this.intercepter);
+        this.parentLine.parentInstruction.parentGroup.parentEditor.cursor.onKeydownIntercept.subscribe(this.intercepter);
     }
 
     public updateAndDeactivate(): void {
         super.updateAndDeactivate();
-        this.parentInstruction.parentGroup.parentEditor.cursor.onKeydownIntercept.unsubscribe(this.intercepter);
+        this.parentLine.parentInstruction.parentGroup.parentEditor.cursor.onKeydownIntercept.unsubscribe(this.intercepter);
+    }
+
+    public acceptAutocomplete(blueprint: InstructionBlueprint) {
+        const newInstruction = blueprint.create();
+        this.parentLine.changeView(newInstruction);
     }
 
     private intercepter(ev: KeyboardEvent) {

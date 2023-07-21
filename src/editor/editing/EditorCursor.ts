@@ -140,7 +140,7 @@ export class EditorCursor extends Elm<"span"> {
                     // accept suggestion
                     const text = this.autocomplete.acceptSuggestion();
                     this.autocomplete.clearSuggestions();
-                    if (!text) { preventDefault = false; break; }
+                    if (!text) { break; }
                     this.lastActiveEditable.setValue(text);
                     this.setPosition({
                         group: this.position.group,

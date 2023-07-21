@@ -2,6 +2,7 @@ import { looseStartsWith } from "../../utils.js";
 import { Editable } from "../editing/Editable.js";
 import { AutoCompleteSuggester } from "../editing/AutoComplete.js";
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
+import { NewInstructionEditable } from "./NewInstruction.js";
 
 export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggester {
     public static symbol = Symbol();
@@ -11,6 +12,8 @@ export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggeste
     public learn() { }
     public unlearn() { }
     public suggest(editable: Editable) {
+        if (!(editable instanceof NewInstructionEditable)) { return null; }
+
         const value = editable.getValue();
         const instructions = this.blueprintRegistery.getAllBlueprints();
         const suggestions: [number, InstructionBlueprint][] = [];
@@ -33,7 +36,7 @@ export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggeste
             subtitle: x[1].plugin,
             description: (x[1].shortcutKey ? "[" + x[1].shortcutKey + "] " : "") +
                 x[1].description,
-            fill: x[1].instructionName
+            fill: () => editable.acceptAutocomplete(x[1])
         }));
     }
 }
