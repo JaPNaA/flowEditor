@@ -12,7 +12,6 @@ const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
 const autocompleteTypeBackgroundMusic = Symbol();
 const autocompleteTypeShow = Symbol();
-const autocompleteTypeStringVariable = Symbol();
 
 export default class VisualNovelPlugin implements EditorPlugin {
     name = "Visual Novel";
@@ -544,7 +543,7 @@ class SetVariableStringInstruction extends InstructionLine implements OneLineIns
             this.stringEditable = this.createEditable(data.str),
             '"'
         );
-        this.variableEditable.autoCompleteType = autocompleteTypeStringVariable;
+        this.variableEditable.autoCompleteType = globalAutocompleteTypes.variable;
         this.elm.class("control");
     }
 
