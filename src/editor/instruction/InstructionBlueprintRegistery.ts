@@ -11,8 +11,6 @@ export interface InstructionBlueprint {
 }
 
 export class InstructionBlueprintRegistery {
-    private static probeableShortcutChars = "abcdefghijklmnopqrstuvwxyz1234567890-=[]'\\,./!@#$%^&*()_+{}\"|<>?";
-
     private allInstructions: InstructionBlueprint[] = [];
     private shortcutsMap = new Map<string, InstructionBlueprint>();
 
@@ -46,20 +44,7 @@ export class InstructionBlueprintRegistery {
 
         for (const shortcutKey of shortcutKeys) {
             if (this.shortcutsMap.get(shortcutKey)) {
-                // taken, begin probing
-                let index = InstructionBlueprintRegistery.probeableShortcutChars.indexOf(shortcutKey);
-                if (index < 0) { index = 0; }
-                for (let offset = 0; offset < InstructionBlueprintRegistery.probeableShortcutChars.length; offset++) {
-                    const newChar =
-                        InstructionBlueprintRegistery.probeableShortcutChars[
-                        (index + offset) % InstructionBlueprintRegistery.probeableShortcutChars.length];
-                    if (!this.shortcutsMap.get(newChar)) {
-                        console.warn(`'${shortcutKey}' shortcut was not available. Reassigned to '${newChar}'`);
-                        this.shortcutsMap.set(newChar, blueprint);
-                        break;
-                    }
-
-                }
+                console.warn("Shortcut " + shortcutKey + " was not available. Failed to assign.");
             } else {
                 this.shortcutsMap.set(shortcutKey, blueprint);
             }
