@@ -552,7 +552,6 @@ class SpeechBubbleElm extends Elm {
      * Returns the number of characters that are showable.
      */
     public setFullHTML(character: string, html: string): number {
-        console.log(html);
         let elm;
         this.replaceContents(
             new Elm().append(character).attribute("style", "font-weight: bold"),

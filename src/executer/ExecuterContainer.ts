@@ -88,7 +88,6 @@ export class ExecuterContainer extends Component {
 
     public execute() {
         const compiled = appHooks.getCompiledFlowFromEditor();
-        console.log(compiled);
         this.resizeHandle.uncollapse();
         this.log.clear();
         this.input.clear();

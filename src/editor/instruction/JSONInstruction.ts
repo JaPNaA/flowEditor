@@ -64,7 +64,6 @@ class JSONLineEditable extends Editable {
         const currentPosition = this.parentLine.parentInstruction.getIndex();
         let i;
         for (i = 1; i < lines.length; i++) {
-            console.log(lines[i]);
             parentGroup.insertInstruction(
                 new InstructionOneLine(
                     new JSONLine(lines[i])
