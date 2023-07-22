@@ -268,6 +268,7 @@ class StateSaver extends Component {
         this.elm.class("operationsBar").append(
             this.savedList = new Elm("span").class("saved"),
             this.saveButton = new Elm("button")
+                .class("saveButton")
                 .attribute("disabled", "true")
                 .append("Save state")
                 .onActivate(() => {

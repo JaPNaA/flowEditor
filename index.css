@@ -292,10 +292,6 @@ body {
     color: #7797ff;
 }
 
-.executerContainer .fileOperationsBar {
-    text-align: right;
-}
-
 .executerContainer .operationsBar {
     background-color: #3a3a3a;
     line-height: 1;
@@ -314,8 +310,21 @@ body {
     color: #e9e9e9;
 }
 
-.executerContainer .operationsBar button.deleteAndReload {
-    color: #ff2d2d;
+.executerContainer .fileOperationsBar {
+    text-align: right;
+}
+
+.executerContainer .fileOperationsBar button.deleteAndReload {
+    color: #ffecec;
+    background-color: #8b4646;
+}
+
+.executerContainer .fileOperationsBar button.deleteAndReload:hover {
+    background-color: #942a2a;
+}
+
+.executerContainer .saves button.saveButton {
+    color: #22e753;
 }
 
 .executerContainer .resizeHandle {
