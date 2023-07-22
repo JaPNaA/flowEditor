@@ -4,7 +4,7 @@ import { Editable } from "../../editor/editing/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { InstructionBlueprintMin } from "../../editor/instruction/InstructionBlueprintRegistery.js";
 import { EditorPlugin } from "../EditorPlugin.js";
-import { ControlBackground, ControlBackgroundMusic, ControlChoose, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
+import { ControlBackground, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlChoose, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instruction/instructionTypes.js";
 
@@ -83,6 +83,27 @@ export default class VisualNovelPlugin implements EditorPlugin {
             src: ""
         }))
     }, {
+        instructionName: "set background music volume",
+        description: "Set the volume of the background music",
+        create: () => new InstructionOneLine(new BackgroundMusicVolumeInstruction({
+            visualNovelCtrl: "bgmSettings",
+            volume: 0.4
+        }))
+    }, {
+        instructionName: "play sfx",
+        description: "Play a sound effect",
+        create: () => new InstructionOneLine(new SFXInstruction({
+            visualNovelCtrl: "sfx",
+            src: ""
+        }))
+    }, {
+        instructionName: "set sfx volume",
+        description: "Set the volume of sound effects",
+        create: () => new InstructionOneLine(new SFXVolumeInstruction({
+            visualNovelCtrl: "sfxSettings",
+            volume: 0.6
+        }))
+    }, {
         instructionName: "set variable to string",
         description: "Sets the value of a variable to string (by setting the value to a number identifying the string.)",
         create: () => new InstructionOneLine(new SetVariableStringInstruction({
@@ -117,6 +138,12 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 return new InstructionOneLine(new WaitInstruction(data.time));
             case "bgm":
                 return new InstructionOneLine(new BackgroundMusicInstruction(data));
+            case "bgmVolume":
+                return new InstructionOneLine(new BackgroundMusicVolumeInstruction(data));
+            case "sfx":
+                return new InstructionOneLine(new SFXInstruction(data));
+            case "sfxVolume":
+                return new InstructionOneLine(new SFXVolumeInstruction(data));
             case "strset":
                 return new InstructionOneLine(new SetVariableStringInstruction(data));
             default:
@@ -357,6 +384,95 @@ class BackgroundMusicInstruction extends InstructionLine implements OneLineInstr
         return {
             visualNovelCtrl: "bgm",
             src: this.editable.getValue()
+        };
+    }
+}
+
+class BackgroundMusicVolumeInstruction extends InstructionLine implements OneLineInstruction {
+    private editable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(data: ControlBackgroundMusicSettings) {
+        super();
+
+        this.setAreas(
+            "Set background music volume: ",
+            this.editable = this.createEditable(data.volume)
+        );
+        this.elm.class("secondary");
+    }
+
+    public export(): ControlBackgroundMusicSettings {
+        const volume = parseFloat(this.editable.getValue());
+        if (isNaN(volume)) { throw new Error("Not a number"); }
+        return {
+            visualNovelCtrl: "bgmSettings",
+            volume: volume
+        };
+    }
+
+    public serialize() {
+        const volume = parseFloat(this.editable.getValue());
+        if (isNaN(volume)) { throw new Error("Not a number"); }
+        return {
+            visualNovelCtrl: "bgmVolume",
+            volume: volume
+        };
+    }
+}
+
+class SFXInstruction extends InstructionLine implements OneLineInstruction {
+    private editable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(data: ControlSFX) {
+        super();
+
+        this.setAreas(
+            "Play sfx: ",
+            this.editable = this.createEditable(data.src)
+        );
+        this.editable.autoCompleteType = autocompleteTypeBackgroundMusic;
+        this.elm.class("secondary");
+    }
+
+    public serialize(): ControlSFX {
+        return {
+            visualNovelCtrl: "sfx",
+            src: this.editable.getValue()
+        };
+    }
+}
+
+class SFXVolumeInstruction extends InstructionLine implements OneLineInstruction {
+    private editable: Editable;
+    public isBranch: boolean = false;
+
+    constructor(data: ControlSFXSettings) {
+        super();
+
+        this.setAreas(
+            "Set sfx volume: ",
+            this.editable = this.createEditable(data.volume)
+        );
+        this.elm.class("secondary");
+    }
+
+    public export(): ControlSFXSettings {
+        const volume = parseFloat(this.editable.getValue());
+        if (isNaN(volume)) { throw new Error("Not a number"); }
+        return {
+            visualNovelCtrl: "sfxSettings",
+            volume: volume
+        };
+    }
+
+    public serialize() {
+        const volume = parseFloat(this.editable.getValue());
+        if (isNaN(volume)) { throw new Error("Not a number"); }
+        return {
+            visualNovelCtrl: "sfxVolume",
+            volume: volume
         };
     }
 }

@@ -122,6 +122,15 @@ export class VisualNovelExecuter implements Executer {
                 this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
                 this.executerContainer.log.logSecondary("Set background music: " + data.src);
                 return Promise.resolve();
+            case "bgmSettings":
+                this.game.setBackgroundMusicSettings(data);
+                return Promise.resolve();
+            case "sfx":
+                this.game.playSFX(replaceVariables(data.src, this.getVariable));
+                return Promise.resolve();
+            case "sfxSettings":
+                this.game.setSFXSettings(data);
+                return Promise.resolve();
             case "strset":
                 this.executerContainer.writeVariable(data.v, this.stringVariables.push(data.str));
                 return Promise.resolve();
@@ -268,6 +277,22 @@ class VisualNovelGame {
 
     public async setBackgroundMusic(src: string) {
         await this.audio.setBackgroundMusic(src);
+    }
+
+    public setBackgroundMusicSettings(settings: any) {
+        if (settings.volume !== undefined) {
+            this.audio.setBackgroundVolume(settings.volume);
+        }
+    }
+
+    public async playSFX(src: string) {
+        await this.audio.playSFX(src);
+    }
+
+    public setSFXSettings(settings: any) {
+        if (settings.volume !== undefined) {
+            this.audio.setSFXVolume(settings.volume);
+        }
     }
 
     public dispose() {
@@ -805,6 +830,7 @@ class AudioPlayer {
             this.sfx.src = URL.createObjectURL(
                 await this.project.getAsset(src)
             );
+            this.sfx.play();
         } else {
             this.sfx.pause();
         }
