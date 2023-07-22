@@ -122,9 +122,7 @@ export class VisualNovelExecuter implements Executer {
                 this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
                 return Promise.resolve();
             case "strset":
-                const index = this.stringVariables.length;
-                this.stringVariables.push(data.str);
-                this.executerContainer.writeVariable(data.v, index);
+                this.executerContainer.writeVariable(data.v, this.stringVariables.push(data.str));
                 return Promise.resolve();
             default:
                 return null;
@@ -154,8 +152,8 @@ export class VisualNovelExecuter implements Executer {
     private getVariable(str: string): string | undefined {
         const pointer = this.executerContainer.getVariable(str);
         if (pointer === undefined) { return; }
-        return this.stringVariables[pointer] === undefined ?
-            pointer.toString() : this.stringVariables[pointer];
+        return this.stringVariables[pointer - 1] === undefined ?
+            pointer.toString() : this.stringVariables[pointer - 1];
     }
 }
 
@@ -351,7 +349,7 @@ class Chooser extends WorldElmWithComponents {
     }
 
     public getState() {
-        return this.choices;
+        return this.choices && this.choices.slice();
     }
 
     public setState(choices: string[] | undefined) {
