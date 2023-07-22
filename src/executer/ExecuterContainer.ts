@@ -14,7 +14,7 @@ export class ExecuterContainer extends Component {
     private lastChoice: any[] = [];
     private outputDisplays: Elm;
     private resizeHandle = new ResizeHandle(this);
-    private saves = new StateSaver();
+    private saves = new StateSaver(this);
 
     constructor(private project: Project) {
         super("executerContainer");
@@ -263,7 +263,7 @@ class StateSaver extends Component {
     private saveButton: Elm<"button">;
     private saveCount = 0;
 
-    constructor() {
+    constructor(private container: ExecuterContainer) {
         super("saves");
         this.elm.class("operationsBar").append(
             this.savedList = new Elm("span").class("saved"),
@@ -287,7 +287,8 @@ class StateSaver extends Component {
         const flowState = this.flowRunner.getState();
         const plugins = pluginHooks.getExecutionStates();
 
-        const restoreButton = new Elm("button").append("Save " + (++this.saveCount));
+        const saveName = "Save " + (++this.saveCount);
+        const restoreButton = new Elm("button").append(saveName);
         const stateSave = {
             flow: flowState,
             plugins: plugins
@@ -296,8 +297,12 @@ class StateSaver extends Component {
 
         this.savedList.append(restoreButton);
         this.saves.push(save);
+        this.container.log.logSecondary("Saved to " + saveName + ": " + JSON.stringify(stateSave));
 
-        restoreButton.onActivate(() => this.restore(stateSave));
+        restoreButton.onActivate(() => {
+            this.restore(stateSave);
+            this.container.log.logSecondary("Restored from " + saveName + ": " + JSON.stringify(stateSave));
+        });
         restoreButton.on("contextmenu", ev => {
             ev.preventDefault();
             removeElmFromArray(save, this.saves);
