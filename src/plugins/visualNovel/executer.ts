@@ -137,11 +137,17 @@ export class VisualNovelExecuter implements Executer {
     }
 
     public getState() {
-        return { stringVariables: this.stringVariables.slice() };
+        return {
+            stringVariables: this.stringVariables.slice(),
+            game: this.game?.getState()
+        };
     }
 
     public setState(state: any): void {
         this.stringVariables = state.stringVariables;
+        if (state.game && this.game) {
+            this.game.setState(state.game);
+        }
     }
 
     /** Function used to map flow variable to string */
@@ -242,6 +248,24 @@ class VisualNovelGame {
         if (settings.tagStyles) { }
     }
 
+    public getState() {
+        return {
+            chooser: this.chooser.getState(),
+            speechBubble: this.speechBubble.getState(),
+            background: this.background.getState(),
+            imageDisplayer: this.imageDisplayer.getState(),
+            bgm: (this.bgm && !this.bgm.paused) ? this.bgm.src : "",
+        }
+    }
+
+    public setState(state: any) {
+        this.chooser.setState(state.chooser);
+        this.speechBubble.setState(state.speechBubble);
+        this.background.setState(state.background);
+        this.imageDisplayer.setState(state.imageDisplayer);
+        this.setBackgroundMusic(state.bgm);
+    }
+
     public async setBackgroundMusic(src: string) {
         if (!src && this.bgm) {
             this.bgm.pause();
@@ -276,6 +300,7 @@ class VisualNovelGame {
 class Chooser extends WorldElmWithComponents {
     private elm = new Elm();
     public onChosen = new EventBus<number>();
+    public choices?: string[];
 
     constructor() {
         super();
@@ -296,6 +321,7 @@ class Chooser extends WorldElmWithComponents {
 
     public requestChoice(choices: string[]) {
         const style = this.elm.getHTMLElement().style;
+        this.choices = choices;
         if (choices.length <= 4) {
             style.paddingTop = "64px";
             style.rowGap = "16px";
@@ -320,7 +346,19 @@ class Chooser extends WorldElmWithComponents {
     }
 
     public clear() {
+        this.choices = undefined;
         this.elm.clear();
+    }
+
+    public getState() {
+        return this.choices;
+    }
+
+    public setState(choices: string[] | undefined) {
+        this.clear();
+        if (choices) {
+            this.requestChoice(choices);
+        }
     }
 
     public remove(): void {
@@ -360,6 +398,7 @@ class Background extends WorldElm {
     private focusY: number = 0;
 
     private imageLoaded = false;
+    private background?: ControlBackground;
 
     public draw() {
         const X = this.engine.canvas.X;
@@ -386,6 +425,7 @@ class Background extends WorldElm {
     }
 
     public async set(background: ControlBackground) {
+        this.background = background;
         if (this.image) { URL.revokeObjectURL(this.image.src); }
         if (background.src) {
             this.image = new Image();
@@ -403,6 +443,15 @@ class Background extends WorldElm {
         this.focusX = background.x === undefined ? 0.5 : background.x / 100;
         this.focusY = background.y === undefined ? 0.5 : background.y / 100;
     }
+
+    public getState() {
+        return this.background;
+    }
+
+    public setState(state: any) {
+        if (!state) { return this.set({ visualNovelCtrl: "background", color: "#000" }); }
+        this.set(state);
+    }
 }
 
 class ImageDisplayer extends WorldElm {
@@ -414,6 +463,7 @@ class ImageDisplayer extends WorldElm {
     private focusY: number = 0.5;
 
     private imageLoaded = false;
+    private src?: string;
 
     public draw() {
         const X = this.engine.canvas.X;
@@ -438,6 +488,7 @@ class ImageDisplayer extends WorldElm {
     }
 
     public async showImage(src: string) {
+        this.src = src;
         if (this.image) { URL.revokeObjectURL(this.image.src); }
         if (src) {
             this.image = new Image();
@@ -453,6 +504,18 @@ class ImageDisplayer extends WorldElm {
         // this.zoom = background.zoom === undefined ? 1 : background.zoom;
         // this.focusX = background.x === undefined ? 0.5 : background.x / 100;
         // this.focusY = background.y === undefined ? 0.5 : background.y / 100;
+    }
+
+    public getState() {
+        return this.src;
+    }
+
+    public setState(state: any) {
+        if (state) {
+            this.showImage(state);
+        } else {
+            this.showImage("");
+        }
     }
 }
 
@@ -475,6 +538,8 @@ class SpeechBubble extends WorldElmWithComponents {
 
     private visible = true;
 
+    private posY: number = 100;
+
     constructor() {
         super();
     }
@@ -493,6 +558,7 @@ class SpeechBubble extends WorldElmWithComponents {
 
     /** @param y 0 to 100 */
     public setPositionY(y: number) {
+        this.posY = y;
         this.elm.setPositionY(y);
     }
 
@@ -548,6 +614,29 @@ class SpeechBubble extends WorldElmWithComponents {
         this.charsShowing = this.numChars;
         this.render();
         this.isDone = true;
+    }
+
+    public getState() {
+        return {
+            charsShowing: this.charsShowing,
+            fullHTML: this.fullHTML,
+            characterNameHTML: this.characterNameHTML,
+            settings: {
+                visible: this.visible,
+                posY: this.posY,
+                speed: this.charsPerSecond
+            }
+        };
+    }
+
+    public setState(state: any) {
+        this.setVisible(state.settings.visible);
+        this.setPositionY(state.settings.posY);
+        this.setSpeed(state.settings.speed);
+
+        this.write(state.characterNameHTML, state.fullHTML);
+        this.charsShowing = state.charsShowing;
+        this.render();
     }
 
     public tick(): void {
