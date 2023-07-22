@@ -120,6 +120,7 @@ export class VisualNovelExecuter implements Executer {
                 return new Promise(res => setTimeout(() => res(), data.time));
             case "bgm":
                 this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
+                this.executerContainer.log.logSecondary("Set background music: " + data.src);
                 return Promise.resolve();
             case "strset":
                 this.executerContainer.writeVariable(data.v, this.stringVariables.push(data.str));
@@ -164,7 +165,7 @@ class VisualNovelGame {
     private speechBubble = new SpeechBubble();
     private background = new Background();
     private imageDisplayer = new ImageDisplayer();
-    private bgm?: HTMLAudioElement;
+    private audio = new AudioPlayer();
     private project!: Project;
 
     constructor(parentElm: HTMLElement) {
@@ -182,6 +183,7 @@ class VisualNovelGame {
         this.project = project;
         this.background.project = project;
         this.imageDisplayer.project = project;
+        this.audio.project = project;
     }
 
     public async characterSay(charHTML: string, text: string) {
@@ -252,7 +254,7 @@ class VisualNovelGame {
             speechBubble: this.speechBubble.getState(),
             background: this.background.getState(),
             imageDisplayer: this.imageDisplayer.getState(),
-            bgm: (this.bgm && !this.bgm.paused) ? this.bgm.src : "",
+            bgm: this.audio.getState()
         }
     }
 
@@ -261,36 +263,17 @@ class VisualNovelGame {
         this.speechBubble.setState(state.speechBubble);
         this.background.setState(state.background);
         this.imageDisplayer.setState(state.imageDisplayer);
-        this.setBackgroundMusic(state.bgm);
+        this.audio.setState(state.bgm);
     }
 
     public async setBackgroundMusic(src: string) {
-        if (!src && this.bgm) {
-            this.bgm.pause();
-            return;
-        }
-        if (!src) { return; }
-        if (!this.bgm) {
-            this.bgm = new Audio(
-                URL.createObjectURL(
-                    await this.project.getAsset(src)
-                )
-            );
-            this.bgm.loop = true;
-            this.bgm.volume = 0.4;
-            this.bgm.play();
-        } else {
-            if (this.bgm.src) { URL.revokeObjectURL(this.bgm.src); }
-            this.bgm.src = src;
-            this.bgm.play();
-        }
+        await this.audio.setBackgroundMusic(src);
     }
 
     public dispose() {
-        if (this.bgm) {
-            this.bgm.pause();
-            this.bgm = undefined;
-        }
+        this.background.remove();
+        this.imageDisplayer.remove();
+        this.audio.dispose();
         this.engine.dispose();
     }
 }
@@ -450,6 +433,11 @@ class Background extends WorldElm {
         if (!state) { return this.set({ visualNovelCtrl: "background", color: "#000" }); }
         this.set(state);
     }
+
+    public remove() {
+        super.remove();
+        if (this.image) { URL.revokeObjectURL(this.image.src); }
+    }
 }
 
 class ImageDisplayer extends WorldElm {
@@ -514,6 +502,11 @@ class ImageDisplayer extends WorldElm {
         } else {
             this.showImage("");
         }
+    }
+
+    public remove(): void {
+        super.remove();
+        if (this.image) { URL.revokeObjectURL(this.image.src); }
     }
 }
 
@@ -763,5 +756,78 @@ class SpeechBubbleElm extends Elm {
 
     public setInvisible() {
         this.elm.style.display = "none";
+    }
+}
+
+class AudioPlayer {
+    public project!: Project;
+
+    private backgroundMusic: HTMLAudioElement = new Audio();
+    private backgroundMusicSrc: string = "";
+    private backgroundVolume = 0.4;
+    private sfx: HTMLAudioElement = new Audio();
+    private sfxVolume = 0.6;
+
+    constructor() {
+        this.backgroundMusic.volume = this.backgroundVolume;
+        this.backgroundMusic.loop = true;
+        this.sfx.volume = this.sfxVolume;
+    }
+
+    public setBackgroundVolume(volume: number) {
+        this.backgroundVolume = this.backgroundMusic.volume = volume;
+    }
+
+    public setSFXVolume(volume: number) {
+        this.sfxVolume = this.sfx.volume = volume;
+    }
+
+    public async setBackgroundMusic(src: string) {
+        if (this.backgroundMusic.src) {
+            URL.revokeObjectURL(this.backgroundMusic.src);
+        }
+        this.backgroundMusicSrc = src;
+        if (src) {
+            this.backgroundMusic.src = URL.createObjectURL(
+                await this.project.getAsset(src)
+            );
+            this.backgroundMusic.play();
+        } else {
+            this.backgroundMusic.pause();
+        }
+    }
+
+    public async playSFX(src: string) {
+        if (this.sfx.src) {
+            URL.revokeObjectURL(this.sfx.src);
+        }
+        if (src) {
+            this.sfx.src = URL.createObjectURL(
+                await this.project.getAsset(src)
+            );
+        } else {
+            this.sfx.pause();
+        }
+    }
+
+    public getState() {
+        return {
+            backgroundMusic: this.backgroundMusicSrc,
+            backgroundVolume: this.backgroundVolume,
+            sfxVolume: this.sfxVolume
+        };
+    }
+
+    public setState(state: any) {
+        this.setBackgroundMusic(state.backgroundMusic);
+        this.setBackgroundVolume(state.backgroundVolume);
+        this.setSFXVolume(state.sfxVolume);
+    }
+
+    public dispose() {
+        this.sfx.pause();
+        this.backgroundMusic.pause();
+        if (this.sfx.src) { URL.revokeObjectURL(this.sfx.src); }
+        if (this.backgroundMusic.src) { URL.revokeObjectURL(this.backgroundMusic.src); }
     }
 }
