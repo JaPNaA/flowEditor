@@ -136,6 +136,14 @@ export class VisualNovelExecuter implements Executer {
         return Promise.resolve();
     }
 
+    public getState() {
+        return { stringVariables: this.stringVariables.slice() };
+    }
+
+    public setState(state: any): void {
+        this.stringVariables = state.stringVariables;
+    }
+
     /** Function used to map flow variable to string */
     private getVariable(str: string): string | undefined {
         const pointer = this.executerContainer.getVariable(str);

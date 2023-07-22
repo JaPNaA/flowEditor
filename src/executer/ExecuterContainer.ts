@@ -1,6 +1,7 @@
-import { FlowRunner, FlowRunnerOutput } from "../FlowRunner.js";
+import { FlowRunner, FlowRunnerOutput, FlowRunnerState } from "../FlowRunner.js";
 import { appHooks, pluginHooks } from "../index.js";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
 import { FileProject } from "../project/FileProject.js";
 import { Project } from "../project/Project.js";
 import { requestFile } from "../utils.js";
@@ -13,13 +14,14 @@ export class ExecuterContainer extends Component {
     private lastChoice: any[] = [];
     private outputDisplays: Elm;
     private resizeHandle = new ResizeHandle(this);
+    private saves = new StateSaver();
 
     constructor(private project: Project) {
         super("executerContainer");
 
         this.elm.append(
             this.resizeHandle,
-            new Elm().class("fileOperationsBar").append(
+            new Elm().class("fileOperationsBar", "operationsBar").append(
                 new Elm("button").append("Run").onActivate(() => this.execute()),
                 new Elm("button").append("Save").onActivate(() =>
                     appHooks.saveEditor()
@@ -53,6 +55,7 @@ export class ExecuterContainer extends Component {
                 })
             ),
             this.outputDisplays = new Elm().class("outputDisplays"),
+            this.saves,
             this.log,
             this.input
         );
@@ -93,6 +96,7 @@ export class ExecuterContainer extends Component {
         this.input.clear();
         pluginHooks.stopExecution();
         this.runner = new FlowRunner({ flow: compiled });
+        this.saves.setFlowRunner(this.runner);
         pluginHooks.startExecution();
         this.continueExecute();
     }
@@ -249,4 +253,66 @@ class ResizeHandle extends Component {
             this.currWidth = newWidth;
         }
     }
+}
+
+class StateSaver extends Component {
+    private saves: [Elm<"button">, StateSave][] = [];
+    private flowRunner?: FlowRunner;
+
+    private savedList: Elm<"span">;
+    private saveButton: Elm<"button">;
+    private saveCount = 0;
+
+    constructor() {
+        super("saves");
+        this.elm.class("operationsBar").append(
+            this.savedList = new Elm("span").class("saved"),
+            this.saveButton = new Elm("button")
+                .attribute("disabled", "true")
+                .append("Save state")
+                .onActivate(() => {
+                    this.save();
+                })
+        )
+    }
+
+    public setFlowRunner(flowRunner: FlowRunner) {
+        this.flowRunner = flowRunner;
+        this.saveButton.getHTMLElement().disabled = false;
+    }
+
+    public save() {
+        if (!this.flowRunner) { return; }
+
+        const flowState = this.flowRunner.getState();
+        const plugins = pluginHooks.getExecutionStates();
+
+        const restoreButton = new Elm("button").append("Save " + (++this.saveCount));
+        const stateSave = {
+            flow: flowState,
+            plugins: plugins
+        };
+        const save: [Elm<'button'>, StateSave] = [restoreButton, stateSave];
+
+        this.savedList.append(restoreButton);
+        this.saves.push(save);
+
+        restoreButton.onActivate(() => this.restore(stateSave));
+        restoreButton.on("contextmenu", ev => {
+            ev.preventDefault();
+            removeElmFromArray(save, this.saves);
+            restoreButton.remove();
+        });
+    }
+
+    public restore(state: StateSave) {
+        if (!this.flowRunner) { return; }
+        this.flowRunner.setState(state.flow);
+        pluginHooks.setExecutionStates(state.plugins);
+    }
+}
+
+interface StateSave {
+    flow: FlowRunnerState;
+    plugins: { [x: string]: any };
 }

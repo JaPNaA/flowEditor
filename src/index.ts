@@ -51,6 +51,14 @@ export const pluginHooks = {
 
     stopExecution() {
         return visualNovelPlugin.executer.stop();
+    },
+
+    getExecutionStates() {
+        return { [visualNovelPlugin.name]: visualNovelPlugin.executer.getState() };
+    },
+
+    setExecutionStates(states: { [x: string]: any }) {
+        visualNovelPlugin.executer.setState(states[visualNovelPlugin.name]);
     }
 };
 

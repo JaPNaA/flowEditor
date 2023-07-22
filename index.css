@@ -294,11 +294,14 @@ body {
 
 .executerContainer .fileOperationsBar {
     text-align: right;
+}
+
+.executerContainer .operationsBar {
     background-color: #3a3a3a;
     line-height: 1;
 }
 
-.executerContainer .fileOperationsBar button {
+.executerContainer .operationsBar button {
     background-color: #535353;
     color: #c9c9c9;
     border: none;
@@ -306,12 +309,12 @@ body {
     cursor: pointer;
 }
 
-.executerContainer .fileOperationsBar button:hover {
+.executerContainer .operationsBar button:hover {
     background-color: #686868;
     color: #e9e9e9;
 }
 
-.executerContainer .fileOperationsBar button.deleteAndReload {
+.executerContainer .operationsBar button.deleteAndReload {
     color: #ff2d2d;
 }
 

@@ -13,4 +13,6 @@ export interface Executer {
     start(executerContainer: ExecuterContainer): Promise<void>;
     run(data: any): Promise<void> | null;
     stop(): Promise<void>;
+    setState(state: any): void;
+    getState(): any;
 }

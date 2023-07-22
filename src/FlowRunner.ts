@@ -28,6 +28,28 @@ export class FlowRunner {
         this.variables.set(key, value);
     }
 
+    /** Get the state of the flow runner. Used for restoration later. */
+    public getState(): FlowRunnerState {
+        const obj: { [x: string]: number } = {};
+        for (const [key, value] of this.variables) {
+            obj[key] = value;
+        }
+        return {
+            instructionPtr: this.instructionPointer,
+            variables: obj
+        };
+    }
+
+    /** Restore the state of the flow runner. */
+    public setState(state: FlowRunnerState) {
+        const keys = Object.keys(state.variables);
+        this.variables.clear();
+        for (const key of keys) {
+            this.variables.set(key, state.variables[key]);
+        }
+        this.instructionPointer = state.instructionPtr;
+    }
+
     /** Gets the output of the flow runner */
     public getOutput(): FlowRunnerOutput | null {
         return this.output;
@@ -117,6 +139,11 @@ export class FlowRunner {
             return this.variables.get(v) || 0;
         }
     }
+}
+
+export interface FlowRunnerState {
+    instructionPtr: number;
+    variables: { [x: string]: number };
 }
 
 export type FlowRunnerOutput = FlowRunnerOutputDefault | FlowRunnerOutputChoice | FlowRunnerOutputEnd;
