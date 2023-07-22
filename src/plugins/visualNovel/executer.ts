@@ -8,7 +8,6 @@ import { replaceVariables, visualNovelMdToHTML } from "./visualNovelMd.js";
 
 export class VisualNovelExecuter implements Executer {
     private elm = new Elm().class("visualNovelExecuter")
-        .attribute("style", "height: 50vh; font-family: serif; user-select: none;")
         .attribute("tabindex", "0")
         .append(new Elm("style").withSelf(s => {
             s.getHTMLElement().innerHTML = `
@@ -54,6 +53,17 @@ export class VisualNovelExecuter implements Executer {
     private stringVariables: string[] = [];
 
     constructor() {
+        const style = this.elm.getHTMLElement().style;
+        if (CSS.supports('aspect-ratio', '16 / 9')) {
+            style.aspectRatio = "16 / 9";
+            style.width = "100%";
+            style.maxHeight = "67vh";
+        } else {
+            style.height = "50vh";
+        }
+        style.fontFamily = "serif";
+        style.userSelect = "none";
+
         this.elm.on("keydown", key => {
             if (key.key === "f") {
                 this.elm.getHTMLElement().requestFullscreen();
