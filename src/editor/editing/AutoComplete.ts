@@ -1,6 +1,6 @@
 import { JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Component, Elm } from "../../japnaaEngine2d/elements.js";
-import { sortAndFilterByLooseStart } from "../../utils.js";
+import { looseStartsWith } from "../../utils.js";
 import { Editable } from "./Editable.js";
 import { EditorCursor } from "./EditorCursor.js";
 
@@ -131,17 +131,39 @@ export class AutoComplete extends Component {
             suggester.learn(editable);
         } else {
             const value = editable.getValue();
+            if (value) { // ignore empty values
+                let counts = this.defaultHandlerPreviousValues.get(editable.autoCompleteType);
+                if (!counts) {
+                    counts = new Map();
+                    this.defaultHandlerPreviousValues.set(editable.autoCompleteType, counts);
+                }
+                const count = counts.get(value);
+                if (count) {
+                    counts.set(value, count + 1);
+                } else {
+                    counts.set(value, 1);
+                }
+            }
+        }
+    }
+
+    public removedValue(editable: Editable) {
+        if (!editable.autoCompleteType) { return; }
+        const suggester = this.map.get(editable.autoCompleteType);
+        if (suggester) {
+            suggester.unlearn(editable);
+        } else {
+            const value = editable.getValue();
             if (!value) { return; } // ignore empty values
             let counts = this.defaultHandlerPreviousValues.get(editable.autoCompleteType);
-            if (!counts) {
-                counts = new Map();
-                this.defaultHandlerPreviousValues.set(editable.autoCompleteType, counts);
-            }
+            if (!counts) { return; }
             const count = counts.get(value);
             if (count) {
-                counts.set(value, count + 1);
-            } else {
-                counts.set(value, 1);
+                if (count <= 1) {
+                    counts.delete(value);
+                } else {
+                    counts.set(value, count - 1);
+                }
             }
         }
     }
@@ -150,10 +172,21 @@ export class AutoComplete extends Component {
         const value = editable.getValue();
         const map = this.defaultHandlerPreviousValues.get(type);
         if (!map) { return null; }
-        return sortAndFilterByLooseStart(value, Array.from(map.keys())).map(v => ({
-            title: v,
-            fill: v
-        }));
+
+        const suggestions: [AutoCompleteSuggestion, number][] = [];
+        for (const [key, times_] of map) {
+            // uncount the editable's current value
+            const times = key === value ? times_ - 1 : times_;
+            const score = looseStartsWith(value, key);
+            if (score >= 0 && times > 0) {
+                suggestions.push([{
+                    title: key,
+                    fill: key,
+                    subtitle: "(" + times + ")"
+                }, score]);
+            }
+        }
+        return suggestions.sort((a, b) => a[1] - b[1]).map(x => x[0]);
     }
 }
 

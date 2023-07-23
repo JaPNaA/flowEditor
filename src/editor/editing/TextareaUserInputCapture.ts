@@ -20,6 +20,9 @@ export class TextareaUserInputCapture {
     /** Fired when an editable is edited */
     public inputHandler?: (userInputEvent: UserInputEvent) => void;
 
+    /** Fired when an editable is edited, and it's new value is applied */
+    public afterInputHandler?: (userInputEvent: UserInputEvent) => void;
+
     /** Fired when a line deletion is requested by the user. Event handlers must setup the input capture again, unless the event is rejected. */
     public lineDeleteHandler?: (lineOp: LineOperationEvent) => void;
 
@@ -227,6 +230,7 @@ export class TextareaUserInputCapture {
                 }
                 editable.afterChangeApply();
             }
+            that.afterInputHandler?.(event);
         }
 
         function applyLineOperation(isNextLine: boolean, isInsert: boolean) {

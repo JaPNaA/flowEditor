@@ -91,6 +91,27 @@ export class RemoveGroupAction implements UndoableAction {
     }
 }
 
+export class MarkGroupAsStartAction implements UndoableAction {
+    private previousStartGroup?: InstructionGroupEditor;
+
+    constructor(private group: InstructionGroupEditor | undefined, private editor: Editor) { }
+
+    public perform(): void {
+        this.previousStartGroup = this.editor._startGroup;
+        if (this.previousStartGroup) {
+            this.previousStartGroup._isStartGroup = false;
+        }
+        this.editor._startGroup = this.group;
+        if (this.group) {
+            this.group._isStartGroup = true;
+        }
+    }
+
+    public inverse(): MarkGroupAsStartAction {
+        return new MarkGroupAsStartAction(this.previousStartGroup, this.editor)
+    }
+}
+
 export class AddInstructionAction implements UndoableAction {
     constructor(private instruction: Instruction, private index: number, private group: InstructionGroupEditor) { }
 
@@ -100,6 +121,7 @@ export class AddInstructionAction implements UndoableAction {
 
         this.instruction._setParent(this.group);
 
+        // insert into html
         if (nextInstruction) {
             const nextLine = nextInstruction.getLines()[0];
             const nextLineElm = nextLine.elm.getHTMLElement();
@@ -122,6 +144,9 @@ export class AddInstructionAction implements UndoableAction {
 
         for (const line of newLines) {
             this.group._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
+            for (const editable of line.getEditables()) {
+                this.group.parentEditor.cursor.autocomplete.enteredValue(editable);
+            }
         }
 
         this.group.updateHeight();
@@ -129,27 +154,6 @@ export class AddInstructionAction implements UndoableAction {
 
     public inverse(): RemoveInstructionAction {
         return new RemoveInstructionAction(this.index, this.group);
-    }
-}
-
-export class MarkGroupAsStartAction implements UndoableAction {
-    private previousStartGroup?: InstructionGroupEditor;
-
-    constructor(private group: InstructionGroupEditor | undefined, private editor: Editor) { }
-
-    public perform(): void {
-        this.previousStartGroup = this.editor._startGroup;
-        if (this.previousStartGroup) {
-            this.previousStartGroup._isStartGroup = false;
-        }
-        this.editor._startGroup = this.group;
-        if (this.group) {
-            this.group._isStartGroup = true;
-        }
-    }
-
-    public inverse(): MarkGroupAsStartAction {
-        return new MarkGroupAsStartAction(this.previousStartGroup, this.editor)
     }
 }
 
@@ -164,8 +168,11 @@ export class RemoveInstructionAction implements UndoableAction {
 
         this._removeInstruction(this.index);
         let lineIndex = instruction.getLines()[0].getCurrentLine();
-        for (const _ of instruction.getLines()) {
+        for (const line of instruction.getLines()) {
             this.group._removeInstructionLine(lineIndex);
+            for (const editable of line.getEditables()) {
+                this.group.parentEditor.cursor.autocomplete.removedValue(editable);
+            }
         }
 
         this.group.updateHeight();

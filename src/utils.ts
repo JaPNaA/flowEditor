@@ -76,14 +76,3 @@ export function looseStartsWith(start: string, str: string): number {
 
     return skipped;
 }
-
-export function sortAndFilterByLooseStart(start: string, strs: string[]): string[] {
-    const suggestions: [string, number][] = [];
-    for (const str of strs) {
-        const score = looseStartsWith(start, str);
-        if (score >= 0) {
-            suggestions.push([str, score]);
-        }
-    }
-    return suggestions.sort((a, b) => a[1] - b[1]).map(x => x[0]);
-}

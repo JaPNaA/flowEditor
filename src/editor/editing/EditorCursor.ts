@@ -102,6 +102,17 @@ export class EditorCursor extends Elm<"span"> {
             justInputted = true;
             this.onInput.send();
             this.position.group.onCursorInput(this.position, input);
+
+            const editable = this.getEditableFromPosition(this.position);
+            if (!editable) { return; }
+            this.autocomplete.removedValue(editable);
+        };
+
+        this.inputCapture.afterInputHandler = () => {
+            if (!this.position) { return; }
+            const editable = this.getEditableFromPosition(this.position);
+            if (!editable) { return; }
+            this.autocomplete.enteredValue(editable);
         };
 
         this.inputCapture.lineDeleteHandler = lineOp => {
@@ -141,7 +152,9 @@ export class EditorCursor extends Elm<"span"> {
                     const text = this.autocomplete.acceptSuggestion();
                     this.autocomplete.clearSuggestions();
                     if (!text) { break; }
+                    this.autocomplete.removedValue(this.lastActiveEditable);
                     this.lastActiveEditable.setValue(text);
+                    this.autocomplete.enteredValue(this.lastActiveEditable);
                     this.setPosition({
                         group: this.position.group,
                         char: this.position.char,
@@ -213,23 +226,22 @@ export class EditorCursor extends Elm<"span"> {
         if (this.lastActiveEditable) {
             this.lastActiveEditable.updateAndDeactivate();
         }
-        const line = positionStart.group.getLines()[positionStart.line];
-        if (!line) { return; }
-
-        const editable = line.getEditableFromIndex(positionStart.editable);
+        const editable = this.getEditableFromPosition(positionStart);
+        if (!editable) { return; }
+        this.lastActiveEditable = editable;
         editable.setActive(positionStart.char, positionEnd.char, this);
-        if (this.lastActiveEditable !== editable) {
-            if (this.lastActiveEditable) {
-                this.autocomplete.enteredValue(this.lastActiveEditable);
-            }
-            this.lastActiveEditable = editable;
-        }
         if (this.allowAutocomplete) {
             this.autocomplete.updatePosition(this);
             this.autocomplete.showSuggestions(editable);
         }
         this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);
         if (backwards) { this.class("backwards"); } else { this.removeClass("backwards"); }
+    }
+
+    private getEditableFromPosition(position: Readonly<EditorCursorPositionAbsolute>) {
+        const line = position.group.getLines()[position.line];
+        if (!line) { return; }
+        return line.getEditableFromIndex(position.editable);
     }
 
     private setTextareInputCursorPosition(position: Readonly<EditorCursorPositionAbsolute>) {
