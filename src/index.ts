@@ -23,6 +23,10 @@ export const appHooks = {
         return editorContainer.getSaveData();
     },
 
+    requestEditorTextOp() {
+        return editorContainer.openTextOp();
+    },
+
     saveEditor() {
         return editorContainer.save();
     },

@@ -35,6 +35,9 @@ export class ExecuterContainer extends Component {
                         .then(file => file.text())
                         .then(text => appHooks.setEditorSaveData(JSON.parse(text)))
                 ),
+                new Elm("button").append("TextOp").onActivate(() => {
+                    appHooks.requestEditorTextOp();
+                }),
                 new Elm("button").append("Open Project").onActivate(async () => {
                     if (!('showDirectoryPicker' in window)) {
                         alert(

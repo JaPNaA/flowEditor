@@ -13,6 +13,7 @@ import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprin
 import { Instruction } from "./instruction/instructionTypes.js";
 import { InstructionDeserializer } from "./toolchain/InstructionDeserializer.js";
 import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester.js";
+import { TextOpDialogue } from "./ui/TextOpDialogue.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -20,6 +21,7 @@ export class Editor extends WorldElmWithComponents {
     public smoothCamera = new SmoothCamera();
     public blueprintRegistery = new InstructionBlueprintRegistery();
     public deserializer = new InstructionDeserializer();
+    public textOpDialogue = new TextOpDialogue();
 
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
@@ -64,6 +66,7 @@ export class Editor extends WorldElmWithComponents {
         this._children.addChild(this.selectRectangle);
         this._children.addChild(new GridBackground());
         this._children.addChild(this.smoothCamera);
+        this._children.addChild(this.textOpDialogue);
 
         this.navigator = new EditorGroupNavigator(this.subscriptions, this);
 
@@ -567,6 +570,11 @@ export class Editor extends WorldElmWithComponents {
         }
 
         return compiled;
+    }
+
+    public openTextOp() {
+        this.textOpDialogue.showDialogue();
+        this.textOpDialogue.setEditablesFromGroups(this._groupEditors);
     }
 }
 

@@ -97,6 +97,10 @@ export class EditorContainer extends Component {
         return this.setSaveData(this.getSaveData());
     }
 
+    public openTextOp() {
+        return this.editor.openTextOp();
+    }
+
     public setSaveData(saveData: any) {
         if (!this.editorOpenFile) { return; }
         if (saveData) {

@@ -28,6 +28,31 @@ body {
     flex-grow: 1;
 }
 
+.editorContainer .textOpDialogue {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    z-index: 2;
+    pointer-events: all;
+    user-select: auto;
+}
+
+.editorContainer .textOpDialogue textarea {
+    user-select: all;
+    resize: none;
+    width: 100%;
+    height: 50%;
+    background-color: transparent;
+    color: inherit;
+}
+
+.editorContainer .textOpDialogue.hidden {
+    display: none;
+}
+
 .dummyText {
     opacity: 0;
     pointer-events: none;
