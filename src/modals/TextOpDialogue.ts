@@ -1,29 +1,24 @@
-import { Elm, JaPNaAEngine2d, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
-import { Editable } from "../editing/Editable.js";
+import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { InstructionGroupEditor } from "../editor/InstructionGroupEditor.js";
+import { Editable } from "../editor/editing/Editable.js";
 
-export class TextOpDialogue extends WorldElm {
-    private elm = new Elm().class("textOpDialogue", "hidden");
+export class TextOpDialogue extends Component {
     private textarea = new Elm("textarea");
     private acceptButton = new Elm("button").append("Done");
     private cancelButton = new Elm("button").append("Cancel");
     private editables?: Editable[][];
 
     constructor() {
-        super();
+        super("textOpDialogue");
         this.elm.append(
             new Elm("h2").append("TextOp"),
             new Elm().append("Copy the text below into a different editor (Word, Google Docs, Grammarly, etc.) to perform spellcheck, find-and-replace, etc. Then paste it back here to apply changes. MAKE SURE YOU DO NOT ADD OR REMOVE LINES!!"),
             this.textarea,
             new Elm().append(
                 this.acceptButton.onActivate(() => this.acceptChanges()),
-                this.cancelButton.onActivate(() => this.elm.class("hidden"))
+                this.cancelButton.onActivate(() => this.elm.remove())
             )
         );
-    }
-
-    public showDialogue() {
-        this.elm.removeClass("hidden");
     }
 
     public setEditablesFromGroups(groups: InstructionGroupEditor[]) {
@@ -74,16 +69,6 @@ export class TextOpDialogue extends WorldElm {
             }
         }
 
-        this.elm.class("hidden");
-    }
-
-    public _setEngine(engine: JaPNaAEngine2d): void {
-        super._setEngine(engine);
-        this.engine.htmlOverlay.elm.append(this.elm);
-    }
-
-    public remove(): void {
-        super.remove();
         this.elm.remove();
     }
 }

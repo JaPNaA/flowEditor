@@ -1,10 +1,11 @@
 import { ExecuterContainer } from "./executer/ExecuterContainer.js";
 import { EditorContainer } from "./editor/EditorContainer.js";
 import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
-import { Elm } from "./japnaaEngine2d/elements.js";
+import { Component, Elm } from "./japnaaEngine2d/elements.js";
 import { DefaultPlugin } from "./plugins/default/default.js";
 import { Project } from "./project/Project.js";
 import { NullProject } from "./project/NullProject.js";
+import { ModalContainer } from "./modals/ModalContainer.js";
 
 export const appHooks = {
     focusEditor() {
@@ -41,6 +42,10 @@ export const appHooks = {
         editorContainer.setProject(newProject);
         executerContainer.setProject(newProject);
         project = newProject;
+    },
+
+    showModal(modal: Component) {
+        modalContainer.addModal(modal);
     }
 };
 
@@ -69,10 +74,12 @@ export const pluginHooks = {
 let project = new NullProject();
 const executerContainer = new ExecuterContainer(project);
 const editorContainer = new EditorContainer(project);
+const modalContainer = new ModalContainer();
 
 new Elm().class("main").append(
     editorContainer,
-    executerContainer
+    executerContainer,
+    modalContainer
 ).appendTo(document.body);
 
 // load plugins
@@ -81,3 +88,5 @@ const visualNovelPlugin = new VisualNovelPlugin();
 
 editorContainer.registerPlugin(defaultPlugin);
 editorContainer.registerPlugin(visualNovelPlugin);
+
+document.body.removeChild(document.getElementById("noLoadError")!);

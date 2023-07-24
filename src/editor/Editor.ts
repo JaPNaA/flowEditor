@@ -13,7 +13,7 @@ import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprin
 import { Instruction } from "./instruction/instructionTypes.js";
 import { InstructionDeserializer } from "./toolchain/InstructionDeserializer.js";
 import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester.js";
-import { TextOpDialogue } from "./ui/TextOpDialogue.js";
+import { TextOpDialogue } from "../modals/TextOpDialogue.js";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -66,7 +66,6 @@ export class Editor extends WorldElmWithComponents {
         this._children.addChild(this.selectRectangle);
         this._children.addChild(new GridBackground());
         this._children.addChild(this.smoothCamera);
-        this._children.addChild(this.textOpDialogue);
 
         this.navigator = new EditorGroupNavigator(this.subscriptions, this);
 
@@ -573,8 +572,8 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public openTextOp() {
-        this.textOpDialogue.showDialogue();
         this.textOpDialogue.setEditablesFromGroups(this._groupEditors);
+        appHooks.showModal(this.textOpDialogue);
     }
 }
 
