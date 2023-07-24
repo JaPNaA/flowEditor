@@ -293,7 +293,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     private mousedragHandler(ev: MouseEvent) {
-        const scale = this.engine.camera.getScale();
+        const scale = this.engine.camera.getScale() * this.engine.sizer.scaling;
         if (this.engine.keyboard.isDown(["Space"]) || this.engine.mouse.rightDown) {
             // move camera
             this.engine.camera.move(-ev.movementX / scale, -ev.movementY / scale);
