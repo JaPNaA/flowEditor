@@ -7,9 +7,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="index.css" />
     <title> Flow Editor </title>
+    <style>
+        body>div#noLoadError {
+            padding: 8px;
+            animation: fadeIn 1s ease 2s 1 forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 
 <body>
+    <div id="noLoadError">
+        If you're reading this text, an error may have occurred while loading (or your internet is super slow, or you're
+        reading from Google's text preview).
+        <br>
+        If you're using an old browser (internet explorer), try updating or using a new browser.
+        <br>
+        If you have an adblocker, try disabling adblock for this site. There are no ads or trackers, but this site
+        uses a file named <code>Hitbox.js</code>, which is blocked by some adblockers.
+    </div>
     <script src="build/index.js" type="module"></script>
 </body>
 
