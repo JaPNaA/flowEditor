@@ -3,7 +3,8 @@ import { InstructionGroupEditor } from "../editor/InstructionGroupEditor.js";
 import { Editable } from "../editor/editing/Editable.js";
 
 export class TextOpDialogue extends Component {
-    private textarea = new Elm("textarea");
+    private textarea = new Elm("textarea")
+        .on("keydown", ev => ev.stopPropagation()); // prevent editor from recieving keystrokes
     private acceptButton = new Elm("button").append("Done");
     private cancelButton = new Elm("button").append("Cancel");
     private editables?: Editable[][];
