@@ -192,6 +192,7 @@ export class Editor extends WorldElmWithComponents {
                 }
             }
         }
+        this.engine.ticker.requestTick();
     }
 
     public getSelectedGroups(): ReadonlySet<InstructionGroupEditor> {
@@ -616,9 +617,10 @@ class SelectRectangle extends WorldElm {
     }
 
     public release() {
-        this.engine.ticker.requestTick();
+        if (!this.visible) { return; }
         this.visible = false;
         this.startSet = false;
+        this.engine.ticker.requestTick();
     }
 
     public getCollisionRect() {
