@@ -25,7 +25,6 @@ export class InstructionGroupEditor extends WorldElm {
     private static collisionType = Symbol();
     private hitbox = new Hitbox(this.rect, this);
 
-    private rendered = false;
     private selected = false;
     private initBranchTargets: ((InstructionGroupEditor | null)[] | null)[] = [];
 
@@ -244,13 +243,37 @@ export class InstructionGroupEditor extends WorldElm {
         this.initBranchTargets.push(targets);
     }
 
+    /** This method is called only once after instructions and branch targets are added */
+    public setupConstruct() {
+        const elm = this.elm.getHTMLElement();
+        const font = `${InstructionGroupEditor.fontSize}px monospace`;
+        const width = 720 + 24; // 24 is padding
+
+        elm.style.font = font;
+        elm.style.width = width + "px";
+
+
+        this.parentEditor.undoLog.freeze();
+
+        for (const instruction of this.data.instructions) {
+            this.addInstructionLine(instruction);
+        }
+
+        let index = 0;
+        for (const branch of this.data.branches) {
+            const line = this.addInstructionLine(branch.instruction);
+            line.setBranchTargets(this.initBranchTargets[index++]);
+        }
+
+        this.parentEditor.undoLog.thaw();
+
+        this.rect.width = width;
+        this.updateHeight();
+    }
+
     public draw(): void {
         const X = this.engine.canvas.X;
         const elm = this.elm.getHTMLElement();
-
-        if (!this.rendered) {
-            this.render();
-        }
 
         if (this._isStartGroup) {
             X.fillStyle = "#35f035";
@@ -340,33 +363,6 @@ export class InstructionGroupEditor extends WorldElm {
 
         X.globalCompositeOperation = "source-over";
         X.globalAlpha = 1;
-    }
-
-    private render() {
-        const elm = this.elm.getHTMLElement();
-        const font = `${InstructionGroupEditor.fontSize}px monospace`;
-        const width = 720 + 24; // 24 is padding
-
-        elm.style.font = font;
-        elm.style.width = width + "px";
-
-
-        for (const instruction of this.data.instructions) {
-            this.addInstructionLine(instruction);
-        }
-
-        this.parentEditor.undoLog.freeze();
-        let index = 0;
-        for (const branch of this.data.branches) {
-            const line = this.addInstructionLine(branch.instruction);
-            line.setBranchTargets(this.initBranchTargets[index++]);
-        }
-        this.parentEditor.undoLog.thaw();
-
-        this.rect.width = width;
-        this.updateHeight();
-
-        this.rendered = true;
     }
 
     public updateHeight() {

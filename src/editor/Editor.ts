@@ -349,6 +349,7 @@ export class Editor extends WorldElmWithComponents {
             editable: 0,
             char: 0
         });
+        newEditor.setupConstruct();
 
         if (this._groupEditors.length === 1) {
             this.markGroupAsStart(this._groupEditors[0]);
@@ -405,6 +406,7 @@ export class Editor extends WorldElmWithComponents {
                     elm.addBranchTargets(null);
                 }
             }
+            elm.setupConstruct();
         }
 
         this.markGroupAsStart(this._groupEditors[0]);
@@ -433,22 +435,24 @@ export class Editor extends WorldElmWithComponents {
         }
 
         for (const elmData of data.elms) {
+            const group = idElmMap.get(elmData.id)!;
             for (const children of elmData.children) {
                 if (children === null) {
-                    idElmMap.get(elmData.id)!.addBranchTargets(null);
+                    group.addBranchTargets(null);
                 } else {
                     if (Array.isArray(children)) {
                         const targets = [];
                         for (const child of children) {
                             targets.push(idElmMap.get(child)!);
                         }
-                        idElmMap.get(elmData.id)!.addBranchTargets(targets);
+                        group.addBranchTargets(targets);
                     } else {
                         // backwards compatibility: handle case when not array
-                        idElmMap.get(elmData.id)!.addBranchTargets([idElmMap.get(children)!]);
+                        group.addBranchTargets([idElmMap.get(children)!]);
                     }
                 }
             }
+            group.setupConstruct();
         }
 
         if (data.startGroup !== undefined) {
