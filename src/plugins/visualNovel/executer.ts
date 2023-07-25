@@ -180,6 +180,7 @@ class VisualNovelGame {
     constructor(parentElm: HTMLElement) {
         this.engine = new JaPNaAEngine2d({
             sizing: { width: 1280, height: 720 },
+            ticks: { enableDirtySystem: true, fixedTick: false },
             parentElement: parentElm
         });
         this.engine.world.addElm(this.background);
@@ -439,7 +440,10 @@ class Background extends WorldElm {
                 await this.project.getAsset(background.src)
             );
             this.imageLoaded = false;
-            this.image.onload = () => this.imageLoaded = true;
+            this.image.onload = () => {
+                this.imageLoaded = true;
+                this.engine.ticker.requestTick();
+            };
         } else {
             this.image = undefined;
         }
@@ -507,7 +511,10 @@ class ImageDisplayer extends WorldElm {
                 await this.project.getAsset(src)
             );
             this.imageLoaded = false;
-            this.image.onload = () => this.imageLoaded = true;
+            this.image.onload = () => {
+                this.imageLoaded = true;
+                this.engine.ticker.requestTick();
+            };
         } else {
             this.image = undefined;
         }
@@ -612,6 +619,7 @@ class SpeechBubble extends WorldElmWithComponents {
         if (this.charsPerSecond === 0) {
             this.showAllChars();
         }
+        this.engine.ticker.requestTick();
     }
 
     public writeAdd(html: string) {
@@ -624,6 +632,7 @@ class SpeechBubble extends WorldElmWithComponents {
         if (this.charsPerSecond === 0) {
             this.showAllChars();
         }
+        this.engine.ticker.requestTick();
     }
 
     public showAllChars() {
@@ -657,6 +666,7 @@ class SpeechBubble extends WorldElmWithComponents {
 
     public tick(): void {
         if (this.isDone) { return; }
+        this.engine.ticker.requestTick();
 
         this.timePassed += this.engine.ticker.timeElapsed;
         this.charsShowing += Math.floor(this.timePassed / this.secondsPerChar);
