@@ -66,6 +66,9 @@ export class ProjectFilesDisplay extends Component {
         });
         this.itemsElm.on("dragover", ev => {
             ev.preventDefault();
+            if (ev.dataTransfer) {
+                ev.dataTransfer.dropEffect = "copy";
+            }
         });
 
         this.setProject(project);
