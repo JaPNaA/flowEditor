@@ -7,12 +7,7 @@ import { Project } from "./Project.js";
 export class ProjectFilesDisplay extends Component {
     private project!: Project;
     private nullProjectElm: Elm;
-    private contentElm: Elm;
-    private itemsElm: Elm;
-    private lastActiveTab?: Elm<"button">;
-
-    private tabsFlowsButton: Elm<"button">;
-    private tabsAssetsButton: Elm<"button">;
+    private directoryTabs?: DirectoryTabs;
 
     constructor(project: Project) {
         super("projectFilesDisplay");
@@ -39,38 +34,6 @@ export class ProjectFilesDisplay extends Component {
             appHooks.openProject(project);
         });
 
-        this.contentElm = new Elm().class("content").append(
-            new Elm().class("tabs").append(
-                this.tabsFlowsButton = new Elm("button").append("Flows")
-                    .onActivate(() => {
-                        this.showFlows();
-                    }),
-                this.tabsAssetsButton = new Elm("button").append("Assets").class("active")
-                    .onActivate(() => {
-                        this.showAssets();
-                    })
-            ),
-            this.itemsElm = new Elm().class("items")
-        );
-        this.itemsElm.on("wheel", ev => ev.stopPropagation());
-        this.itemsElm.getHTMLElement().ondrop = (ev) => {
-            console.log("drop", ev);
-        };
-        this.itemsElm.on("drop", async ev => {
-            ev.preventDefault();
-            if (!ev.dataTransfer) { return; }
-            for (const file of ev.dataTransfer.files) {
-                this.project.writeAsset(file.name, new Blob([await file.arrayBuffer()]));
-            }
-            this.showAssets();
-        });
-        this.itemsElm.on("dragover", ev => {
-            ev.preventDefault();
-            if (ev.dataTransfer) {
-                ev.dataTransfer.dropEffect = "copy";
-            }
-        });
-
         this.setProject(project);
     }
 
@@ -83,43 +46,161 @@ export class ProjectFilesDisplay extends Component {
             return;
         }
 
+        this.directoryTabs = new DirectoryTabs(project);
+
         this.elm.removeClass("nullProject");
-        this.elm.replaceContents(this.contentElm);
+        this.elm.replaceContents(this.directoryTabs);
+    }
+}
 
-        (project.isReady() ? Promise.resolve() : project.onReady.promise())
-            .then(() => this.showAssets());
+class DirectoryTabs extends Component {
+    private tabs: DirectoryTab[] = [];
+    private tabContent = new Elm().class("tabContent");
+    private tabsElm = new Elm().class("tabs");
+
+    constructor(project: Project) {
+        super("directoryTabs");
+
+        this.elm.append(
+            this.tabsElm, this.tabContent
+        );
+
+        this.tabContent.on("wheel", ev => ev.stopPropagation());
+        const assetsTab = new AssetsDirectoryTab(this, project);
+        this.addTab(new FlowsDirectoryTab(this, project));
+        this.addTab(assetsTab);
+        assetsTab.show();
     }
 
-    public async showAssets() {
-        if (!this.project.isReady()) { return; }
-
-        if (this.lastActiveTab) { this.lastActiveTab.removeClass("active"); }
-        this.lastActiveTab = this.tabsAssetsButton;
-        this.lastActiveTab.class("active");
-
-        const assets = await this.project.listAssets();
-        this.writeItems(assets);
-    }
-
-    public async showFlows() {
-        if (!this.project.isReady()) { return; }
-
-        if (this.lastActiveTab) { this.lastActiveTab.removeClass("active"); }
-        this.lastActiveTab = this.tabsFlowsButton;
-        this.lastActiveTab.class("active");
-
-        const flows = await this.project.listFlowSaves();
-        this.writeItems(flows);
-    }
-
-    private writeItems(items: string[]) {
-        this.itemsElm.clear();
-
-        items.sort();
-        for (const item of items) {
-            this.itemsElm.append(
-                new Elm().class("item").append(item)
-            );
+    public _deactivateAllTabs() {
+        for (const tab of this.tabs) {
+            tab.button.removeClass("active");
         }
+    }
+
+    public _setContent(content: Elm) {
+        this.tabContent.replaceContents(content);
+    }
+
+    private addTab(tab: DirectoryTab) {
+        this.tabs.push(tab);
+        this.tabsElm.append(tab.button);
+    }
+}
+
+class FileItem extends Component {
+    constructor(private filename: string) {
+        super("item");
+        this.elm.append(filename);
+    }
+}
+
+abstract class DirectoryTab {
+    public button = new Elm("button");
+    public content = new Elm().class("items");
+
+    constructor(
+        private parentTabs: DirectoryTabs,
+        protected project: Project,
+        name: string
+    ) {
+        this.button.append(name);
+
+        this.button.onActivate(() => {
+            this.show();
+        });
+
+        this.content.on("drop", async ev => {
+            ev.preventDefault();
+            if (!ev.dataTransfer) { return; }
+            for (const file of ev.dataTransfer.files) {
+                this.writeItem(file.name, file);
+            }
+            this.refresh();
+        });
+        this.content.on("dragover", ev => {
+            ev.preventDefault();
+            if (ev.dataTransfer) {
+                ev.dataTransfer.dropEffect = "copy";
+            }
+        });
+
+        this.refresh();
+    }
+
+    public show() {
+        this.parentTabs._deactivateAllTabs();
+        this.button.class("active");
+        this.parentTabs._setContent(this.content);
+    }
+
+    public async refresh(): Promise<void> {
+        this.content.clear();
+    }
+
+    public abstract writeItem(path: string, content: File): Promise<void>;
+    public abstract moveItem(pathFrom: string, pathTo: string): Promise<void>;
+    public abstract removeItem(path: string): Promise<void>;
+}
+
+class AssetsDirectoryTab extends DirectoryTab {
+    constructor(parentTabs: DirectoryTabs, project: Project) {
+        super(parentTabs, project, "Assets");
+    }
+
+    public async refresh(): Promise<void> {
+        await super.refresh();
+
+        if (!this.project.isReady()) { await this.project.onReady.promise(); }
+        this.project.listAssets()
+            .then(assets => {
+                assets.sort();
+                for (const asset of assets) {
+                    this.content.append(new FileItem(asset));
+                }
+            });
+    }
+
+    public async writeItem(path: string, content: Blob): Promise<void> {
+        await this.project.writeAsset(path, content);
+    }
+
+    public async moveItem(pathFrom: string, pathTo: string): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    public async removeItem(path: string): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+}
+
+class FlowsDirectoryTab extends DirectoryTab {
+    constructor(parentTabs: DirectoryTabs, project: Project) {
+        super(parentTabs, project, "Flows");
+    }
+
+    public async refresh(): Promise<void> {
+        await super.refresh();
+
+        if (!this.project.isReady()) { await this.project.onReady.promise(); }
+        this.project.listFlowSaves()
+            .then(flows => {
+                flows.sort();
+                for (const flow of flows) {
+                    this.content.append(new FileItem(flow));
+                }
+            });
+    }
+
+    public async writeItem(path: string, content: File): Promise<void> {
+        await this.project.writeFlowSave(path, await content.text());
+    }
+
+    public async moveItem(pathFrom: string, pathTo: string): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    public async removeItem(path: string): Promise<void> {
+        throw new Error("Method not implemented.");
     }
 }
