@@ -13,12 +13,20 @@ export class NullProject implements Project {
         return true;
     }
 
+    public async listAssets(): Promise<string[]> {
+        return [];
+    }
+
     public async getAsset(path: string): Promise<Blob> {
         return (await fetch(path)).blob();
     }
 
     public getStartFlowPath(): string {
         return "localstorage";
+    }
+
+    public async listFlowSaves(): Promise<string[]> {
+        return ["localstorage"];
     }
 
     public async getFlowSave(path: string): Promise<EditorSaveData> {

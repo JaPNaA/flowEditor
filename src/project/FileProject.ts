@@ -32,6 +32,12 @@ export class FileProject implements Project {
         ]);
     }
 
+    public async listAssets(): Promise<string[]> {
+        const items: string[] = [];
+        await this.recursiveAddFilesToArray(this.assetsDirectory, "", items);
+        return items;
+    }
+
     public getStartFlowPath(): string {
         return this.index.startFlow;
     }
@@ -40,6 +46,12 @@ export class FileProject implements Project {
         return JSON.parse(await this.flowsDirectory.getFileHandle(path)
             .then(handle => handle.getFile())
             .then(file => file.text()));
+    }
+
+    public async listFlowSaves(): Promise<string[]> {
+        const items: string[] = [];
+        await this.recursiveAddFilesToArray(this.flowsDirectory, "", items);
+        return items;
     }
 
     public async writeFlowSave(path: string, content: string): Promise<void> {
@@ -126,6 +138,18 @@ export class FileProject implements Project {
         if (this.ready) { return; }
         this.ready = true;
         this.onReady.send();
+    }
+
+    private async recursiveAddFilesToArray(directory: FileSystemDirectoryHandle, basePath: string, items: string[]) {
+        const promises = [];
+        for await (const item of directory.values()) {
+            if (item.kind === "file") {
+                items.push(basePath + item.name);
+            } else if (item.kind === "directory") {
+                promises.push(this.recursiveAddFilesToArray(item, basePath + item.name + "/", items));
+            }
+        }
+        await Promise.all(promises);
     }
 }
 
