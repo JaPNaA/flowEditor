@@ -6,6 +6,8 @@ import { DefaultPlugin } from "./plugins/default/default.js";
 import { Project } from "./project/Project.js";
 import { NullProject } from "./project/NullProject.js";
 import { ModalContainer } from "./modals/ModalContainer.js";
+import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
+import { UILayout } from "./UILayout.js";
 
 export const appHooks = {
     focusEditor() {
@@ -39,6 +41,7 @@ export const appHooks = {
     },
 
     openProject(newProject: Project) {
+        projectFilesDisplay.setProject(newProject);
         editorContainer.setProject(newProject);
         executerContainer.setProject(newProject);
         project = newProject;
@@ -72,13 +75,15 @@ export const pluginHooks = {
 };
 
 let project = new NullProject();
+const projectFilesDisplay = new ProjectFilesDisplay(project);
 const executerContainer = new ExecuterContainer(project);
 const editorContainer = new EditorContainer(project);
 const modalContainer = new ModalContainer();
 
-new Elm().class("main").append(
+new UILayout(
     editorContainer,
     executerContainer,
+    projectFilesDisplay,
     modalContainer
 ).appendTo(document.body);
 
