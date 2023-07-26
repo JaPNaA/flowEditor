@@ -1,4 +1,4 @@
-import { Project } from "./Project.js";
+import { DetectedExternallyModifiedError, Project } from "./Project.js";
 import { EditorSaveData } from "../editor/Editor.js";
 import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 
@@ -15,6 +15,8 @@ export class FileProject implements Project {
     private index!: ProjectIndex;
     private assetsDirectory!: FileSystemDirectoryHandle;
     private flowsDirectory!: FileSystemDirectoryHandle;
+
+    private lastModifiedMap = new Map<string, number>();
 
     constructor(private directoryHandle: FileSystemDirectoryHandle) {
         this.setup();
@@ -43,9 +45,10 @@ export class FileProject implements Project {
     }
 
     public async getFlowSave(path: string): Promise<EditorSaveData> {
-        return JSON.parse(await this.flowsDirectory.getFileHandle(path)
-            .then(handle => handle.getFile())
-            .then(file => file.text()));
+        const file = await this.flowsDirectory.getFileHandle(path)
+            .then(handle => handle.getFile());
+        this.lastModifiedMap.set(path, file.lastModified);
+        return JSON.parse(await file.text());
     }
 
     public async listFlowSaves(): Promise<string[]> {
@@ -54,13 +57,28 @@ export class FileProject implements Project {
         return items;
     }
 
-    public async writeFlowSave(path: string, content: string): Promise<void> {
-        return this.flowsDirectory.getFileHandle(path, { create: true })
-            .then(handle => handle.createWritable())
-            .then(async writable => {
-                await writable.write(content);
-                await writable.close();
-            });
+    public async writeFlowSave(path: string, content: string, force?: boolean): Promise<void> {
+        const handle = await this.flowsDirectory.getFileHandle(path, { create: true });
+        const expectedLastModified = this.lastModifiedMap.get(path);
+        if (!force && expectedLastModified !== undefined) {
+            const lastModified = (await handle.getFile()).lastModified;
+            if (lastModified !== expectedLastModified) {
+                throw new DetectedExternallyModifiedError();
+            }
+        }
+
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+    }
+
+    public async checkIsLatestFlowSave(path: string): Promise<boolean> {
+        const expectedLastModified = this.lastModifiedMap.get(path);
+        if (expectedLastModified === undefined) { return true; }
+        const handle = await this.flowsDirectory.getFileHandle(path);
+        const file = await handle.getFile();
+        const lastModified = file.lastModified;
+        return lastModified === expectedLastModified;
     }
 
     private async setup() {

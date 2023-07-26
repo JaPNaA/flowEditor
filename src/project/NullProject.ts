@@ -1,13 +1,15 @@
 import { EditorSaveData } from "../editor/Editor.js";
 import { newInstructionData } from "../editor/toolchain/flowToInstructionData.js";
 import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { Project } from "./Project.js";
+import { DetectedExternallyModifiedError, Project } from "./Project.js";
 
 /**
  * The NullProject is open when the user has not opened any project.
  */
 export class NullProject implements Project {
     public onReady = new EventBus();
+
+    private lastRead?: string;
 
     public isReady(): boolean {
         return true;
@@ -31,8 +33,10 @@ export class NullProject implements Project {
 
     public async getFlowSave(path: string): Promise<EditorSaveData> {
         if (path !== "localstorage") { throw new Error("Flow not found"); }
-        if (localStorage['flowEditorSave']) {
-            return JSON.parse(localStorage['flowEditorSave']);
+        const stored = localStorage['flowEditorSave'];
+        if (stored) {
+            this.lastRead = stored;
+            return JSON.parse(stored);
         } else {
             return {
                 startGroup: 0,
@@ -41,8 +45,16 @@ export class NullProject implements Project {
         }
     }
 
-    public async writeFlowSave(path: string, data: string): Promise<void> {
+    public async writeFlowSave(path: string, data: string, force?: boolean): Promise<void> {
         if (path !== "localstorage") { throw new Error("Cannot write another file into localstorage"); }
+        if (!force && this.lastRead !== localStorage['flowEditorSave']) {
+            throw new DetectedExternallyModifiedError();
+        }
         localStorage['flowEditorSave'] = data;
+    }
+
+    public async checkIsLatestFlowSave(path: string): Promise<boolean> {
+        if (path !== "localstorage") { throw new Error("Cannot check another file in localstorage"); }
+        return this.lastRead === localStorage['flowEditorSave'];
     }
 }
