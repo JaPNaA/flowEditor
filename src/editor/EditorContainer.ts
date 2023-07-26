@@ -1,6 +1,6 @@
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorPlugin } from "../plugins/EditorPlugin.js";
-import { Project } from "../project/Project.js";
+import { DetectedExternallyModifiedError, Project } from "../project/Project.js";
 import { Editor } from "./Editor.js";
 
 export class EditorContainer extends Component {
@@ -18,6 +18,7 @@ export class EditorContainer extends Component {
     private editor = new Editor();
     private editorOpenFile?: string;
     private autoSaveInterval: number;
+    private ignoreExternallyModified: boolean = false;
 
     constructor(private project: Project) {
         super("editorContainer");
@@ -35,13 +36,28 @@ export class EditorContainer extends Component {
             this.engine.ticker.requestTick();
         });
 
+        addEventListener("focus", () => {
+            if (this.editorOpenFile) {
+                this.project.checkIsLatestFlowSave(this.editorOpenFile)
+                    .then(isLatest => {
+                        if (!isLatest && !this.ignoreExternallyModified) {
+                            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?")) {
+                                this.reloadProject();
+                            } else {
+                                this.ignoreExternallyModified = true;
+                            }
+                        }
+                    });
+            }
+        });
+
         this.elm.attribute("tabindex", "0");
 
-        this.autoSaveInterval = setInterval(() => {
+        this.autoSaveInterval = setInterval(async () => {
             if (this.preventSaveOnExit) { return; }
             if (!this.editor.dirty) { return; }
             console.log("autosave");
-            this.save();
+            await this.save();
             this.editor.dirty = false;
         }, 600e3);
 
@@ -61,8 +77,12 @@ export class EditorContainer extends Component {
     }
 
     public async setProject(project: Project) {
-        this.setSaveData(this.getSaveData());
+        await this.setSaveData(this.getSaveData());
         this.project = project;
+        return this.reloadProject();
+    }
+
+    public async reloadProject() {
         this.editor.remove();
         this.editor = new Editor();
         this.engine.world.addElm(this.editor);
@@ -93,7 +113,7 @@ export class EditorContainer extends Component {
         return this.editor.serialize();
     }
 
-    public save() {
+    public async save() {
         return this.setSaveData(this.getSaveData());
     }
 
@@ -101,13 +121,19 @@ export class EditorContainer extends Component {
         return this.editor.openTextOp();
     }
 
-    public setSaveData(saveData: any) {
+    public async setSaveData(saveData: any) {
         if (!this.editorOpenFile) { return; }
-        if (saveData) {
-            const str = JSON.stringify(saveData);
-            return this.project.writeFlowSave(this.editorOpenFile, str);
-        } else {
-            return this.project.writeFlowSave(this.editorOpenFile, "");
+        const saveStr = saveData ? JSON.stringify(saveData) : "";
+        this.ignoreExternallyModified = false;
+
+        try {
+            return await this.project.writeFlowSave(this.editorOpenFile, saveStr);
+        } catch (err) {
+            if (err instanceof DetectedExternallyModifiedError) {
+                if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?")) {
+                    return await this.project.writeFlowSave(this.editorOpenFile, saveStr, true);
+                }
+            }
         }
     }
 }
