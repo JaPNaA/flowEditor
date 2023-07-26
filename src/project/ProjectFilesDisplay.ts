@@ -88,13 +88,6 @@ class DirectoryTabs extends Component {
     }
 }
 
-class FileItem extends Component {
-    constructor(private filename: string) {
-        super("item");
-        this.elm.append(filename);
-    }
-}
-
 abstract class DirectoryTab {
     public button = new Elm("button");
     public content = new Elm().class("items");
@@ -156,7 +149,7 @@ class AssetsDirectoryTab extends DirectoryTab {
             .then(assets => {
                 assets.sort();
                 for (const asset of assets) {
-                    this.content.append(new FileItem(asset));
+                    this.content.append(new FileItem(asset, this));
                 }
             });
     }
@@ -187,7 +180,7 @@ class FlowsDirectoryTab extends DirectoryTab {
             .then(flows => {
                 flows.sort();
                 for (const flow of flows) {
-                    this.content.append(new FileItem(flow));
+                    this.content.append(new FileItem(flow, this));
                 }
             });
     }
@@ -202,5 +195,32 @@ class FlowsDirectoryTab extends DirectoryTab {
 
     public async removeItem(path: string): Promise<void> {
         throw new Error("Method not implemented.");
+    }
+}
+
+class FileItem extends Component {
+    constructor(private filename: string, private parentTab: DirectoryTab) {
+        super("item");
+
+        this.elm.append(
+            new Elm().class("filename").append(filename),
+            new Elm().class("fileOps").append(
+                new Elm("button").append("\u270e").class("rename")
+                    .onActivate(async () => {
+                        const newName = prompt("Rename '" + filename + "' to...");
+                        if (newName) {
+                            await this.parentTab.moveItem(filename, newName);
+                            await this.parentTab.refresh();
+                        }
+                    }),
+                new Elm("button").append("\u2a2f").class("delete", "danger")
+                    .onActivate(async () => {
+                        if (confirm("Delete '" + filename + "'? You cannot undo this action.")) {
+                            await this.parentTab.removeItem(filename);
+                            await this.parentTab.refresh();
+                        }
+                    })
+            )
+        );
     }
 }

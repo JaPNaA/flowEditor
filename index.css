@@ -487,17 +487,59 @@ button {
 
 .projectFilesDisplay .directoryTabs .items {
     padding-left: 8px;
+    padding-right: 8px;
     width: 100%;
     height: 100%;
+    box-sizing: border-box;
     overflow-x: hidden;
     overflow-y: auto;
 }
 
 .projectFilesDisplay .directoryTabs .items .item {
+    display: flex;
+    flex-direction: row;
     font-size: 0.8em;
     border-bottom: #202020 2px solid;
+    cursor: default;
+    line-height: 1.8em;
 }
 
 .projectFilesDisplay .directoryTabs .items .item:hover {
     background-color: #202020;
+}
+
+.projectFilesDisplay .directoryTabs .items .item .filename {
+    flex-grow: 1;
+}
+
+.projectFilesDisplay .directoryTabs .items .item .fileOps {
+    white-space: pre;
+    width: 48px;
+    opacity: 0;
+}
+
+.projectFilesDisplay .directoryTabs .items .item:hover .fileOps {
+    opacity: 1;
+}
+
+.projectFilesDisplay .directoryTabs .items .item .fileOps button {
+    background-color: transparent;
+    color: inherit;
+    padding-left: 8px;
+    padding-right: 8px;
+    box-sizing: border-box;
+    height: 1.8em;
+}
+
+.projectFilesDisplay .directoryTabs .items .item .fileOps button.delete {
+    color: #ffecec;
+    background-color: #683333;
+}
+
+.projectFilesDisplay .directoryTabs .items .item .fileOps button:hover {
+    background-color: #3b3b3b88;
+}
+
+.projectFilesDisplay .directoryTabs .items .item .fileOps button.delete:hover {
+    background-color: #682222;
 }
