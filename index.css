@@ -503,16 +503,26 @@ button {
     box-sizing: border-box;
 }
 
-.projectFilesDisplay .directoryTabs .items .item {
-    display: flex;
-    flex-direction: row;
+.projectFilesDisplay .directoryTabs .items .item,
+.projectFilesDisplay .directoryTabs .items .addFileItem {
     font-size: 0.8em;
-    border-bottom: #202020 2px solid;
     cursor: pointer;
     line-height: 1.8em;
 }
 
-.projectFilesDisplay .directoryTabs .items .item:hover {
+.projectFilesDisplay .directoryTabs .items .item {
+    display: flex;
+    flex-direction: row;
+    border-bottom: #202020 2px solid;
+}
+
+.projectFilesDisplay .directoryTabs .items .addFileItem {
+    font-style: italic;
+    color: #9e9e9e;
+}
+
+.projectFilesDisplay .directoryTabs .items .item:hover,
+.projectFilesDisplay .directoryTabs .items .addFileItem:hover {
     background-color: #202020;
 }
 
