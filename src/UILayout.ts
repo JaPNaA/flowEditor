@@ -6,30 +6,35 @@ import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
 
 export class UILayout extends Component {
     private rightPanel: Elm;
+    private rightBottomPanel: Elm;
 
     constructor(editor: EditorContainer, executer: ExecuterContainer, project: ProjectFilesDisplay, modal: ModalContainer) {
         super("main");
 
         this.rightPanel = new Elm().class("rightPanel");
+        this.rightBottomPanel = new Elm().class("rightBottomPanel")
         this.elm.append(
             editor,
             this.rightPanel.append(
+                new HorizontalResizeHandle(this.rightPanel),
                 executer,
-                project,
-                new ResizeHandle(this.rightPanel)
+                this.rightBottomPanel.append(
+                    new VerticalResizeHandle(this.rightBottomPanel),
+                    project
+                )
             ),
             modal
         );
     }
 }
 
-class ResizeHandle extends Component {
+abstract class ResizeHandle extends Component {
     private dragging = false;
-    private lastWidth = 33;
-    private currWidth = 33;
+    private lastSize = 0.33;
+    private currSize = 0.33;
     private collapsed = false;
 
-    constructor(private parent: Elm) {
+    constructor(protected parent: Elm) {
         super("resizeHandle");
 
         this.mouseupHandler = this.mouseupHandler.bind(this);
@@ -54,37 +59,82 @@ class ResizeHandle extends Component {
 
     public collapse() {
         this.collapsed = true;
-        this.parent.getHTMLElement().style.width = "8px";
+        this.setSize(0);
         this.parent.class("collapsed");
     }
 
-    public uncollapse(width?: number) {
+    public uncollapse(size?: number) {
         this.collapsed = false;
         this.parent.removeClass("collapsed");
-        this.parent.getHTMLElement().style.width = (width || this.lastWidth) + "%";
+        this.setSize(size || this.lastSize);
     }
+
+    /** Set new size; if size === 0, is collapsed */
+    protected abstract setSize(size: number): void;
+    protected abstract mousemoveHandler(ev: MouseEvent): void;
 
     private mouseupHandler() {
         removeEventListener("mouseup", this.mouseupHandler);
         removeEventListener("mousemove", this.mousemoveHandler);
         this.dragging = false;
         if (!this.collapsed) {
-            this.lastWidth = this.currWidth;
+            this.lastSize = this.currSize;
         }
     }
 
-    private mousemoveHandler(ev: MouseEvent) {
-        ev.preventDefault();
-        // "1 -" because executer is on the right
-        const newWidth = Math.min((1 - ev.clientX / innerWidth) * 100, 95);
-
-        if (newWidth < 5) {
+    protected userInputSize(size: number) {
+        if (size < 0.05) {
             if (!this.collapsed) {
                 this.collapse();
             }
+        } else if (size > 0.95) {
+            this.uncollapse(0.95);
+            this.currSize = 0.95;
         } else {
-            this.uncollapse(newWidth);
-            this.currWidth = newWidth;
+            this.uncollapse(size);
+            this.currSize = size;
         }
+    }
+}
+
+class HorizontalResizeHandle extends ResizeHandle {
+    constructor(parent: Elm) {
+        super(parent);
+        this.elm.class("horizontalResizeHandle");
+    }
+
+    protected setSize(size: number): void {
+        if (size === 0) {
+            this.parent.getHTMLElement().style.width = "8px";
+        } else {
+            this.parent.getHTMLElement().style.width = size * 100 + "%";
+        }
+    }
+
+    protected mousemoveHandler(ev: MouseEvent) {
+        // "1 -" because executer is on the right
+        const newWidth = 1 - ev.clientX / innerWidth;
+        this.userInputSize(newWidth)
+    }
+}
+
+class VerticalResizeHandle extends ResizeHandle {
+    constructor(parent: Elm) {
+        super(parent);
+        this.elm.class("verticalResizeHandle");
+    }
+
+    protected setSize(size: number): void {
+        if (size === 0) {
+            this.parent.getHTMLElement().style.height = "8px";
+        } else {
+            this.parent.getHTMLElement().style.height = size * 100 + "%";
+        }
+    }
+
+    protected mousemoveHandler(ev: MouseEvent) {
+        // "1 -" because the container is on the bottom
+        const newHeight = 1 - ev.clientY / innerHeight;
+        this.userInputSize(newHeight)
     }
 }
