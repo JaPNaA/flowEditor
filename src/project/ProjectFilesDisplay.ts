@@ -43,16 +43,10 @@ export class ProjectFilesDisplay extends Component {
             new Elm().class("tabs").append(
                 this.tabsFlowsButton = new Elm("button").append("Flows")
                     .onActivate(() => {
-                        if (this.lastActiveTab) { this.lastActiveTab.removeClass("active"); }
-                        this.lastActiveTab = this.tabsFlowsButton;
-                        this.lastActiveTab.class("active");
                         this.showFlows();
                     }),
                 this.tabsAssetsButton = new Elm("button").append("Assets").class("active")
                     .onActivate(() => {
-                        if (this.lastActiveTab) { this.lastActiveTab.removeClass("active"); }
-                        this.lastActiveTab = this.tabsAssetsButton;
-                        this.lastActiveTab.class("active");
                         this.showAssets();
                     })
             ),
@@ -80,12 +74,22 @@ export class ProjectFilesDisplay extends Component {
 
     public async showAssets() {
         if (!this.project.isReady()) { return; }
+
+        if (this.lastActiveTab) { this.lastActiveTab.removeClass("active"); }
+        this.lastActiveTab = this.tabsAssetsButton;
+        this.lastActiveTab.class("active");
+
         const assets = await this.project.listAssets();
         this.writeItems(assets);
     }
 
     public async showFlows() {
         if (!this.project.isReady()) { return; }
+
+        if (this.lastActiveTab) { this.lastActiveTab.removeClass("active"); }
+        this.lastActiveTab = this.tabsFlowsButton;
+        this.lastActiveTab.class("active");
+
         const flows = await this.project.listFlowSaves();
         this.writeItems(flows);
     }
