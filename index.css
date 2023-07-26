@@ -16,6 +16,7 @@ button {
     border: none;
     padding: 4px 8px;
     color: inherit;
+    background-color: transparent;
 }
 
 ::-webkit-scrollbar {
@@ -325,6 +326,8 @@ button {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    /** Prevent this from overgrowing */
+    min-height: 0;
     width: 100%;
 }
 
@@ -385,6 +388,11 @@ button {
 
 .executerContainer .saves button.saveButton {
     color: #22e753;
+}
+
+.executerContainer .chooseInput button {
+    background-color: #333333;
+    margin-right: 8px;
 }
 
 .modalContainer {
