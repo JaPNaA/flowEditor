@@ -53,6 +53,21 @@ export class ProjectFilesDisplay extends Component {
             this.itemsElm = new Elm().class("items")
         );
         this.itemsElm.on("wheel", ev => ev.stopPropagation());
+        this.itemsElm.getHTMLElement().ondrop = (ev) => {
+            console.log("drop", ev);
+        };
+        this.itemsElm.on("drop", async ev => {
+            ev.preventDefault();
+            if (!ev.dataTransfer) { return; }
+            for (const file of ev.dataTransfer.files) {
+                this.project.writeAsset(file.name, new Blob([await file.arrayBuffer()]));
+            }
+            this.showAssets();
+        });
+        this.itemsElm.on("dragover", ev => {
+            ev.preventDefault();
+        });
+
         this.setProject(project);
     }
 

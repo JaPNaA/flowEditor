@@ -34,6 +34,13 @@ export class FileProject implements Project {
         ]);
     }
 
+    public async writeAsset(path: string, blob: Blob): Promise<void> {
+        const handle = await this.assetsDirectory.getFileHandle(path, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        writable.close();
+    }
+
     public async listAssets(): Promise<string[]> {
         const items: string[] = [];
         await this.recursiveAddFilesToArray(this.assetsDirectory, "", items);

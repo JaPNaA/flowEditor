@@ -8,6 +8,8 @@ export interface Project {
     isReady(): boolean;
     /** Get an asset file */
     getAsset(path: string): Promise<Blob>;
+    /** Write an asset file */
+    writeAsset(path: string, blob: Blob): Promise<void>;
     /** List all asset files */
     listAssets(): Promise<string[]>;
     /** Get the 'start' flow's path */

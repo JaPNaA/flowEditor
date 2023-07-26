@@ -23,6 +23,10 @@ export class NullProject implements Project {
         return (await fetch(path)).blob();
     }
 
+    public async writeAsset(path: string, blob: Blob): Promise<void> {
+        throw new Error("Cannot write assets to NullProject");
+    }
+
     public getStartFlowPath(): string {
         return "localstorage";
     }
