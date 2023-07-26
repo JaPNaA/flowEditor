@@ -2,7 +2,6 @@ import { FlowRunner, FlowRunnerOutput, FlowRunnerState } from "../FlowRunner.js"
 import { appHooks, pluginHooks } from "../index.js";
 import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
-import { FileProject } from "../project/FileProject.js";
 import { Project } from "../project/Project.js";
 import { requestFile } from "../utils.js";
 
@@ -35,19 +34,6 @@ export class ExecuterContainer extends Component {
                 ),
                 new Elm("button").append("TextOp").onActivate(() => {
                     appHooks.requestEditorTextOp();
-                }),
-                new Elm("button").append("Open Project").onActivate(async () => {
-                    if (!('showDirectoryPicker' in window)) {
-                        alert(
-                            "Your browser does not support this feature (yet).\n" +
-                            "At time of writing, only the latest Chromium-based browsers (Chrome, Edge, Opera, Brave, etc.) support this feature."
-                        );
-                        return;
-                    }
-                    const handle = await showDirectoryPicker({ mode: "readwrite" });
-                    await handle.requestPermission({ mode: "readwrite" });
-                    const project = new FileProject(handle);
-                    appHooks.openProject(project);
                 }),
                 new Elm("button").append("Delete all").class("deleteAndReload").onActivate(() => {
                     if (confirm("Delete editor contents and reload?")) {

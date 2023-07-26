@@ -440,12 +440,18 @@ button {
     height: 100%;
 }
 
+.projectFilesDisplay.nullProject {
+    cursor: pointer;
+}
+
 .projectFilesDisplay.nullProject .nullProjectNotice {
+    padding: 8px;
     position: absolute;
     color: #888;
     font-style: italic;
     text-align: center;
     width: 100%;
+    box-sizing: border-box;
     top: 50%;
     transform: translateY(-50%);
 }

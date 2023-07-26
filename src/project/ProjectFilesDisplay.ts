@@ -1,4 +1,6 @@
+import { appHooks } from "../index.js";
 import { Component, Elm } from "../japnaaEngine2d/elements.js";
+import { FileProject } from "./FileProject.js";
 import { NullProject } from "./NullProject.js";
 import { Project } from "./Project.js";
 
@@ -15,6 +17,27 @@ export class ProjectFilesDisplay extends Component {
     constructor(project: Project) {
         super("projectFilesDisplay");
         this.nullProjectElm = new Elm().class("nullProjectNotice").append("No project open.");
+        if ('showDirectoryPicker' in window) {
+            this.nullProjectElm.append(new Elm().append("Click to open or create project."));
+        } else {
+            this.nullProjectElm.replaceContents(
+                new Elm().append("Your browser does not support projects."),
+                new Elm().append("(Your browser does not support the File Access API.)"),
+                new Elm().append("At time of writing, only the latest Chromium-based browsers (Chrome, Edge, Opera, Brave, etc.) support the File Access API.")
+            );
+        }
+
+        this.elm.onActivate(async () => {
+            if (!(this.project instanceof NullProject)) { return; }
+            if (!('showDirectoryPicker' in window)) {
+                alert("Your browser does not support this feature.");
+                return;
+            }
+            const handle = await showDirectoryPicker({ mode: "readwrite" });
+            await handle.requestPermission({ mode: "readwrite" });
+            const project = new FileProject(handle);
+            appHooks.openProject(project);
+        });
 
         this.contentElm = new Elm().class("content").append(
             new Elm().class("tabs").append(
