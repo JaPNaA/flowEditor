@@ -18,6 +18,15 @@ button {
     color: inherit;
 }
 
+::-webkit-scrollbar {
+    width: 2px;
+    background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #ffffff3d;
+}
+
 .main {
     width: 100vw;
     height: 100vh;
@@ -308,15 +317,6 @@ button {
     overflow-x: hidden;
 }
 
-.executerContainer .outputLog::-webkit-scrollbar {
-    width: 2px;
-    background-color: transparent;
-}
-
-.executerContainer .outputLog::-webkit-scrollbar-thumb {
-    background-color: #ffffff3d;
-}
-
 .executerContainer .outputLog .log.secondary {
     color: #7797ff;
 }
@@ -433,6 +433,7 @@ button {
 }
 
 .projectFilesDisplay .items {
+    padding-left: 8px;
     flex-grow: 1;
     overflow-x: hidden;
     overflow-y: auto;
