@@ -197,7 +197,10 @@ export class FileProject implements Project {
     private async recursiveAddFilesToArray(directory: FileSystemDirectoryHandle, basePath: string, items: string[]) {
         const promises = [];
         for await (const item of directory.values()) {
-            if (item.kind === "file") {
+            if (
+                item.kind === "file" &&
+                !item.name.endsWith(".crswap") // ignore swap files Chrome generates
+            ) {
                 items.push(basePath + item.name);
             } else if (item.kind === "directory") {
                 promises.push(this.recursiveAddFilesToArray(item, basePath + item.name + "/", items));
