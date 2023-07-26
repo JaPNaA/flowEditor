@@ -1,5 +1,6 @@
 import { appHooks } from "../index.js";
 import { Component, Elm } from "../japnaaEngine2d/elements.js";
+import { download } from "../utils.js";
 import { FileProject } from "./FileProject.js";
 import { NullProject } from "./NullProject.js";
 import { Project } from "./Project.js";
@@ -134,6 +135,7 @@ abstract class DirectoryTab {
     public abstract writeItem(path: string, content: File): Promise<void>;
     public abstract moveItem(pathFrom: string, pathTo: string): Promise<void>;
     public abstract removeItem(path: string): Promise<void>;
+    public abstract openItem(path: string): Promise<void>;
 }
 
 class AssetsDirectoryTab extends DirectoryTab {
@@ -164,6 +166,38 @@ class AssetsDirectoryTab extends DirectoryTab {
 
     public async removeItem(path: string): Promise<void> {
         await this.project.removeAsset(path);
+    }
+
+    public async openItem(path: string): Promise<void> {
+        const blob = await this.project.getAsset(path);
+        const url = URL.createObjectURL(blob);
+
+        // check path has image extention
+        const pathExtention = path.slice(path.lastIndexOf(".") + 1);
+        if (["png", "jpg", "jpeg", "gif", "svg", "bmp"].includes(pathExtention)) {
+            const newWindow = open();
+            if (!newWindow) { return; }
+            const image = newWindow.document.createElement("img");
+            image.src = url;
+            newWindow.document.body.appendChild(image);
+            image.addEventListener("load", () => {
+                URL.revokeObjectURL(url);
+            });
+        } else if (["mp3", "wav", "ogg"].includes(pathExtention)) {
+            const newWindow = open();
+            if (!newWindow) { return; }
+            const audio = newWindow.document.createElement("audio");
+            audio.controls = true;
+            audio.autoplay = true;
+            audio.src = url;
+            newWindow.document.body.appendChild(audio);
+            audio.addEventListener("load", () => {
+                URL.revokeObjectURL(url);
+                audio.play();
+            });
+        } else {
+            download(blob, path);
+        }
     }
 }
 
@@ -196,6 +230,10 @@ class FlowsDirectoryTab extends DirectoryTab {
     public async removeItem(path: string): Promise<void> {
         await this.project.removeFlowSave(path);
     }
+
+    public async openItem(path: string): Promise<void> {
+        throw new Error("Not implemented");
+    }
 }
 
 class FileItem extends Component {
@@ -203,7 +241,9 @@ class FileItem extends Component {
         super("item");
 
         this.elm.append(
-            new Elm().class("filename").append(filename),
+            new Elm().class("filename").append(filename).onActivate(() => {
+                this.parentTab.openItem(filename);
+            }),
             new Elm().class("fileOps").append(
                 new Elm("button").append("\u270e").class("rename")
                     .onActivate(async () => {

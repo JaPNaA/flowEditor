@@ -500,7 +500,7 @@ button {
     flex-direction: row;
     font-size: 0.8em;
     border-bottom: #202020 2px solid;
-    cursor: default;
+    cursor: pointer;
     line-height: 1.8em;
 }
 
