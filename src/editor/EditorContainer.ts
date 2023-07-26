@@ -41,10 +41,9 @@ export class EditorContainer extends Component {
                 this.project.checkIsLatestFlowSave(this.editorOpenFile)
                     .then(isLatest => {
                         if (!isLatest && !this.ignoreExternallyModified) {
+                            this.ignoreExternallyModified = true;
                             if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?")) {
                                 this.reloadProject();
-                            } else {
-                                this.ignoreExternallyModified = true;
                             }
                         }
                     });
@@ -74,6 +73,7 @@ export class EditorContainer extends Component {
             console.error(err);
         }
         this.editorOpenFile = startFile;
+        this.ignoreExternallyModified = false;
     }
 
     public async setProject(project: Project) {
@@ -124,7 +124,6 @@ export class EditorContainer extends Component {
     public async setSaveData(saveData: any) {
         if (!this.editorOpenFile) { return; }
         const saveStr = saveData ? JSON.stringify(saveData) : "";
-        this.ignoreExternallyModified = false;
 
         try {
             return await this.project.writeFlowSave(this.editorOpenFile, saveStr);
@@ -135,5 +134,7 @@ export class EditorContainer extends Component {
                 }
             }
         }
+
+        this.ignoreExternallyModified = false;
     }
 }
