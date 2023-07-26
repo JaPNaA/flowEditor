@@ -34,6 +34,12 @@ export class FileProject implements Project {
         ]);
     }
 
+    public async listAssets(): Promise<string[]> {
+        const items: string[] = [];
+        await this.recursiveAddFilesToArray(this.assetsDirectory, "", items);
+        return items;
+    }
+
     public async writeAsset(path: string, blob: Blob): Promise<void> {
         const handle = await this.assetsDirectory.getFileHandle(path, { create: true });
         const writable = await handle.createWritable();
@@ -41,11 +47,18 @@ export class FileProject implements Project {
         writable.close();
     }
 
-    public async listAssets(): Promise<string[]> {
-        const items: string[] = [];
-        await this.recursiveAddFilesToArray(this.assetsDirectory, "", items);
-        return items;
+    public async moveAsset(pathFrom: string, pathTo: string): Promise<void> {
+        const handle = await this.assetsDirectory.getFileHandle(pathFrom);
+        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
+        return handle.move(pathTo);
     }
+
+    public async removeAsset(path: string): Promise<void> {
+        const handle = await this.assetsDirectory.getFileHandle(path);
+        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
+        return handle.remove();
+    }
+
 
     public getStartFlowPath(): string {
         return this.index.startFlow;
@@ -66,18 +79,33 @@ export class FileProject implements Project {
 
     public async writeFlowSave(path: string, content: string, force?: boolean): Promise<void> {
         const handle = await this.flowsDirectory.getFileHandle(path, { create: true });
-        const expectedLastModified = this.lastModifiedMap.get(path);
-        if (!force && expectedLastModified !== undefined) {
-            const lastModified = (await handle.getFile()).lastModified;
-            if (lastModified !== expectedLastModified) {
-                throw new DetectedExternallyModifiedError();
-            }
+        if (!force) {
+            this.throwIfUnexpectedLastModifiedFlowSave(path, handle);
         }
 
         const writable = await handle.createWritable();
         await writable.write(content);
         await writable.close();
         this.lastModifiedMap.set(path, (await handle.getFile()).lastModified);
+    }
+
+    public async moveFlowSave(pathFrom: string, pathTo: string): Promise<void> {
+        const handle = await this.flowsDirectory.getFileHandle(pathFrom);
+        const expectedLastModified = await this.throwIfUnexpectedLastModifiedFlowSave(pathFrom, handle);
+        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
+        await handle.move(pathTo);
+        if (expectedLastModified !== undefined) {
+            this.lastModifiedMap.set(pathTo, expectedLastModified);
+            this.lastModifiedMap.delete(pathFrom);
+        }
+    }
+
+    public async removeFlowSave(path: string): Promise<void> {
+        const handle = await this.flowsDirectory.getFileHandle(path);
+        await this.throwIfUnexpectedLastModifiedFlowSave(path, handle);
+        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
+        await handle.remove();
+        this.lastModifiedMap.delete(path);
     }
 
     public async checkIsLatestFlowSave(path: string): Promise<boolean> {
@@ -176,6 +204,17 @@ export class FileProject implements Project {
             }
         }
         await Promise.all(promises);
+    }
+
+    private async throwIfUnexpectedLastModifiedFlowSave(path: string, handle: FileSystemFileHandle): Promise<number | undefined> {
+        const expectedLastModified = this.lastModifiedMap.get(path);
+        if (expectedLastModified !== undefined) {
+            const lastModified = (await handle.getFile()).lastModified;
+            if (lastModified !== expectedLastModified) {
+                throw new DetectedExternallyModifiedError();
+            }
+            return lastModified;
+        }
     }
 }
 

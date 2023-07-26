@@ -27,6 +27,14 @@ export class NullProject implements Project {
         throw new Error("Cannot write assets to NullProject");
     }
 
+    public async moveAsset(pathFrom: string, pathTo: string): Promise<void> {
+        throw new Error("Cannot move assets in NullProject");
+    }
+
+    public async removeAsset(path: string): Promise<void> {
+        throw new Error("Cannot remove assets in NullProject");
+    }
+
     public getStartFlowPath(): string {
         return "localstorage";
     }
@@ -56,6 +64,14 @@ export class NullProject implements Project {
         }
         localStorage['flowEditorSave'] = data;
         this.lastRead = data;
+    }
+
+    public async moveFlowSave(pathFrom: string, pathTo: string): Promise<void> {
+        throw new Error("Cannot move flow saves in NullProject");
+    }
+
+    public async removeFlowSave(path: string): Promise<void> {
+        throw new Error("Cannot remove flow saves in NullProject");
     }
 
     public async checkIsLatestFlowSave(path: string): Promise<boolean> {

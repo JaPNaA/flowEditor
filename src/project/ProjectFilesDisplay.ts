@@ -159,11 +159,11 @@ class AssetsDirectoryTab extends DirectoryTab {
     }
 
     public async moveItem(pathFrom: string, pathTo: string): Promise<void> {
-        throw new Error("Method not implemented.");
+        await this.project.moveAsset(pathFrom, pathTo);
     }
 
     public async removeItem(path: string): Promise<void> {
-        throw new Error("Method not implemented.");
+        await this.project.removeAsset(path);
     }
 }
 
@@ -190,11 +190,11 @@ class FlowsDirectoryTab extends DirectoryTab {
     }
 
     public async moveItem(pathFrom: string, pathTo: string): Promise<void> {
-        throw new Error("Method not implemented.");
+        await this.project.moveFlowSave(pathFrom, pathTo);
     }
 
     public async removeItem(path: string): Promise<void> {
-        throw new Error("Method not implemented.");
+        await this.project.removeFlowSave(path);
     }
 }
 
