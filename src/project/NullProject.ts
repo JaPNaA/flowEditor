@@ -51,6 +51,7 @@ export class NullProject implements Project {
             throw new DetectedExternallyModifiedError();
         }
         localStorage['flowEditorSave'] = data;
+        this.lastRead = data;
     }
 
     public async checkIsLatestFlowSave(path: string): Promise<boolean> {

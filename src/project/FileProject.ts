@@ -70,6 +70,7 @@ export class FileProject implements Project {
         const writable = await handle.createWritable();
         await writable.write(content);
         await writable.close();
+        this.lastModifiedMap.set(path, (await handle.getFile()).lastModified);
     }
 
     public async checkIsLatestFlowSave(path: string): Promise<boolean> {
