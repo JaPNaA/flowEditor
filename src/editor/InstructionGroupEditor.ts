@@ -3,15 +3,17 @@ import { EditorCursorPositionAbsolute } from "./editing/EditorCursor.js";
 import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture.js";
 import { UIDGenerator } from "./toolchain/UIDGenerator.js";
 import { InstructionData } from "./toolchain/flowToInstructionData.js";
-import { Elm, Hitbox, JaPNaAEngine2d, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions.js";
 import { NewInstruction } from "./instruction/NewInstruction.js";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes.js";
 
-export class InstructionGroupEditor extends WorldElm {
+export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public elm: Elm;
     public collisionType = InstructionGroupEditor.collisionType;
+    public graphicHitbox: Hitbox<QuadtreeElmChild>;
+
     /** DO NOT USE OUTSIDE `UndoableAction` */
     public _instructions: Instruction[] = [];
     /** DO NOT USE OUTSIDE `UndoableAction` */
@@ -28,10 +30,16 @@ export class InstructionGroupEditor extends WorldElm {
     private selected = false;
     private initBranchTargets: ((InstructionGroupEditor | null)[] | null)[] = [];
 
+    private elmVisible = false;
+    private graphicRect = new RectangleM(0, 0, 0, 0);
+    private graphicHitboxUpdateCallback!: () => void;
+
     constructor(public readonly parentEditor: Editor, private data: InstructionData) {
         super();
         this.rect.x = data.x;
         this.rect.y = data.y;
+
+        this.graphicHitbox = new Hitbox(this.graphicRect, this);
 
         this.elm = new Elm().class("instructionGroup");
         this.elm.attribute("tabindex", "-1");
@@ -42,6 +50,48 @@ export class InstructionGroupEditor extends WorldElm {
                 this.parentEditor.unsetEditMode();
             }
         });
+    }
+
+    public updateAfterMove() {
+        let xStart = this.rect.x;
+        let yStart = this.rect.y;
+        let xEnd = this.rect.rightX();
+        let yEnd = this.rect.bottomY();
+
+        for (const line of this._lines) {
+            if (line instanceof BranchInstructionLine) {
+                if (line.branchTarget) {
+                    if (line.branchTarget.rect.x < xStart) {
+                        xStart = line.branchTarget.rect.x;
+                    } else if (line.branchTarget.rect.x > xEnd) {
+                        xEnd = line.branchTarget.rect.x;
+                    }
+                    if (line.branchTarget.rect.y < yStart) {
+                        yStart = line.branchTarget.rect.y;
+                    } else if (line.branchTarget.rect.y > yEnd) {
+                        yEnd = line.branchTarget.rect.y;
+                    }
+                }
+            }
+        }
+
+        this.graphicRect.x = xStart;
+        this.graphicRect.y = yStart;
+        this.graphicRect.width = xEnd - xStart;
+        this.graphicRect.height = yEnd - yStart;
+
+        this.graphicHitboxUpdateCallback();
+    }
+
+    public setGraphicHitboxUpdateCallback(callback: () => void): void {
+        this.graphicHitboxUpdateCallback = callback;
+    }
+
+    public onExitView(): void {
+        if (this.elmVisible) {
+            this.elm.remove();
+            this.elmVisible = false;
+        }
     }
 
     public appendInputCapture(inputCapture: TextareaUserInputCapture) {
@@ -159,7 +209,6 @@ export class InstructionGroupEditor extends WorldElm {
     public _setEngine(engine: JaPNaAEngine2d): void {
         super._setEngine(engine);
         this.engine.collisions.addHitbox(this.hitbox);
-        this.engine.htmlOverlay.elm.append(this.elm);
     }
 
     public remove(): void {
@@ -268,7 +317,8 @@ export class InstructionGroupEditor extends WorldElm {
         this.parentEditor.undoLog.thaw();
 
         this.rect.width = width;
-        this.updateHeight();
+
+        this.updateAfterMove();
     }
 
     public draw(): void {
@@ -303,6 +353,13 @@ export class InstructionGroupEditor extends WorldElm {
         }
         X.fill();
 
+        if (!this.elmVisible) {
+            this.engine.htmlOverlay.elm.append(this.elm);
+            this.elmVisible = true;
+            this.updateHeight();
+            this.updateAfterMove();
+        }
+
         elm.style.top = this.rect.y + "px";
         elm.style.left = this.rect.x + "px";
 
@@ -323,42 +380,41 @@ export class InstructionGroupEditor extends WorldElm {
 
         let index = -1;
         for (const instruction of this._lines) {
-            if (instruction instanceof BranchInstructionLine) {
-                const target = instruction.getBranchTarget();
-                if (!target) { continue; }
-                index++;
+            if (!(instruction instanceof BranchInstructionLine)) { continue; }
+            const target = instruction.getBranchTarget();
+            if (!target) { continue; }
+            index++;
 
-                const instructionElm = instruction.elm.getHTMLElement();
-                const startY = this.rect.y + instructionElm.offsetTop + instructionElm.offsetHeight / 2;
-                const startX = this.rect.rightX() + 16 + 16 * index;
-                const endY = target.rect.y - 16;
-                const targetRectCenterX = target.rect.x + target.rect.width / 2;
-                let currTriangleSize = triangleSize;
+            const instructionElm = instruction.elm.getHTMLElement();
+            const startY = this.rect.y + instructionElm.offsetTop + instructionElm.offsetHeight / 2;
+            const startX = this.rect.rightX() + 16 + 16 * index;
+            const endY = target.rect.y - 16;
+            const targetRectCenterX = target.rect.x + target.rect.width / 2;
+            let currTriangleSize = triangleSize;
 
-                // highlight current connections
-                if (target.selected) {
-                    X.globalAlpha = 1;
-                    X.lineWidth = 2.5;
-                    currTriangleSize = 1.5;
-                } else {
-                    X.globalAlpha = alpha;
-                    X.lineWidth = lineWidth;
-                }
-
-                X.beginPath();
-                X.moveTo(this.rect.rightX(), startY);
-                X.lineTo(startX, startY);
-                X.lineTo(startX, endY);
-                X.lineTo(targetRectCenterX, endY);
-                X.lineTo(targetRectCenterX, target.rect.y - 6 * currTriangleSize);
-                X.stroke();
-
-                X.beginPath();
-                X.moveTo(targetRectCenterX, target.rect.y);
-                X.lineTo(targetRectCenterX - 4 * currTriangleSize, target.rect.y - 6 * currTriangleSize);
-                X.lineTo(targetRectCenterX + 4 * currTriangleSize, target.rect.y - 6 * currTriangleSize);
-                X.fill();
+            // highlight current connections
+            if (target.selected) {
+                X.globalAlpha = 1;
+                X.lineWidth = 2.5;
+                currTriangleSize = 1.5;
+            } else {
+                X.globalAlpha = alpha;
+                X.lineWidth = lineWidth;
             }
+
+            X.beginPath();
+            X.moveTo(this.rect.rightX(), startY);
+            X.lineTo(startX, startY);
+            X.lineTo(startX, endY);
+            X.lineTo(targetRectCenterX, endY);
+            X.lineTo(targetRectCenterX, target.rect.y - 6 * currTriangleSize);
+            X.stroke();
+
+            X.beginPath();
+            X.moveTo(targetRectCenterX, target.rect.y);
+            X.lineTo(targetRectCenterX - 4 * currTriangleSize, target.rect.y - 6 * currTriangleSize);
+            X.lineTo(targetRectCenterX + 4 * currTriangleSize, target.rect.y - 6 * currTriangleSize);
+            X.fill();
         }
 
         X.globalCompositeOperation = "source-over";

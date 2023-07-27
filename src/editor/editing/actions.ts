@@ -197,6 +197,7 @@ export class BranchTargetChangeAction implements UndoableAction {
         this.previousBranchTarget = this.instruction.branchTarget;
         this.instruction.branchTarget = this.branchTarget;
         this.instruction._updateElmState();
+        this.instruction.parentInstruction.parentGroup.updateAfterMove();
     }
 
     public inverse(): UndoableAction {

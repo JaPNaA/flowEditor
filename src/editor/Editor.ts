@@ -1,7 +1,7 @@
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./toolchain/UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./toolchain/flowToInstructionData.js";
-import { Elm, JaPNaAEngine2d, ParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./editing/EditorCursor.js";
 import { ControlItem } from "../FlowRunner.js";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions.js";
@@ -23,12 +23,15 @@ export class Editor extends WorldElmWithComponents {
     public deserializer = new InstructionDeserializer();
     public textOpDialogue = new TextOpDialogue();
 
+    private nonGroupEditorChildren = this.addComponent(new ParentComponent());
+
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _children = this.addComponent(new ParentComponent());
+    public _children = this.addComponent(new QuadtreeParentComponent());
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _startGroup?: InstructionGroupEditor;
+
 
     /**
      * Has there been changes? If true, allows autosave every 10 minutes.
@@ -62,10 +65,10 @@ export class Editor extends WorldElmWithComponents {
 
     constructor() {
         super();
-        this._children.addChild(new DummyText());
-        this._children.addChild(this.selectRectangle);
-        this._children.addChild(new GridBackground());
-        this._children.addChild(this.smoothCamera);
+        this.nonGroupEditorChildren.addChild(new DummyText());
+        this.nonGroupEditorChildren.addChild(this.selectRectangle);
+        this.nonGroupEditorChildren.addChild(new GridBackground());
+        this.nonGroupEditorChildren.addChild(this.smoothCamera);
 
         this.navigator = new EditorGroupNavigator(this.subscriptions, this);
 
@@ -305,6 +308,7 @@ export class Editor extends WorldElmWithComponents {
                 for (const group of this.selectedGroups) {
                     group.rect.x += ev.movementX / scale;
                     group.rect.y += ev.movementY / scale;
+                    group.updateAfterMove();
                 }
                 this.engine.ticker.requestTick();
             } else {
@@ -332,14 +336,14 @@ export class Editor extends WorldElmWithComponents {
 
     private addGroupHandler() {
         const newData = newInstructionData();
-        const newEditor = new InstructionGroupEditor(this, newData);
         if (this._groupEditors.length === 0) {
-            newEditor.rect.x = 8;
-            newEditor.rect.y = 24;
+            newData.x = 8;
+            newData.y = 24;
         } else {
-            newEditor.rect.x = this.engine.mouse.worldPos.x;
-            newEditor.rect.y = this.engine.mouse.worldPos.y;
+            newData.x = this.engine.mouse.worldPos.x;
+            newData.y = this.engine.mouse.worldPos.y;
         }
+        const newEditor = new InstructionGroupEditor(this, newData);
         this.addGroup(newEditor);
         newEditor.requestNewLine(0);
         this.setEditMode();
