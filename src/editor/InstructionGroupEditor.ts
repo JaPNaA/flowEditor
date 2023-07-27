@@ -28,6 +28,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public _isStartGroup = false;
 
     private static fontSize = 16;
+    private static defaultWidth = 720 + 24; // 24 is padding
     private static collisionType = Symbol();
     private hitbox = new Hitbox(this.rect, this);
 
@@ -42,6 +43,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         super();
         this.rect.x = data.x;
         this.rect.y = data.y;
+        this.rect.width = InstructionGroupEditor.defaultWidth;
 
         this.graphicHitbox = new Hitbox(this.graphicRect, this);
 
@@ -57,34 +59,10 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     }
 
     public updateAfterMove() {
-        let xStart = this.rect.x;
-        let yStart = this.rect.y;
-        let xEnd = this.rect.rightX();
-        let yEnd = this.rect.bottomY();
-
-        for (const line of this._lines) {
-            if (line instanceof BranchInstructionLine) {
-                if (line.branchTarget) {
-                    if (line.branchTarget.rect.x < xStart) {
-                        xStart = line.branchTarget.rect.x;
-                    } else if (line.branchTarget.rect.x > xEnd) {
-                        xEnd = line.branchTarget.rect.x;
-                    }
-                    if (line.branchTarget.rect.y < yStart) {
-                        yStart = line.branchTarget.rect.y;
-                    } else if (line.branchTarget.rect.y > yEnd) {
-                        yEnd = line.branchTarget.rect.y;
-                    }
-                }
-            }
+        this.updateAfterMoveNoParentPropagation();
+        for (const parent of this._parentGroups) {
+            parent.updateAfterMoveNoParentPropagation();
         }
-
-        this.graphicRect.x = xStart;
-        this.graphicRect.y = yStart;
-        this.graphicRect.width = xEnd - xStart;
-        this.graphicRect.height = yEnd - yStart;
-
-        this.graphicHitboxUpdateCallback();
     }
 
     public setGraphicHitboxUpdateCallback(callback: () => void): void {
@@ -292,10 +270,9 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public setupConstruct() {
         const elm = this.elm.getHTMLElement();
         const font = `${InstructionGroupEditor.fontSize}px monospace`;
-        const width = 720 + 24; // 24 is padding
 
         elm.style.font = font;
-        elm.style.width = width + "px";
+        elm.style.width = InstructionGroupEditor.defaultWidth + "px";
 
 
         this.parentEditor.undoLog.freeze();
@@ -312,7 +289,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
         this.parentEditor.undoLog.thaw();
 
-        this.rect.width = width;
+        this.rect.width = InstructionGroupEditor.defaultWidth;
 
         this.updateAfterMove();
     }
@@ -320,6 +297,12 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public draw(): void {
         const X = this.engine.canvas.X;
         const elm = this.elm.getHTMLElement();
+
+        // debug: draw graphic hitbox
+        X.strokeStyle = "#f0f";
+        X.lineWidth = 1;
+        X.strokeRect(this.graphicRect.x, this.graphicRect.y, this.graphicRect.width, this.graphicRect.height);
+
 
         if (this._isStartGroup) {
             X.fillStyle = "#35f035";
@@ -551,6 +534,37 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             this._htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
             line.elm.remove();
         }
+    }
+
+    private updateAfterMoveNoParentPropagation() {
+        let xStart = this.rect.x;
+        let yStart = this.rect.y;
+        let xEnd = this.rect.rightX();
+        let yEnd = this.rect.bottomY();
+
+        for (const line of this._lines) {
+            if (line instanceof BranchInstructionLine) {
+                if (line.branchTarget) {
+                    if (line.branchTarget.rect.x < xStart) {
+                        xStart = line.branchTarget.rect.x;
+                    } else if (line.branchTarget.rect.rightX() > xEnd) {
+                        xEnd = line.branchTarget.rect.rightX();
+                    }
+                    if (line.branchTarget.rect.y < yStart) {
+                        yStart = line.branchTarget.rect.y;
+                    } else if (line.branchTarget.rect.y > yEnd) {
+                        yEnd = line.branchTarget.rect.y;
+                    }
+                }
+            }
+        }
+
+        this.graphicRect.x = xStart;
+        this.graphicRect.y = yStart;
+        this.graphicRect.width = xEnd - xStart;
+        this.graphicRect.height = yEnd - yStart;
+
+        this.graphicHitboxUpdateCallback();
     }
 
     private insertLineAndUpdateCursor(lineIndex: number) {
