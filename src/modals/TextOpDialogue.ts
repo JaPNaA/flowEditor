@@ -58,7 +58,7 @@ export class TextOpDialogue extends Component {
     public acceptChanges() {
         if (!this.editables) { throw new Error("No editables set."); }
 
-        const lines = this.textarea.getHTMLElement().value.split("\n");
+        const lines = this.textarea.getHTMLElement().value.split("\n").filter(x => x);
         if (lines.length !== this.editables.length) { throw new Error("Line count mismatch."); }
 
         for (let i = 0; i < lines.length; i++) {
