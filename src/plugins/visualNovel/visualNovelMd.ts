@@ -8,12 +8,20 @@ const variableRegex = /{(.+?)}/g;
 
 export function visualNovelMdToHTML(richText: string, getVariable?: (v: string) => string | undefined) {
     const preVariableText = _sanitizeHTML(richText)
+        .replace(/\\\\/g, '&#92;') // escaped \
+        .replace(/\\\*/g, '&#42;') // escaped *
+        .replace(/\\_/g, '&#95;') // escaped _
+        .replace(/\\#/g, '&#35;') // escaped #
+        .replace(/\\&lt;/g, '&\\lt;') // escaped <
+        .replace(/\\&gt;/g, '&\\gt;') // escaped >
         .replace(headingRegex, '<span class="volume" level="$1">$2</span>')
         .replace(underscoreBoldRegex, '$1<b>$2</b>')
         .replace(asteriskBoldRegex, '<b>$1</b>')
         .replace(underscoreItalicRegex, '$1<i>$2</i>')
         .replace(asteriskItalicRegex, '<i>$1</i>')
         .replace(tagRegex, '<span class="tag" tag="$1">$2</span>')
+        .replace(/&\\lt;/g, '&lt;') // unescape <
+        .replace(/&\\gt;/g, '&gt;'); // unescape >
     if (getVariable) {
         return wrapInVisualNovelMd(replaceVariables(preVariableText, getVariable));
     } else {
