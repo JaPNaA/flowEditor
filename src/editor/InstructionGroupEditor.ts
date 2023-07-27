@@ -542,20 +542,16 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         let xEnd = this.rect.rightX();
         let yEnd = this.rect.bottomY();
 
-        for (const line of this._lines) {
-            if (line instanceof BranchInstructionLine) {
-                if (line.branchTarget) {
-                    if (line.branchTarget.rect.x < xStart) {
-                        xStart = line.branchTarget.rect.x;
-                    } else if (line.branchTarget.rect.rightX() > xEnd) {
-                        xEnd = line.branchTarget.rect.rightX();
-                    }
-                    if (line.branchTarget.rect.y < yStart) {
-                        yStart = line.branchTarget.rect.y;
-                    } else if (line.branchTarget.rect.y > yEnd) {
-                        yEnd = line.branchTarget.rect.y;
-                    }
-                }
+        for (const child of this._childGroups) {
+            if (child.rect.x < xStart) {
+                xStart = child.rect.x;
+            } else if (child.rect.rightX() > xEnd) {
+                xEnd = child.rect.rightX();
+            }
+            if (child.rect.y < yStart) {
+                yStart = child.rect.y;
+            } else if (child.rect.y > yEnd) {
+                yEnd = child.rect.y;
             }
         }
 
