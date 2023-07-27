@@ -44,7 +44,10 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.rect.x = data.x;
         this.rect.y = data.y;
         this.rect.width = InstructionGroupEditor.defaultWidth;
+        // initial height: #instructions * font size * line height + padding
+        this.rect.height = (data.instructions.length + data.branches.length) * 16 * 1.55 + 16;
 
+        this.graphicRect.copy(this.rect);
         this.graphicHitbox = new Hitbox(this.graphicRect, this);
 
         this.elm = new Elm().class("instructionGroup");
