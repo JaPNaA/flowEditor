@@ -47,18 +47,7 @@ export class EditorGroupNavigator {
         this.ensureFocusGroup();
         if (!this.focusGroup) { return; }
 
-        const instructions = this.focusGroup.getInstructions();
-        const children: InstructionGroupEditor[] = [];
-        for (const instruction of instructions) {
-            const branchTargets = instruction.getBranchTargets();
-            if (branchTargets) {
-                for (const target of branchTargets) {
-                    if (target && !children.includes(target)) {
-                        children.push(target);
-                    }
-                }
-            }
-        }
+        const children = this.focusGroup._childGroups;
 
         if (children.length) {
             this.siblings = children;
@@ -71,24 +60,7 @@ export class EditorGroupNavigator {
         this.ensureFocusGroup();
         if (!this.focusGroup) { return; }
 
-        const parents = new Set<InstructionGroupEditor>();
-
-        editorsLoop: for (const editor of this.parent.getGroups()) {
-            for (const instruction of editor._instructions) {
-                if (!instruction.isBranch()) { continue; }
-                const targets = instruction.getBranchTargets();
-                if (targets) {
-                    for (const target of targets) {
-                        if (target === this.focusGroup) {
-                            parents.add(editor);
-                            continue editorsLoop;
-                        }
-                    }
-                }
-            }
-        }
-
-        const parentsArr = Array.from(parents);
+        const parentsArr = this.focusGroup._parentGroups;
 
         if (parentsArr.length) {
             this.siblings = parentsArr;

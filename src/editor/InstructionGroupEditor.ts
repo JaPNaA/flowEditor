@@ -14,13 +14,17 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public collisionType = InstructionGroupEditor.collisionType;
     public graphicHitbox: Hitbox<QuadtreeElmChild>;
 
-    /** DO NOT USE OUTSIDE `UndoableAction` */
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _instructions: Instruction[] = [];
-    /** DO NOT USE OUTSIDE `UndoableAction` */
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _lines: InstructionLine[] = [];
-    /** DO NOT USE OUTSIDE `UndoableAction` */
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
+    public _childGroups: InstructionGroupEditor[] = [];
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
+    public _parentGroups: InstructionGroupEditor[] = [];
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
-    /** DO NOT USE OUTSIDE `UndoableAction` */
+    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _isStartGroup = false;
 
     private static fontSize = 16;
@@ -218,18 +222,10 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     }
 
     public relinkParentsToFinalBranch() {
-        // todo: improve efficiency (currently scanning because child branches
-        // don't report when they change targets)
-        let newTarget: InstructionGroupEditor | null = null;
+        let newTarget: InstructionGroupEditor | null = this._childGroups[this._childGroups.length - 1] || null;
 
-        for (const instruction of this._instructions) {
-            if (instruction.isBranch()) {
-                newTarget = instruction.getBranchTargets()?.[0] || null;
-            }
-        }
-
-        for (const editor of this.parentEditor.getGroups()) {
-            for (const instruction of editor._instructions) {
+        for (const parent of this._parentGroups) {
+            for (const instruction of parent._instructions) {
                 if (!instruction.isBranch()) { continue; }
                 const targets = instruction.getBranchTargets();
                 const newTargets = [];
@@ -305,13 +301,13 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.parentEditor.undoLog.freeze();
 
         for (const instruction of this.data.instructions) {
-            this.addInstructionLine(instruction);
+            this.addInstruction(instruction);
         }
 
         let index = 0;
         for (const branch of this.data.branches) {
-            const line = this.addInstructionLine(branch.instruction);
-            line.setBranchTargets(this.initBranchTargets[index++]);
+            const instruction = this.addInstruction(branch.instruction);
+            instruction.setBranchTargets(this.initBranchTargets[index++]);
         }
 
         this.parentEditor.undoLog.thaw();
@@ -567,7 +563,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         });
     }
 
-    private addInstructionLine(data: any) {
+    private addInstruction(data: any) {
         const instruction = this.instructionFromData(data);
         const lines = instruction.getLines();
         instruction._setParent(this);

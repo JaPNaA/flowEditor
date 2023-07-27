@@ -195,8 +195,30 @@ export class BranchTargetChangeAction implements UndoableAction {
 
     public perform(): void {
         this.previousBranchTarget = this.instruction.branchTarget;
+
+        // remove parent/child relation
+        if (this.previousBranchTarget) {
+            removeElmFromArray(
+                this.previousBranchTarget,
+                this.instruction.parentInstruction.parentGroup._childGroups
+            );
+            removeElmFromArray(
+                this.instruction.parentInstruction.parentGroup,
+                this.previousBranchTarget._parentGroups
+            );
+        }
+
+        // update instruction
         this.instruction.branchTarget = this.branchTarget;
         this.instruction._updateElmState();
+
+        // update parent/child relations
+        if (this.branchTarget) {
+            this.branchTarget._parentGroups.push(this.instruction.parentInstruction.parentGroup);
+            this.instruction.parentInstruction.parentGroup._childGroups.push(this.branchTarget);
+        }
+
+        // update render hitboxes
         this.instruction.parentInstruction.parentGroup.updateAfterMove();
     }
 
