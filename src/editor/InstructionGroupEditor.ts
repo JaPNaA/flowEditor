@@ -314,10 +314,9 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         const elm = this.elm.getHTMLElement();
 
         // debug: draw graphic hitbox
-        X.strokeStyle = "#f0f";
-        X.lineWidth = 1;
-        X.strokeRect(this.graphicRect.x, this.graphicRect.y, this.graphicRect.width, this.graphicRect.height);
-
+        // X.strokeStyle = "#f0f";
+        // X.lineWidth = 1;
+        // X.strokeRect(this.graphicRect.x, this.graphicRect.y, this.graphicRect.width, this.graphicRect.height);
 
         if (this._isStartGroup) {
             X.fillStyle = "#35f035";
