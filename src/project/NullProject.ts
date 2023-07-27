@@ -46,8 +46,8 @@ export class NullProject implements Project {
     public async getFlowSave(path: string): Promise<EditorSaveData> {
         if (path !== "localstorage") { throw new Error("Flow not found"); }
         const stored = localStorage['flowEditorSave'];
+        this.lastRead = stored;
         if (stored) {
-            this.lastRead = stored;
             return JSON.parse(stored);
         } else {
             return {
