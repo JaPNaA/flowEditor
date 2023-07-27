@@ -200,9 +200,16 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     }
 
     public relinkParentsToFinalBranch() {
-        let newTarget: InstructionGroupEditor | null = this._childGroups[this._childGroups.length - 1] || null;
+        let newTarget: InstructionGroupEditor | null = null;
+        for (let i = this._childGroups.length - 1; i >= 0; i--) {
+            if (this._childGroups[i] !== this) {
+                newTarget = this._childGroups[i];
+            }
+        }
 
-        for (const parent of this._parentGroups) {
+        // loop backwards since we're removing our parents
+        for (let i = this._parentGroups.length - 1; i >= 0; i--) {
+            const parent = this._parentGroups[i];
             for (const instruction of parent._instructions) {
                 if (!instruction.isBranch()) { continue; }
                 const targets = instruction.getBranchTargets();
@@ -560,7 +567,9 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.graphicRect.width = xEnd - xStart;
         this.graphicRect.height = yEnd - yStart;
 
-        this.graphicHitboxUpdateCallback();
+        if (!this.toBeRemoved) {
+            this.graphicHitboxUpdateCallback();
+        }
     }
 
     private insertLineAndUpdateCursor(lineIndex: number) {
