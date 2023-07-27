@@ -427,6 +427,8 @@ export class InstructionGroupEditor extends WorldElm {
         this.insertInstruction(jump, this._instructions.length);
         jump.setBranchTargets([newGroup]);
 
+        newGroup.setupConstruct();
+
         this.parentEditor.undoLog.endGroup();
 
         return newGroup;
