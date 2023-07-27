@@ -12,6 +12,7 @@ export class EditorContainer extends Component {
         canvas: { alpha: true },
         htmlOverlay: { relativeToWorld: true },
         ticks: { fixedTick: false, enableDirtySystem: true },
+        collision: { autoCheck: false },
         parentElement: this.elm.getHTMLElement()
     });
 
