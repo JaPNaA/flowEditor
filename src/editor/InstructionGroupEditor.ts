@@ -76,6 +76,14 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
     }
 
+    public showElm() {
+        if (this.elmVisible) { return; }
+        this.engine.htmlOverlay.elm.append(this.elm);
+        this.elmVisible = true;
+        this.updateHeight();
+        this.updateAfterMove();
+    }
+
     public appendInputCapture(inputCapture: TextareaUserInputCapture) {
         inputCapture.appendTo(this.elm);
     }
@@ -340,10 +348,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         X.fill();
 
         if (!this.elmVisible) {
-            this.engine.htmlOverlay.elm.append(this.elm);
-            this.elmVisible = true;
-            this.updateHeight();
-            this.updateAfterMove();
+            this.showElm();
         }
 
         elm.style.top = this.rect.y + "px";

@@ -345,6 +345,7 @@ export class Editor extends WorldElmWithComponents {
         }
         const newEditor = new InstructionGroupEditor(this, newData);
         this.addGroup(newEditor);
+        newEditor.showElm(); // show so that it can be focused
         newEditor.requestNewLine(0);
         this.setEditMode();
         this.cursor.setPosition({
