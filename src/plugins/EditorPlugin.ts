@@ -1,3 +1,4 @@
+import { AutoCompleteSuggester } from "../editor/editing/AutoComplete";
 import { InstructionBlueprintMin } from "../editor/instruction/InstructionBlueprintRegistery";
 import { Instruction } from "../editor/instruction/instructionTypes";
 import { ExecuterContainer } from "../executer/ExecuterContainer";
@@ -7,6 +8,7 @@ export interface EditorPlugin {
     instructionBlueprints: InstructionBlueprintMin[];
     parse(data: any): Instruction | undefined;
     executer?: Executer;
+    autocomplete?: [symbol, AutoCompleteSuggester][];
 }
 
 export interface Executer {

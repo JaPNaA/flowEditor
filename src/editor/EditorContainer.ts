@@ -89,17 +89,25 @@ export class EditorContainer extends Component {
         this.engine.world.addElm(this.editor);
 
         for (const plugin of this.plugins) {
-            this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
-            this.editor.deserializer.registerDeserializer(plugin.parse);
+            this._addPluginToEditor(plugin);
         }
 
         return this.setup();
     }
 
     public registerPlugin(plugin: EditorPlugin) {
+        this._addPluginToEditor(plugin);
+        this.plugins.push(plugin);
+    }
+
+    private _addPluginToEditor(plugin: EditorPlugin) {
         this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
         this.editor.deserializer.registerDeserializer(plugin.parse);
-        this.plugins.push(plugin);
+        if (plugin.autocomplete) {
+            for (const [key, suggester] of plugin.autocomplete) {
+                this.editor.cursor.autocomplete.registerSuggester(key, suggester);
+            }
+        }
     }
 
     public compile() {
