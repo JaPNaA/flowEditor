@@ -505,13 +505,15 @@ class ChooseInstruction extends InstructionLine implements OneLineInstruction {
 
     public export(): (VisualNovelControlItem | ControlItem)[] {
         const options = this.choicesSpan.getValue().split(",").map(e => e.trim());
-        return [{
+        return [{ // show options
             visualNovelCtrl: "choose",
             options: options
-        }, {
+        }, { // get input
             ctrl: "input",
             options: options,
             variable: this.variableSpan.getValue()
+        }, { // hide options
+            visualNovelCtrl: "choose"
         }]
     }
 }
@@ -602,6 +604,8 @@ class ChoiceBranchMacro extends Instruction {
             ctrl: "input",
             options: choices,
             variable: "__choice__"
+        }, { // hide options
+            visualNovelCtrl: "choose"
         }];
         for (let i = 0; i < choices.length - 1; i++) {
             const offset = this.branchOffsets[i];

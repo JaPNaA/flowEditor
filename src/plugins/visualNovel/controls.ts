@@ -66,7 +66,7 @@ export interface ControlSayAdd {
  */
 export interface ControlChoose {
     visualNovelCtrl: "choose";
-    options: string[];
+    options?: string[];
 }
 
 export interface ControlSpeechBubbleSettings {

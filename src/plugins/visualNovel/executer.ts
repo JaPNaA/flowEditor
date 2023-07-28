@@ -78,6 +78,9 @@ export class VisualNovelExecuter implements Executer {
         this.executerContainer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
         this.game.setProject(executerContainer.getProject());
+        this.game.getChooserChosenEventBus().subscribe(choice => {
+            this.executerContainer.input(choice);
+        });
         this.stringVariables.length = 0;
 
         return Promise.resolve();
@@ -107,8 +110,11 @@ export class VisualNovelExecuter implements Executer {
                     src: data.src && replaceVariables(data.src, this.getVariable)
                 });
             case "choose":
-                this.game.requestChoice(data.options.map(v => visualNovelMdToHTML(v, this.getVariable)))
-                    .then(val => this.executerContainer.input(val));
+                if (data.options) {
+                    this.game.showChoices(data.options.map(v => visualNovelMdToHTML(v, this.getVariable)));
+                } else {
+                    this.game.hideChoices();
+                }
                 return Promise.resolve();
             case "speechBubbleSettings":
                 this.game.setSpeechBubbleSettings(data);
@@ -221,11 +227,16 @@ class VisualNovelGame {
         await this.speechBubble.onNextRequested.promise();
     }
 
-    public async requestChoice(choices: string[]) {
-        this.chooser.requestChoice(choices);
-        const val = await this.chooser.onChosen.promise();
+    public showChoices(choices: string[]) {
+        this.chooser.showChoices(choices);
+    }
+
+    public hideChoices() {
         this.chooser.clear();
-        return val;
+    }
+
+    public getChooserChosenEventBus() {
+        return this.chooser.onChosen;
     }
 
     public setBackground(background: ControlBackground) {
@@ -323,7 +334,7 @@ class Chooser extends WorldElmWithComponents {
         this.engine.htmlOverlay.elm.append(this.elm);
     }
 
-    public requestChoice(choices: string[]) {
+    public showChoices(choices: string[]) {
         const style = this.elm.getHTMLElement().style;
         this.choices = choices;
         if (choices.length <= 4) {
@@ -339,7 +350,6 @@ class Chooser extends WorldElmWithComponents {
             style.rowGap = "16px";
             style.width = "1000px";
         }
-
 
         let i = 0;
         for (const choice of choices) {
@@ -361,7 +371,7 @@ class Chooser extends WorldElmWithComponents {
     public setState(choices: string[] | undefined) {
         this.clear();
         if (choices) {
-            this.requestChoice(choices);
+            this.showChoices(choices);
         }
     }
 
