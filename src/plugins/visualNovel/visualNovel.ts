@@ -482,7 +482,7 @@ class ChooseInstruction extends InstructionLine implements OneLineInstruction {
     private choicesSpan: Editable;
     public isBranch: boolean = false;
 
-    constructor(data: ControlChoose) {
+    constructor(data: any) {
         super();
 
         this.setAreas(
@@ -495,12 +495,24 @@ class ChooseInstruction extends InstructionLine implements OneLineInstruction {
         this.elm.class("control");
     }
 
-    public serialize(): ControlChoose {
+    public serialize(): any {
         return {
             visualNovelCtrl: "choose",
             options: this.choicesSpan.getValue().split(",").map(e => e.trim()),
             variable: this.variableSpan.getValue()
         };
+    }
+
+    public export(): (VisualNovelControlItem | ControlItem)[] {
+        const options = this.choicesSpan.getValue().split(",").map(e => e.trim());
+        return [{
+            visualNovelCtrl: "choose",
+            options: options
+        }, {
+            ctrl: "input",
+            options: options,
+            variable: this.variableSpan.getValue()
+        }]
     }
 }
 
@@ -585,8 +597,11 @@ class ChoiceBranchMacro extends Instruction {
         const choices = this.getChoices();
         const output: (VisualNovelControlItem | ControlItem)[] = [{
             visualNovelCtrl: "choose",
-            variable: "__choice__",
             options: choices
+        }, {
+            ctrl: "input",
+            options: choices,
+            variable: "__choice__"
         }];
         for (let i = 0; i < choices.length - 1; i++) {
             const offset = this.branchOffsets[i];
@@ -596,7 +611,7 @@ class ChoiceBranchMacro extends Instruction {
                     op: "<=",
                     v1: "__choice__",
                     v2: i,
-                    offset: offset - i - 1
+                    offset: offset - output.length
                 });
             } else {
                 output.push({ ctrl: 'nop' });
@@ -608,7 +623,7 @@ class ChoiceBranchMacro extends Instruction {
             if (offset) {
                 output.push({
                     ctrl: "jump",
-                    offset: offset - choices.length
+                    offset: offset - output.length
                 });
             } else {
                 output.push({ ctrl: 'nop' });

@@ -58,9 +58,14 @@ export interface ControlSayAdd {
     text: string;
 }
 
+/**
+ * ControlChoose shows a select option on the screen. When the user clicks on
+ * an option, the flow runner must be on an input instruction and will recieve
+ * an input.
+ * (ControlChoose does not set variables.)
+ */
 export interface ControlChoose {
     visualNovelCtrl: "choose";
-    variable: string;
     options: string[];
 }
 

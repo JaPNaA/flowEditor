@@ -107,12 +107,9 @@ export class VisualNovelExecuter implements Executer {
                     src: data.src && replaceVariables(data.src, this.getVariable)
                 });
             case "choose":
-                return this.game.requestChoice(
-                    data.options.map(v => visualNovelMdToHTML(v, this.getVariable))
-                ).then(val => {
-                    this.executerContainer.log.logSecondary(`<- ${data.options[val]}`);
-                    this.executerContainer.writeVariable(data.variable, val);
-                });
+                this.game.requestChoice(data.options.map(v => visualNovelMdToHTML(v, this.getVariable)))
+                    .then(val => this.executerContainer.input(val));
+                return Promise.resolve();
             case "speechBubbleSettings":
                 this.game.setSpeechBubbleSettings(data);
                 return Promise.resolve();

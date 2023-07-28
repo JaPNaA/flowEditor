@@ -7,7 +7,7 @@ import { requestFile } from "../utils.js";
 
 export class ExecuterContainer extends Component {
     public log = new OutputLog();
-    private input = new ChooseInput();
+    private chooseInput = new ChooseInput();
     private runner?: FlowRunner;
     private paused = false;
     private lastChoice: any[] = [];
@@ -44,15 +44,10 @@ export class ExecuterContainer extends Component {
             this.outputDisplays = new Elm().class("outputDisplays"),
             this.saves,
             this.log,
-            this.input
+            this.chooseInput
         );
 
-        this.input.selectCallback = choice => {
-            if (!this.runner) { return; }
-            this.runner.input(choice);
-            this.log.logSecondary("<- " + this.lastChoice[choice]);
-            this.continueExecute();
-        };
+        this.chooseInput.selectCallback = choice => this.input(choice);
     }
 
     public getProject() {
@@ -71,6 +66,14 @@ export class ExecuterContainer extends Component {
         return this.runner?.getVariable(key);
     }
 
+    public input(value: number) {
+        if (!this.runner) { return; }
+        this.chooseInput.clear();
+        this.runner.input(value);
+        this.log.logSecondary("<- " + this.lastChoice[value]);
+        this.continueExecute();
+    }
+
     public addOutputDisplay(elm: Elm) {
         this.outputDisplays.append(elm);
     }
@@ -79,7 +82,7 @@ export class ExecuterContainer extends Component {
         const compiled = appHooks.getCompiledFlowFromEditor();
         // this.resizeHandle.uncollapse();
         this.log.clear();
-        this.input.clear();
+        this.chooseInput.clear();
         pluginHooks.stopExecution();
         this.runner = new FlowRunner({ flow: compiled });
         this.saves.setFlowRunner(this.runner);
@@ -113,7 +116,7 @@ export class ExecuterContainer extends Component {
                 this.log.log(JSON.stringify(output.data));
             }
         } else if (output.type === "input") {
-            this.input.requestChoice(output.choices);
+            this.chooseInput.requestChoice(output.choices);
             this.lastChoice = output.choices;
             this.paused = true;
         }
