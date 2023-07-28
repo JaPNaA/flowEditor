@@ -149,7 +149,8 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
 
 class ControlJumpLine extends BranchInstructionLine implements OneLineInstruction {
     private editable = this.createEditable('');
-    public isBranch: boolean = true;
+    public isBranch = true;
+    public isAlwaysJump = true;
 
     constructor() {
         super();

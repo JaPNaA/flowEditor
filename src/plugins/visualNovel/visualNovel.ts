@@ -530,6 +530,10 @@ class ChoiceBranchMacro extends Instruction {
         return true;
     }
 
+    public isAlwaysJump(): boolean {
+        return true;
+    }
+
     public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
         const targets: (InstructionGroupEditor | null)[] = [];
         for (const line of this.choiceLines) {

@@ -111,15 +111,15 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         }
 
         if (instruction.isBranch()) {
-            this.splitAfterIfNeeded(currentLine);
+            this.splitAfterIfNeeded(currentLine, instruction.isAlwaysJump());
         }
         this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
     }
 
-    private splitAfterIfNeeded(thisIndex: number) {
+    private splitAfterIfNeeded(thisIndex: number, thisIsAlwaysJump: boolean) {
         const nextInstruction = this.parentInstruction.parentGroup.getInstructions()[thisIndex + 1];
 
-        if (nextInstruction && !nextInstruction.isBranch()) {
+        if (nextInstruction && (thisIsAlwaysJump || !nextInstruction.isBranch())) {
             this.parentInstruction.parentGroup.splitAtInstruction(thisIndex + 1);
         }
     }

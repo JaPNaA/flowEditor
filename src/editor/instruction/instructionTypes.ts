@@ -42,8 +42,17 @@ export abstract class Instruction {
         return this.parentGroup.parentEditor.requestSelectInstructionGroup();
     }
 
+    /** Is the instruction a branch? */
     public isBranch() {
-        return false; // this.view instanceof BranchInstructionLineView;
+        return false;
+    }
+
+    /**
+     * Does this instruction always jump?
+     * If returns true, `isBranch` must also return true.
+     */
+    public isAlwaysJump() {
+        return false;
     }
 
     public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
@@ -169,9 +178,14 @@ export abstract class InstructionLine extends Component {
 }
 
 export interface OneLineInstruction extends InstructionLine {
+    /** Serialize to be loaded into the editor later */
     serialize(): any;
+    /** Export into an executable instruction */
     export?(): any;
+    /** Instruction is a branch? */
     isBranch: boolean;
+    /** Does this instruction always jump? */
+    isAlwaysJump?: boolean;
 }
 
 /**
@@ -187,11 +201,13 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
         this.addLine(line);
     }
 
-    public getBranchTargets(): InstructionGroupEditor[] | null {
+    public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
         if (this.line instanceof BranchInstructionLine) {
             const branchTarget = this.line.getBranchTarget();
             if (branchTarget) {
                 return [branchTarget];
+            } else {
+                return [null];
             }
         }
         return null;
@@ -215,6 +231,10 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
 
     public isBranch(): boolean {
         return this.line.isBranch;
+    }
+
+    public isAlwaysJump(): boolean {
+        return this.line.isAlwaysJump || false;
     }
 
     public removeLine(line: InstructionLine): boolean {
