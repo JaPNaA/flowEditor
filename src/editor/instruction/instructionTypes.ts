@@ -180,8 +180,8 @@ export abstract class InstructionLine extends Component {
 export interface OneLineInstruction extends InstructionLine {
     /** Serialize to be loaded into the editor later */
     serialize(): any;
-    /** Export into an executable instruction */
-    export?(): any;
+    /** Export into an executable instructions */
+    export?(): any[];
     /** Instruction is a branch? */
     isBranch: boolean;
     /** Does this instruction always jump? */
@@ -253,7 +253,7 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
 
     public export(): any[] {
         if (this.line.export) {
-            return [this.line.export()];
+            return this.line.export();
         } else {
             return [this.line.serialize()];
         }

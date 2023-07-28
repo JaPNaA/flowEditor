@@ -212,8 +212,8 @@ class DisplayMacro extends InstructionLine implements OneLineInstruction {
         return { visualNovelCtrl: "display", text: this.textEditable.getValue() };
     }
 
-    public export(): ControlSay {
-        return { visualNovelCtrl: "say", char: "", text: this.textEditable.getValue() };
+    public export(): ControlSay[] {
+        return [{ visualNovelCtrl: "say", char: "", text: this.textEditable.getValue() }];
     }
 }
 
@@ -254,10 +254,10 @@ class SetTextRevealSpeedInstruction extends InstructionLine implements OneLineIn
         this.elm.class("secondary");
     }
 
-    public export(): ControlSpeechBubbleSettings {
+    public export(): ControlSpeechBubbleSettings[] {
         const speed = parseFloat(this.editable.getValue());
         if (isNaN(speed)) { throw new Error("Not a number"); }
-        return { visualNovelCtrl: "speechBubbleSettings", revealSpeed: speed };
+        return [{ visualNovelCtrl: "speechBubbleSettings", revealSpeed: speed }];
     }
 
     public serialize() {
@@ -285,11 +285,11 @@ class SetSpeechBubblePositionInstruction extends InstructionLine implements OneL
         this.elm.class("secondary");
     }
 
-    public export(): ControlSpeechBubbleSettings {
+    public export(): ControlSpeechBubbleSettings[] {
         const x = parseFloat(this.xEditable.getValue());
         const y = parseFloat(this.yEditable.getValue());
         if (isNaN(x) || isNaN(y)) { throw new Error("Not a number"); }
-        return { visualNovelCtrl: "speechBubbleSettings", positionX: x, positionY: y };
+        return [{ visualNovelCtrl: "speechBubbleSettings", positionX: x, positionY: y }];
     }
 
     public serialize() {
@@ -402,13 +402,13 @@ class BackgroundMusicVolumeInstruction extends InstructionLine implements OneLin
         this.elm.class("secondary");
     }
 
-    public export(): ControlBackgroundMusicSettings {
+    public export(): ControlBackgroundMusicSettings[] {
         const volume = parseFloat(this.editable.getValue());
         if (isNaN(volume)) { throw new Error("Not a number"); }
-        return {
+        return [{
             visualNovelCtrl: "bgmSettings",
             volume: volume
-        };
+        }];
     }
 
     public serialize() {
@@ -458,13 +458,13 @@ class SFXVolumeInstruction extends InstructionLine implements OneLineInstruction
         this.elm.class("secondary");
     }
 
-    public export(): ControlSFXSettings {
+    public export(): ControlSFXSettings[] {
         const volume = parseFloat(this.editable.getValue());
         if (isNaN(volume)) { throw new Error("Not a number"); }
-        return {
+        return [{
             visualNovelCtrl: "sfxSettings",
             volume: volume
-        };
+        }];
     }
 
     public serialize() {
