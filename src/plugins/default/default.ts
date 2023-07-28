@@ -5,8 +5,10 @@ import { EditorPlugin } from "../EditorPlugin.js";
 import { Editable } from "../../editor/editing/Editable.js";
 import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "../../FlowRunner.js";
 import { TextareaUserInputCaptureAreas } from "../../editor/editing/TextareaUserInputCapture.js";
-import { globalAutocompleteTypes } from "../../editor/editing/AutoComplete.js";
+import { AutoCompleteSuggester, globalAutocompleteTypes } from "../../editor/editing/AutoComplete.js";
 import { NewInstruction } from "../../editor/instruction/NewInstruction.js";
+
+const autocompleteTypeCompareOp = Symbol();
 
 export class DefaultPlugin implements EditorPlugin {
     name = "Default";
@@ -56,6 +58,26 @@ export class DefaultPlugin implements EditorPlugin {
         create: () => new JSONInstruction("")
     }];
 
+    autocomplete: [symbol, AutoCompleteSuggester][] = [
+        [autocompleteTypeCompareOp, {
+            learn() { },
+            unlearn() { },
+            suggest(editable) {
+                if (editable.getValue()) { return null; }
+                return [{
+                    title: "=",
+                    fill: "=",
+                }, {
+                    title: "<",
+                    fill: "<"
+                }, {
+                    title: "<=",
+                    fill: "<="
+                }];
+            },
+        }]
+    ]
+
     parse(data: any): Instruction | undefined {
         if (!isControlItem(data)) {
             return;
@@ -97,10 +119,9 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
             this.v2Span = this.createEditable(data.v2),
             ", goto..."
         ).class("jump");
-
+        this.opSpan.autoCompleteType = autocompleteTypeCompareOp;
         this.v1Span.autoCompleteType = globalAutocompleteTypes.variable;
-
-        if (data.op == "=") { this.opSpan.class("eq"); }
+        this.v2Span.autoCompleteType = globalAutocompleteTypes.variable;
     }
 
     public serialize(): ControlBranch {
