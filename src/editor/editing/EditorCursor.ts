@@ -155,12 +155,26 @@ export class EditorCursor extends Elm<"span"> {
                     this.autocomplete.removedValue(this.lastActiveEditable);
                     this.lastActiveEditable.setValue(text);
                     this.autocomplete.enteredValue(this.lastActiveEditable);
-                    this.setPosition({
-                        group: this.position.group,
-                        char: this.position.char,
-                        editable: Math.min(this.position.editable + 1, this.position.group.getLines()[this.position.line].getLastEditableIndex()),
-                        line: this.position.line
-                    });
+
+                    this.allowAutocomplete = false;
+                    const currLine = this.position.group.getLines()[this.position.line];
+                    if (this.position.editable >= currLine.getLastEditableIndex()) {
+                        // end of current editable
+                        this.setPosition({
+                            group: this.position.group,
+                            char: text.length,
+                            editable: this.position.editable,
+                            line: this.position.line
+                        });
+                    } else {
+                        // next editable
+                        this.setPosition({
+                            group: this.position.group,
+                            char: 0,
+                            editable: Math.min(this.position.editable + 1, currLine.getLastEditableIndex()),
+                            line: this.position.line
+                        });
+                    }
                     break;
                 default:
                     preventDefault = false;
