@@ -43,11 +43,7 @@ export class EditorCursor extends Elm<"span"> {
                 if (group) {
                     const position = group.selectionToPosition(selection);
                     if (position) {
-                        this._setPosition(position);
-                        this.setVirtualCursorPosition(position, position, false);
-                        this.setTextareInputCursorPosition(position);
-                        position.group.appendInputCapture(this.inputCapture);
-                        this.inputCapture.focus();
+                        this.setPosition(position);
                         this.onClickGroup.send(group);
 
                         this.allowAutocomplete = false;
@@ -64,10 +60,26 @@ export class EditorCursor extends Elm<"span"> {
             if (!this.position) { return; }
             const newPosStart = this.position.group.calculateNewPosition(this.position, relPosStart);
             const newPosEnd = this.position.group.calculateNewPosition(this.position, relPosEnd);
+
+            // select entire editable if is placeholder
+            if (
+                newPosStart.char === newPosEnd.char &&
+                newPosStart.editable === newPosEnd.editable &&
+                newPosStart.group === newPosEnd.group &&
+                newPosStart.line === newPosEnd.line
+            ) {
+                const editable = this.getEditableFromPosition(newPosStart);
+                if (editable?.placeholder) {
+                    relPosStart[2] = newPosStart.char = 0;
+                    relPosEnd[2] = newPosEnd.char = editable.getValue().length;
+                    editable.placeholder = false;
+                }
+            }
+
             this.setVirtualCursorPosition(newPosStart, newPosEnd, backwards);
             if (this.position.group !== newPosStart.group || this.position.line !== newPosStart.line) {
                 this.position.group.appendInputCapture(this.inputCapture);
-                this.setTextareInputCursorPosition(newPosStart);
+                this.setTextareInputCursorPosition(newPosStart, newPosEnd);
             }
             this._setPosition(newPosStart);
             this.inputCapture.focus();
@@ -213,11 +225,32 @@ export class EditorCursor extends Elm<"span"> {
     }
 
     public setPosition(position: EditorCursorPositionAbsolute) {
-        this._setPosition(position);
-        this.clampPosition();
-        position.group.appendInputCapture(this.inputCapture);
-        this.setVirtualCursorPosition(this.position!, this.position!, false);
-        this.setTextareInputCursorPosition(this.position!);
+        const editable = this.getEditableFromPosition(position);
+        if (editable?.placeholder) { // placeholder handling
+            editable.placeholder = false;
+            let posStart = {
+                group: position.group,
+                line: position.line,
+                editable: position.editable,
+                char: 0
+            };
+            let posEnd = {
+                group: position.group,
+                line: position.line,
+                editable: position.editable,
+                char: editable.getValue().length
+            };
+            this._setPosition(posStart);
+            position.group.appendInputCapture(this.inputCapture);
+            this.setVirtualCursorPosition(posStart, posEnd, false);
+            this.setTextareInputCursorPosition(posStart, posEnd);
+        } else {
+            this._setPosition(position);
+            this.clampPosition();
+            position.group.appendInputCapture(this.inputCapture);
+            this.setVirtualCursorPosition(this.position!, this.position!, false);
+            this.setTextareInputCursorPosition(this.position!, this.position!);
+        }
 
         this.inputCapture.focus();
     }
@@ -258,9 +291,15 @@ export class EditorCursor extends Elm<"span"> {
         return line.getEditableFromIndex(position.editable);
     }
 
-    private setTextareInputCursorPosition(position: Readonly<EditorCursorPositionAbsolute>) {
-        this.updateInputCaptureContext(position);
-        this.inputCapture.setPositionOnCurrentLine(position.editable, position.char);
+    private setTextareInputCursorPosition(
+        positionStart: Readonly<EditorCursorPositionAbsolute>,
+        positionEnd: Readonly<EditorCursorPositionAbsolute>
+    ) {
+        this.updateInputCaptureContext(positionStart);
+        this.inputCapture.setPositionsOnCurrentLine(
+            positionStart.editable, positionStart.char,
+            positionEnd.editable, positionEnd.char
+        );
     }
 
     private clampPosition() {

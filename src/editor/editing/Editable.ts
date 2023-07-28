@@ -3,9 +3,20 @@ import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { UserInputEvent } from "./TextareaUserInputCapture.js";
 
 export class Editable extends Elm<"span"> {
-    private value: string;
     public onChange = new EventBus<UserInputEvent>();
+    /** The type of value autocomplete tries to complete this editable's value with */
     public autoCompleteType?: symbol;
+    /**
+     * Set to true if just created by a NewInstruction and is undefined. Set
+     * to false during construction of instruction to mark as not placeholder.
+     * 
+     * If true, the first time EditorCursor activates the editable, the entire
+     * editable will be selected, and autocomplete should treat the editable as
+     * empty.
+     */
+    public placeholder?: boolean;
+
+    private value: string;
 
     constructor(initialText: string) {
         super("span");

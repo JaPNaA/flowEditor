@@ -408,6 +408,16 @@ export class TextareaUserInputCapture {
         this.setTextareaCursorPositionIfNeeded(indexPos);
     }
 
+    /** Sets the cursor positions on the current line */
+    public setPositionsOnCurrentLine(
+        editableOrIndexStart: number | Editable, characterIndexStart: number,
+        editableOrIndexEnd: number | Editable, characterIndexEnd: number
+    ) {
+        const indexPosStart = this.getIndexOnCurrentLine(editableOrIndexStart, characterIndexStart);
+        const indexPosEnd = this.getIndexOnCurrentLine(editableOrIndexEnd, characterIndexEnd);
+        this.setTextareaCursorPositionsIfNeeded(indexPosStart, indexPosEnd);
+    }
+
     private getIndexOnCurrentLine(editableOrIndex: number | Editable, characterIndex: number) {
         let curr = 6; // 6 for '\n  ' at start and after above line
         for (const area of this.aboveLine) {

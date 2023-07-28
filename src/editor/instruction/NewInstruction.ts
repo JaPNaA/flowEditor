@@ -85,6 +85,15 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 
     public changeView(instruction: Instruction) {
+        // set all instruction's editables to placeholder if undefined
+        for (const line of instruction.getLines()) {
+            for (const editable of line.getEditables()) {
+                if (editable.placeholder === undefined) {
+                    editable.placeholder = true;
+                }
+            }
+        }
+
         this.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
         const currentLine = this.getCurrentLine();
         const currentInstructionIndex = this.parentInstruction.getIndex();
