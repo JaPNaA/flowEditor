@@ -9,7 +9,7 @@ export class ExecuterContainer extends Component {
     public log = new OutputLog();
     private chooseInput = new ChooseInput();
     private runner?: FlowRunner;
-    private paused = false;
+    private paused = true;
     private lastChoice: any[] = [];
     private outputDisplays: Elm;
     private saves = new StateSaver(this);
@@ -71,7 +71,11 @@ export class ExecuterContainer extends Component {
         this.chooseInput.clear();
         this.runner.input(value);
         this.log.logSecondary("<- " + this.lastChoice[value]);
-        this.continueExecute();
+        this.resume();
+    }
+
+    public pause() {
+        this.paused = true;
     }
 
     public addOutputDisplay(elm: Elm) {
@@ -84,13 +88,15 @@ export class ExecuterContainer extends Component {
         this.log.clear();
         this.chooseInput.clear();
         pluginHooks.stopExecution();
+        this.paused = true;
         this.runner = new FlowRunner({ flow: compiled });
         this.saves.setFlowRunner(this.runner);
         pluginHooks.startExecution();
-        this.continueExecute();
+        this.resume();
     }
 
-    private continueExecute() {
+    public resume() {
+        if (!this.paused) { return; }
         if (!this.runner) { return; }
         this.paused = false;
         while (this.runner.isActive() && !this.paused) {
@@ -105,14 +111,8 @@ export class ExecuterContainer extends Component {
     private processOutput(output: FlowRunnerOutput | null) {
         if (!output) { return; }
         if (output.type === "default") {
-            const promise = pluginHooks.runInstruction(output.data);
-            if (promise) {
-                this.paused = true;
-                promise.then(() => {
-                    this.paused = false;
-                    this.continueExecute();
-                });
-            } else {
+            const successful = pluginHooks.runInstruction(output.data);
+            if (!successful) {
                 this.log.log(JSON.stringify(output.data));
             }
         } else if (output.type === "input") {

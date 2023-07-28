@@ -13,7 +13,7 @@ export interface EditorPlugin {
 
 export interface Executer {
     start(executerContainer: ExecuterContainer): Promise<void>;
-    run(data: any): Promise<void> | null;
+    run(data: any): boolean;
     stop(): Promise<void>;
     setState(state: any): void;
     getState(): any;

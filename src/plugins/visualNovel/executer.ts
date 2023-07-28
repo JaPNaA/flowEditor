@@ -78,67 +78,75 @@ export class VisualNovelExecuter implements Executer {
         this.executerContainer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
         this.game.setProject(executerContainer.getProject());
-        this.game.getChooserChosenEventBus().subscribe(choice => {
-            this.executerContainer.input(choice);
-        });
+        this.game.getChooserChosenEventBus()
+            .subscribe(choice => this.executerContainer.input(choice));
+        this.game.onContinue.subscribe(() => this.executerContainer.resume());
         this.stringVariables.length = 0;
 
         return Promise.resolve();
     }
 
-    public run(data: any): Promise<void> | null {
-        if (!this.game) { return Promise.reject("Game not started"); }
-        if (!isVisualNovelControlItem(data)) { return null; }
+    public run(data: any): boolean {
+        if (!this.game) { throw new Error("Game not started"); }
+        if (!isVisualNovelControlItem(data)) { return false; }
 
         switch (data.visualNovelCtrl) {
             case "say":
                 this.executerContainer.log.log(`${data.char}: "${data.text}"`);
-                return this.game.characterSay(
+                this.game.characterSay(
                     visualNovelMdToHTML(data.char, this.getVariable),
                     visualNovelMdToHTML(data.text, this.getVariable)
                 );
+                this.executerContainer.pause();
+                return true;
             case "say-add":
                 this.executerContainer.log.log('"' + data.text + '"');
-                return this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
+                this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
+                this.executerContainer.pause();
+                return true;
             case "show":
                 this.executerContainer.log.log(`Show ${data.src}`);
-                return this.game.showImage(replaceVariables(data.src, this.getVariable));
+                this.game.showImage(replaceVariables(data.src, this.getVariable));
+                return true;
             case "background":
                 this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
-                return this.game.setBackground({
+                this.game.setBackground({
                     ...data,
                     src: data.src && replaceVariables(data.src, this.getVariable)
                 });
+                return true;
             case "choose":
                 if (data.options) {
                     this.game.showChoices(data.options.map(v => visualNovelMdToHTML(v, this.getVariable)));
                 } else {
                     this.game.hideChoices();
                 }
-                return Promise.resolve();
+                return true;
             case "speechBubbleSettings":
                 this.game.setSpeechBubbleSettings(data);
-                return Promise.resolve();
+                return true;
             case "wait":
-                return new Promise(res => setTimeout(() => res(), data.time));
+                this.executerContainer.pause();
+                setTimeout(() => this.executerContainer.resume(), data.time);
+                return true;
             case "bgm":
                 this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
                 this.executerContainer.log.logSecondary("Set background music: " + data.src);
-                return Promise.resolve();
+                return true;
             case "bgmSettings":
                 this.game.setBackgroundMusicSettings(data);
-                return Promise.resolve();
+                return true;
             case "sfx":
                 this.game.playSFX(replaceVariables(data.src, this.getVariable));
-                return Promise.resolve();
+                return true;
             case "sfxSettings":
                 this.game.setSFXSettings(data);
-                return Promise.resolve();
+                return true;
             case "strset":
                 this.executerContainer.writeVariable(data.v, this.stringVariables.push(data.str));
-                return Promise.resolve();
+                return true;
             default:
-                return null;
+                return false;
         }
     }
 
@@ -171,6 +179,7 @@ export class VisualNovelExecuter implements Executer {
 }
 
 class VisualNovelGame {
+    public onContinue = new EventBus();
     private engine: JaPNaAEngine2d;
 
     private chooser = new Chooser();
@@ -190,6 +199,7 @@ class VisualNovelGame {
         this.engine.world.addElm(this.imageDisplayer);
         this.engine.world.addElm(this.speechBubble);
         this.engine.world.addElm(this.chooser);
+        this.speechBubble.onNextRequested.subscribe(this.onContinue);
     }
 
     public setProject(project: Project) {
@@ -199,32 +209,24 @@ class VisualNovelGame {
         this.audio.project = project;
     }
 
-    public async characterSay(charHTML: string, text: string) {
+    public characterSay(charHTML: string, text: string) {
         this.speechBubble.write(charHTML, text);
 
         if (this.engine.mouse.rightDown) {
             // skip
             this.speechBubble.showAllChars();
-            return new Promise<void>(res => {
-                setTimeout(res, 50);
-            });
+            setTimeout(() => this.onContinue.send(), 50);
         }
-
-        await this.speechBubble.onNextRequested.promise();
     }
 
-    public async characterSayAdd(text: string) {
+    public characterSayAdd(text: string) {
         this.speechBubble.writeAdd(text);
 
         if (this.engine.mouse.rightDown) {
             // skip
             this.speechBubble.showAllChars();
-            return new Promise<void>(res => {
-                setTimeout(res, 50);
-            });
+            setTimeout(() => this.onContinue.send(), 50);
         }
-
-        await this.speechBubble.onNextRequested.promise();
     }
 
     public showChoices(choices: string[]) {
