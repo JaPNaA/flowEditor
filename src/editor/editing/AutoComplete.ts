@@ -169,7 +169,7 @@ export class AutoComplete extends Component {
     }
 
     private defaultSuggester(editable: Editable, type: symbol): AutoCompleteSuggestion[] | null {
-        const value = editable.getValue();
+        const value = editable.placeholder ? "" : editable.getValue();
         const map = this.defaultHandlerPreviousValues.get(type);
         if (!map) { return null; }
 

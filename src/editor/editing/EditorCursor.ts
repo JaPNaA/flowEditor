@@ -72,7 +72,6 @@ export class EditorCursor extends Elm<"span"> {
                 if (editable?.placeholder) {
                     relPosStart[2] = newPosStart.char = 0;
                     relPosEnd[2] = newPosEnd.char = editable.getValue().length;
-                    editable.placeholder = false;
                 }
             }
 
@@ -168,6 +167,7 @@ export class EditorCursor extends Elm<"span"> {
                     this.lastActiveEditable.setValue(text);
                     this.autocomplete.enteredValue(this.lastActiveEditable);
 
+                    this.lastActiveEditable.placeholder = false;
                     this.allowAutocomplete = false;
                     const currLine = this.position.group.getLines()[this.position.line];
                     if (this.position.editable >= currLine.getLastEditableIndex()) {
@@ -227,7 +227,7 @@ export class EditorCursor extends Elm<"span"> {
     public setPosition(position: EditorCursorPositionAbsolute) {
         const editable = this.getEditableFromPosition(position);
         if (editable?.placeholder) { // placeholder handling
-            editable.placeholder = false;
+            this.allowAutocomplete = true;
             let posStart = {
                 group: position.group,
                 line: position.line,
@@ -271,6 +271,7 @@ export class EditorCursor extends Elm<"span"> {
 
     private setVirtualCursorPosition(positionStart: Readonly<EditorCursorPositionAbsolute>, positionEnd: Readonly<EditorCursorPositionAbsolute>, backwards: boolean) {
         if (this.lastActiveEditable) {
+            this.lastActiveEditable.placeholder = false;
             this.lastActiveEditable.updateAndDeactivate();
         }
         const editable = this.getEditableFromPosition(positionStart);
