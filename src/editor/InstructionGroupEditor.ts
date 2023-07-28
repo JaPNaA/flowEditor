@@ -10,6 +10,8 @@ import { NewInstruction } from "./instruction/NewInstruction.js";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes.js";
 
 export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
+    public static defaultWidth = 720 + 24; // 24 is padding
+
     public elm: Elm;
     public collisionType = InstructionGroupEditor.collisionType;
     public graphicHitbox: Hitbox<QuadtreeElmChild>;
@@ -28,7 +30,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public _isStartGroup = false;
 
     private static fontSize = 16;
-    private static defaultWidth = 720 + 24; // 24 is padding
     private static collisionType = Symbol();
     private hitbox = new Hitbox(this.rect, this);
 
@@ -471,10 +472,30 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
         this.parentEditor.addGroup(newGroup);
 
-        // link previous group here
-        const jump = this.instructionFromData({ ctrl: 'jump', offset: 0 });
-        this.insertInstruction(jump, this._instructions.length);
-        jump.setBranchTargets([newGroup]);
+        // add link from this to new group
+        const lastInstruction = this._instructions[this._instructions.length - 1];
+        if (lastInstruction.isAlwaysJump()) {
+            const targets = lastInstruction.getBranchTargets();
+            const newTargets = [];
+            if (targets) {
+                let linked = false;
+                for (const target of targets) {
+                    if (!linked && target === null) {
+                        newTargets.push(newGroup);
+                        linked = true;
+                    } else {
+                        newTargets.push(target);
+                    }
+                }
+                if (linked) {
+                    lastInstruction.setBranchTargets(newTargets);
+                }
+            }
+        } else {
+            const jump = this.instructionFromData({ ctrl: 'jump', offset: 0 });
+            this.insertInstruction(jump, this._instructions.length);
+            jump.setBranchTargets([newGroup]);
+        }
 
         newGroup.setupConstruct();
 

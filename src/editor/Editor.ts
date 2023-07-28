@@ -340,8 +340,8 @@ export class Editor extends WorldElmWithComponents {
             newData.x = 8;
             newData.y = 24;
         } else {
-            newData.x = this.engine.mouse.worldPos.x;
-            newData.y = this.engine.mouse.worldPos.y;
+            newData.x = this.engine.mouse.worldPos.x - InstructionGroupEditor.defaultWidth / 2;
+            newData.y = this.engine.mouse.worldPos.y - 16;
         }
         const newEditor = new InstructionGroupEditor(this, newData);
         this.addGroup(newEditor);
@@ -491,6 +491,10 @@ export class Editor extends WorldElmWithComponents {
         this.undoLog.startGroup();
         this.undoLog.perform(new AddGroupAction(group, this));
         this.undoLog.endGroup();
+
+        if (this.editMode) {
+            group.setEditMode();
+        }
     }
 
     public removeGroup(group: InstructionGroupEditor) {
