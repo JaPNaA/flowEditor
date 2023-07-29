@@ -1,3 +1,4 @@
+import { Editor } from "../editor/Editor";
 import { InstructionGroupEditor } from "../editor/InstructionGroupEditor";
 import { AutoCompleteSuggester } from "../editor/editing/AutoComplete";
 import { InstructionBlueprintMin } from "../editor/instruction/InstructionBlueprintRegistery";
@@ -28,7 +29,7 @@ export interface PluginRenderer {
 }
 
 export interface PluginAnalyser {
-    onFlowLoad(): void;
+    onFlowLoad(editor: Editor): void;
     onEdit(): void;
     dispose(): void;
 }

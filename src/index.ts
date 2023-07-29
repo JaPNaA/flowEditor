@@ -10,6 +10,7 @@ import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
 import { UILayout } from "./UILayout.js";
 import { InstructionGroupEditor } from "./editor/InstructionGroupEditor.js";
 import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
+import { Editor } from "./editor/Editor.js";
 
 export const appHooks = {
     focusEditor() {
@@ -77,6 +78,10 @@ export const pluginHooks = {
 
     setExecutionStates(states: { [x: string]: any }) {
         visualNovelPlugin.executer.setState(states[visualNovelPlugin.name]);
+    },
+
+    onEditorLoad(editor: Editor) {
+        visualNovelPlugin.analyser.onFlowLoad(editor);
     }
 };
 

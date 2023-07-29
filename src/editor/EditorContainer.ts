@@ -1,3 +1,4 @@
+import { pluginHooks } from "../index.js";
 import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorPlugin } from "../plugins/EditorPlugin.js";
 import { DetectedExternallyModifiedError, Project } from "../project/Project.js";
@@ -80,6 +81,7 @@ export class EditorContainer extends Component {
         }
         this.editorOpenFile = startFile;
         this.ignoreExternallyModified = false;
+        pluginHooks.onEditorLoad(this.editor);
     }
 
     public async setProject(project: Project) {

@@ -3,11 +3,12 @@ import { globalAutocompleteTypes } from "../../editor/editing/AutoComplete.js";
 import { Editable } from "../../editor/editing/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { InstructionBlueprintMin } from "../../editor/instruction/InstructionBlueprintRegistery.js";
-import { EditorPlugin } from "../EditorPlugin.js";
+import { EditorPlugin, PluginAnalyser } from "../EditorPlugin.js";
 import { ControlBackground, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instruction/instructionTypes.js";
 import { VisualNovelRenderer } from "./renderer.js";
+import { VisualNovelAnalyser } from "./analyser.js";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
@@ -115,6 +116,7 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }];
     executer = new VisualNovelExecuter();
     renderer = new VisualNovelRenderer();
+    analyser = new VisualNovelAnalyser();
 
     parse(data: any): Instruction | undefined {
         switch (data.visualNovelCtrl) {
@@ -156,8 +158,18 @@ export default class VisualNovelPlugin implements EditorPlugin {
 
 /** Visual Novel Content Instruction One Line */
 export class VNContentInstrOneLine<T extends OneLineInstruction> extends InstructionOneLine<T> {
-    public backgroundColor: string = "#f0f";
+    /** What this instruction sets the context to */
+    public contextSet?: string;
+    public backgroundColor: string = "transparent";
     public backgroundSrc?: string;
+
+    constructor(line: T) {
+        super(line);
+
+        if (line instanceof BackgroundInstruction) {
+            this.contextSet = "hsl(" + (Math.random() * 360) + ", 70%, 20%)";
+        }
+    }
 }
 
 class SayInstruction extends InstructionLine implements OneLineInstruction {
