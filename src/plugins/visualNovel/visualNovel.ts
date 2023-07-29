@@ -155,8 +155,9 @@ export default class VisualNovelPlugin implements EditorPlugin {
 }
 
 /** Visual Novel Content Instruction One Line */
-class VNContentInstrOneLine<T extends OneLineInstruction> extends InstructionOneLine<T> {
-
+export class VNContentInstrOneLine<T extends OneLineInstruction> extends InstructionOneLine<T> {
+    public backgroundColor: string = "#f0f";
+    public backgroundSrc?: string;
 }
 
 class SayInstruction extends InstructionLine implements OneLineInstruction {
