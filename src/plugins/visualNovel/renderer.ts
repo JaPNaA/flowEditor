@@ -1,4 +1,5 @@
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
+import { NewInstruction } from "../../editor/instruction/NewInstruction.js";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Project } from "../../project/Project.js";
 import { PluginRenderer } from "../EditorPlugin.js";
@@ -42,6 +43,8 @@ export class VisualNovelRenderer implements PluginRenderer {
                     endY = elm.offsetTop + elm.offsetHeight;
                     lastContext = instruction;
                 }
+            } else if (instruction instanceof NewInstruction) {
+                // do nothing
             } else if (lastContext) {
                 this.flush(lastContext, startY, endY, group, X);
                 lastContext = undefined;
