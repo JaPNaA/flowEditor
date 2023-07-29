@@ -50,10 +50,10 @@ export default class VisualNovelPlugin implements EditorPlugin {
         instructionName: "background",
         description: "Set the background",
         shortcutKey: "KeyH",
-        create: () => new VNContentInstrOneLine(new BackgroundInstruction({
+        create: () => new BackgroundInstruction({
             visualNovelCtrl: "background",
             color: "000"
-        })),
+        }),
     }, {
         instructionName: "set text reveal speed",
         description: "Sets the speed of revealing text in a `say` or `display` command",
@@ -137,7 +137,7 @@ export default class VisualNovelPlugin implements EditorPlugin {
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
-                return new VNContentInstrOneLine(new BackgroundInstruction(data));
+                return new BackgroundInstruction(data);
             case "wait":
                 return new VNContentInstrOneLine(new WaitInstruction(data.time));
             case "bgm":
@@ -157,19 +157,14 @@ export default class VisualNovelPlugin implements EditorPlugin {
 }
 
 /** Visual Novel Content Instruction One Line */
-export class VNContentInstrOneLine<T extends OneLineInstruction> extends InstructionOneLine<T> {
+export class VNContentInstrOneLine<T extends OneLineInstruction = OneLineInstruction> extends InstructionOneLine<T> {
     /** What this instruction sets the context to */
-    public contextSet?: string;
-    public backgroundColor: string = "transparent";
+    public contextSet?: {
+        backgroundColor?: string,
+        backgroundSrc?: string
+    };
+    public backgroundColor?: string;
     public backgroundSrc?: string;
-
-    constructor(line: T) {
-        super(line);
-
-        if (line instanceof BackgroundInstruction) {
-            this.contextSet = "hsl(" + (Math.random() * 360) + ", 70%, 20%)";
-        }
-    }
 }
 
 class SayInstruction extends InstructionLine implements OneLineInstruction {
@@ -320,7 +315,17 @@ class SetSpeechBubblePositionInstruction extends InstructionLine implements OneL
     }
 }
 
-class BackgroundInstruction extends InstructionLine implements OneLineInstruction {
+class BackgroundInstruction extends VNContentInstrOneLine<BackgroundInstructionLine> {
+    constructor(data: ControlBackground) {
+        super(new BackgroundInstructionLine(data));
+        this.contextSet = {
+            backgroundColor: data.color && "#" + data.color,
+            backgroundSrc: data.src
+        };
+    }
+}
+
+class BackgroundInstructionLine extends InstructionLine implements OneLineInstruction {
     private backgroundEditable: Editable;
     public isBranch: boolean = false;
 

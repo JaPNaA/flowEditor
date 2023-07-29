@@ -10,45 +10,57 @@ export class VisualNovelRenderer implements PluginRenderer {
 
         let startY = 0;
         let endY = 0;
-        let lastBackgroundColor: string | undefined;
+        let lastContext: VNContentInstrOneLine | undefined;
 
         for (const instruction of group._instructions) {
             const elm = instruction.getLines()[0].elm.getHTMLElement();
             if (instruction instanceof VNContentInstrOneLine) {
-                if (lastBackgroundColor) {
-                    if (lastBackgroundColor === instruction.backgroundColor) {
+                if (lastContext) {
+                    if (this.equalContext(lastContext, instruction)) {
                         endY = elm.offsetTop + elm.offsetHeight;
                     } else {
-                        this.flush(lastBackgroundColor, startY, endY, group, X);
-                        lastBackgroundColor = instruction.backgroundColor;
+                        this.flush(lastContext, startY, endY, group, X);
+                        lastContext = instruction;
                         startY = elm.offsetTop;
                         endY = elm.offsetTop + elm.offsetHeight;
                     }
                 } else {
                     startY = elm.offsetTop;
                     endY = elm.offsetTop + elm.offsetHeight;
-                    lastBackgroundColor = instruction.backgroundColor;
+                    lastContext = instruction;
                 }
-            } else if (lastBackgroundColor) {
-                this.flush(lastBackgroundColor, startY, endY, group, X);
-                lastBackgroundColor = undefined;
+            } else if (lastContext) {
+                this.flush(lastContext, startY, endY, group, X);
+                lastContext = undefined;
             }
         }
 
-        if (lastBackgroundColor) {
-            this.flush(lastBackgroundColor, startY, endY, group, X);
+        if (lastContext) {
+            this.flush(lastContext, startY, endY, group, X);
         }
 
         X.globalAlpha = 1;
     }
 
+    private equalContext(a: VNContentInstrOneLine, b: VNContentInstrOneLine) {
+        if (a.backgroundSrc && b.backgroundSrc) {
+            return a.backgroundSrc === b.backgroundSrc;
+        } else if (a.backgroundSrc || b.backgroundSrc) {
+            return false;
+        } else {
+            return a.backgroundColor === b.backgroundColor;
+        }
+    }
+
     private flush(
-        backgroundColor: string,
+        context: VNContentInstrOneLine,
         startY: number,
         endY: number,
         group: InstructionGroupEditor,
         X: CanvasRenderingContext2D
     ) {
+        const backgroundColor = context.backgroundColor;
+        if (!backgroundColor) { return; }
         X.fillStyle = backgroundColor;
         X.fillRect(group.rect.x, group.rect.y + startY, group.rect.width, endY - startY);
     }

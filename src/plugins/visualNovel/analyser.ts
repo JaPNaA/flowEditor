@@ -3,13 +3,19 @@ import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { PluginAnalyser } from "../EditorPlugin.js";
 import { VNContentInstrOneLine } from "./visualNovel.js";
 
+type Context = {
+    conflict?: boolean,
+    backgroundColor?: string,
+    backgroundSrc?: string
+};
+
 export class VisualNovelAnalyser implements PluginAnalyser {
     constructor() {
     }
 
     public onFlowLoad(editor: Editor): void {
-        let context = undefined;
-        const starts = new Map<InstructionGroupEditor, string>()
+        let context: Context | undefined = undefined;
+        const starts = new Map<InstructionGroupEditor, Context>()
 
         for (const group of editor.getGroups()) {
             for (const instruction of group.getInstructions()) {
@@ -18,15 +24,16 @@ export class VisualNovelAnalyser implements PluginAnalyser {
                         context = instruction.contextSet;
                     }
                     if (context) {
-                        instruction.backgroundColor = context;
+                        instruction.backgroundColor = context.backgroundColor;
+                        instruction.backgroundSrc = context.backgroundSrc;
                     }
                 }
             }
             for (const child of group._childGroups) {
                 const existing = starts.get(child);
-                if (existing && existing !== context) {
+                if (existing && context && !this.equalContext(existing, context)) {
                     // already set -- is conflict
-                    starts.set(child, "#000");
+                    starts.set(child, { conflict: true });
                 } else if (context) {
                     starts.set(child, context);
                 }
@@ -43,21 +50,32 @@ export class VisualNovelAnalyser implements PluginAnalyser {
                         break;
                     }
                     if (context) {
-                        instruction.backgroundColor = context;
+                        instruction.backgroundColor = context.backgroundColor;
+                        instruction.backgroundSrc = context.backgroundSrc;
                     }
                 }
             }
             if (fallsOver) {
                 for (const child of group._childGroups) {
                     const existing = starts.get(child);
-                    if (existing && existing !== context) {
+                    if (existing && !this.equalContext(existing, context)) {
                         // already set -- is conflict
-                        starts.set(child, "#000");
+                        starts.set(child, { conflict: true });
                     } else {
                         starts.set(child, context);
                     }
                 }
             }
+        }
+    }
+
+    private equalContext(a: Context, b: Context) {
+        if (a.backgroundSrc && b.backgroundSrc) {
+            return a.backgroundSrc === b.backgroundSrc;
+        } else if (a.backgroundSrc || b.backgroundSrc) {
+            return false;
+        } else {
+            return a.backgroundColor === b.backgroundColor;
         }
     }
 
