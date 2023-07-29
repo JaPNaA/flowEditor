@@ -73,6 +73,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         if (newGroup.getInstructions().length === 0) {
             newGroup.requestNewLine(0);
         }
+        this.parentInstruction.parentGroup.parentEditor.cursor.update();
         this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
     }
 
@@ -103,6 +104,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             instruction, currentInstructionIndex
         );
 
+        if (instruction.isBranch()) {
+            this.splitAfterIfNeeded(currentLine, instruction.isAlwaysJump());
+        }
+
         if (position) {
             this.parentInstruction.parentGroup.parentEditor.cursor.setPosition({
                 ...position,
@@ -110,9 +115,6 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             });
         }
 
-        if (instruction.isBranch()) {
-            this.splitAfterIfNeeded(currentLine, instruction.isAlwaysJump());
-        }
         this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
     }
 
