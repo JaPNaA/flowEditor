@@ -346,16 +346,16 @@ export class Editor extends WorldElmWithComponents {
         this.undoLog.startGroup();
         const newEditor = new InstructionGroupEditor(this, newData);
         this.addGroup(newEditor);
-        newEditor.showElm(); // show so that it can be focused
-        newEditor.requestNewLine(0);
         this.setEditMode();
+        newEditor.showElm(); // show so that it can be focused
+        newEditor.setupConstruct();
+        newEditor.requestNewLine(0);
         this.cursor.setPosition({
             group: newEditor,
             line: 0,
             editable: 0,
             char: 0
         });
-        newEditor.setupConstruct();
 
         if (this._groupEditors.length === 1) {
             this.markGroupAsStart(this._groupEditors[0]);
