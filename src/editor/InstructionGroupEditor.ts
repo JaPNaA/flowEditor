@@ -8,6 +8,7 @@ import { getAncestorWhich } from "../utils.js";
 import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions.js";
 import { NewInstruction } from "./instruction/NewInstruction.js";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes.js";
+import { pluginHooks } from "../index.js";
 
 export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public static defaultWidth = 720 + 24; // 24 is padding
@@ -413,6 +414,8 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
         X.globalCompositeOperation = "source-over";
         X.globalAlpha = 1;
+
+        pluginHooks.renderGroup(this, this.engine);
     }
 
     public updateHeight() {

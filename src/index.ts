@@ -8,6 +8,8 @@ import { NullProject } from "./project/NullProject.js";
 import { ModalContainer } from "./modals/ModalContainer.js";
 import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
 import { UILayout } from "./UILayout.js";
+import { InstructionGroupEditor } from "./editor/InstructionGroupEditor.js";
+import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 
 export const appHooks = {
     focusEditor() {
@@ -63,6 +65,10 @@ export const pluginHooks = {
 
     stopExecution() {
         return visualNovelPlugin.executer.stop();
+    },
+
+    renderGroup(group: InstructionGroupEditor, engine: JaPNaAEngine2d) {
+        return visualNovelPlugin.renderer.renderGroup(group, engine);
     },
 
     getExecutionStates() {

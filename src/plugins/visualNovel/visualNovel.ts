@@ -4,9 +4,10 @@ import { Editable } from "../../editor/editing/Editable.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { InstructionBlueprintMin } from "../../editor/instruction/InstructionBlueprintRegistery.js";
 import { EditorPlugin } from "../EditorPlugin.js";
-import { ControlBackground, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlChoose, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
+import { ControlBackground, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
 import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instruction/instructionTypes.js";
+import { VisualNovelRenderer } from "./renderer.js";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
@@ -20,17 +21,17 @@ export default class VisualNovelPlugin implements EditorPlugin {
         instructionName: "say",
         description: "Display text indicating a character talking",
         shortcutKey: "KeyS",
-        create: () => new InstructionOneLine(new SayInstruction("", "")),
+        create: () => new VNContentInstrOneLine(new SayInstruction("", "")),
     }, {
         instructionName: "say-add",
         description: "Add more text to the previous 'say' or 'display' command",
         shortcutKey: "KeyA",
-        create: () => new InstructionOneLine(new SayAddInstruction("")),
+        create: () => new VNContentInstrOneLine(new SayAddInstruction("")),
     }, {
         instructionName: "show",
         description: "Show an image in the foreground",
         shortcutKey: "KeyK",
-        create: () => new InstructionOneLine(new ShowInstruction({
+        create: () => new VNContentInstrOneLine(new ShowInstruction({
             visualNovelCtrl: "show",
             src: ""
         })),
@@ -38,7 +39,7 @@ export default class VisualNovelPlugin implements EditorPlugin {
         instructionName: "display",
         description: "Display text indicating narration",
         shortcutKey: "KeyT",
-        create: () => new InstructionOneLine(new DisplayMacro("")),
+        create: () => new VNContentInstrOneLine(new DisplayMacro("")),
     }, {
         instructionName: "choose branch",
         description: "Macro. Display buttons that allow the player to choose which instructions to execute",
@@ -48,23 +49,23 @@ export default class VisualNovelPlugin implements EditorPlugin {
         instructionName: "background",
         description: "Set the background",
         shortcutKey: "KeyH",
-        create: () => new InstructionOneLine(new BackgroundInstruction({
+        create: () => new VNContentInstrOneLine(new BackgroundInstruction({
             visualNovelCtrl: "background",
             color: "000"
         })),
     }, {
         instructionName: "set text reveal speed",
         description: "Sets the speed of revealing text in a `say` or `display` command",
-        create: () => new InstructionOneLine(new SetTextRevealSpeedInstruction(50)),
+        create: () => new VNContentInstrOneLine(new SetTextRevealSpeedInstruction(50)),
     }, {
         instructionName: "set speech bubble position",
         description: "Sets the position of the speech bubble",
-        create: () => new InstructionOneLine(new SetSpeechBubblePositionInstruction(50, 100))
+        create: () => new VNContentInstrOneLine(new SetSpeechBubblePositionInstruction(50, 100))
     }, {
         instructionName: "choose",
         description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
         shortcutKey: "KeyC",
-        create: () => new InstructionOneLine(new ChooseInstruction({
+        create: () => new VNContentInstrOneLine(new ChooseInstruction({
             visualNovelCtrl: "choose",
             variable: "choice",
             options: ['a', 'b']
@@ -73,83 +74,89 @@ export default class VisualNovelPlugin implements EditorPlugin {
         instructionName: "wait",
         description: "Do nothing for a specified amount of time",
         shortcutKey: "KeyW",
-        create: () => new InstructionOneLine(new WaitInstruction(1000)),
+        create: () => new VNContentInstrOneLine(new WaitInstruction(1000)),
     }, {
         instructionName: "background music",
         description: "Set the background music",
         shortcutKey: "KeyM",
-        create: () => new InstructionOneLine(new BackgroundMusicInstruction({
+        create: () => new VNContentInstrOneLine(new BackgroundMusicInstruction({
             visualNovelCtrl: "bgm",
             src: ""
         }))
     }, {
         instructionName: "set background music volume",
         description: "Set the volume of the background music",
-        create: () => new InstructionOneLine(new BackgroundMusicVolumeInstruction({
+        create: () => new VNContentInstrOneLine(new BackgroundMusicVolumeInstruction({
             visualNovelCtrl: "bgmSettings",
             volume: 0.4
         }))
     }, {
         instructionName: "play sfx",
         description: "Play a sound effect",
-        create: () => new InstructionOneLine(new SFXInstruction({
+        create: () => new VNContentInstrOneLine(new SFXInstruction({
             visualNovelCtrl: "sfx",
             src: ""
         }))
     }, {
         instructionName: "set sfx volume",
         description: "Set the volume of sound effects",
-        create: () => new InstructionOneLine(new SFXVolumeInstruction({
+        create: () => new VNContentInstrOneLine(new SFXVolumeInstruction({
             visualNovelCtrl: "sfxSettings",
             volume: 0.6
         }))
     }, {
         instructionName: "set variable to string",
         description: "Sets the value of a variable to string (by setting the value to a number identifying the string.)",
-        create: () => new InstructionOneLine(new SetVariableStringInstruction({
+        create: () => new VNContentInstrOneLine(new SetVariableStringInstruction({
             visualNovelCtrl: "strset",
             v: "string",
             str: ""
         }))
     }];
     executer = new VisualNovelExecuter();
+    renderer = new VisualNovelRenderer();
 
     parse(data: any): Instruction | undefined {
         switch (data.visualNovelCtrl) {
             case "say":
-                return new InstructionOneLine(new SayInstruction(data.char, data.text));
+                return new VNContentInstrOneLine(new SayInstruction(data.char, data.text));
             case "say-add":
-                return new InstructionOneLine(new SayAddInstruction(data.text));
+                return new VNContentInstrOneLine(new SayAddInstruction(data.text));
             case "display":
-                return new InstructionOneLine(new DisplayMacro(data.text));
+                return new VNContentInstrOneLine(new DisplayMacro(data.text));
             case "textRevealSpeed":
-                return new InstructionOneLine(new SetTextRevealSpeedInstruction(data.speed));
+                return new VNContentInstrOneLine(new SetTextRevealSpeedInstruction(data.speed));
             case "speechBubblePosition":
-                return new InstructionOneLine(new SetSpeechBubblePositionInstruction(data.positionX, data.positionY));
+                return new VNContentInstrOneLine(new SetSpeechBubblePositionInstruction(data.positionX, data.positionY));
             case "show":
-                return new InstructionOneLine(new ShowInstruction(data));
+                return new VNContentInstrOneLine(new ShowInstruction(data));
             case "choose":
-                return new InstructionOneLine(new ChooseInstruction(data));
+                return new VNContentInstrOneLine(new ChooseInstruction(data));
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
-                return new InstructionOneLine(new BackgroundInstruction(data));
+                return new VNContentInstrOneLine(new BackgroundInstruction(data));
             case "wait":
-                return new InstructionOneLine(new WaitInstruction(data.time));
+                return new VNContentInstrOneLine(new WaitInstruction(data.time));
             case "bgm":
-                return new InstructionOneLine(new BackgroundMusicInstruction(data));
+                return new VNContentInstrOneLine(new BackgroundMusicInstruction(data));
             case "bgmVolume":
-                return new InstructionOneLine(new BackgroundMusicVolumeInstruction(data));
+                return new VNContentInstrOneLine(new BackgroundMusicVolumeInstruction(data));
             case "sfx":
-                return new InstructionOneLine(new SFXInstruction(data));
+                return new VNContentInstrOneLine(new SFXInstruction(data));
             case "sfxVolume":
-                return new InstructionOneLine(new SFXVolumeInstruction(data));
+                return new VNContentInstrOneLine(new SFXVolumeInstruction(data));
             case "strset":
-                return new InstructionOneLine(new SetVariableStringInstruction(data));
+                return new VNContentInstrOneLine(new SetVariableStringInstruction(data));
             default:
                 return;
         }
     }
+}
+
+/** Visual Novel Content Instruction One Line */
+class VNContentInstrOneLine<T extends OneLineInstruction> extends InstructionOneLine<T> {
+
 }
 
 class SayInstruction extends InstructionLine implements OneLineInstruction {

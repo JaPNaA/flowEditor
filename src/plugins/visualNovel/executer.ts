@@ -2,11 +2,11 @@ import { ExecuterContainer } from "../../executer/ExecuterContainer.js";
 import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
 import { Project } from "../../project/Project.js";
-import { Executer } from "../EditorPlugin.js";
+import { PluginExecuter } from "../EditorPlugin.js";
 import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
 import { replaceVariables, visualNovelMdToHTML } from "./visualNovelMd.js";
 
-export class VisualNovelExecuter implements Executer {
+export class VisualNovelExecuter implements PluginExecuter {
     private elm = new Elm().class("visualNovelExecuter")
         .attribute("tabindex", "0")
         .append(new Elm("style").withSelf(s => {
