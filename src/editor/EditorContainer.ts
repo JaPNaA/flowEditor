@@ -66,6 +66,7 @@ export class EditorContainer extends Component {
             this.editor.dirty = false;
         }, 600e3);
 
+        pluginHooks.setEngine(this.engine);
         this.setup();
     }
 

@@ -5,11 +5,14 @@ import { InstructionBlueprintMin } from "../editor/instruction/InstructionBluepr
 import { Instruction } from "../editor/instruction/instructionTypes";
 import { ExecuterContainer } from "../executer/ExecuterContainer";
 import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d";
+import { Project } from "../project/Project";
 
 export interface EditorPlugin {
     name: string;
     instructionBlueprints: InstructionBlueprintMin[];
     parse(data: any): Instruction | undefined;
+    setProject?(project: Project): void;
+    setEngine?(project: JaPNaAEngine2d): void;
     executer?: PluginExecuter;
     renderer?: PluginRenderer;
     analyser?: PluginAnalyser;

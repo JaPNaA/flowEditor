@@ -415,7 +415,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         X.globalCompositeOperation = "source-over";
         X.globalAlpha = 1;
 
-        pluginHooks.renderGroup(this, this.engine);
+        pluginHooks.renderGroup(this);
     }
 
     public updateHeight() {

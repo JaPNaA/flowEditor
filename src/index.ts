@@ -47,6 +47,7 @@ export const appHooks = {
         projectFilesDisplay.setProject(newProject);
         editorContainer.setProject(newProject);
         executerContainer.setProject(newProject);
+        pluginHooks.setProject(newProject);
         project = newProject;
     },
 
@@ -68,8 +69,8 @@ export const pluginHooks = {
         return visualNovelPlugin.executer.stop();
     },
 
-    renderGroup(group: InstructionGroupEditor, engine: JaPNaAEngine2d) {
-        return visualNovelPlugin.renderer.renderGroup(group, engine);
+    renderGroup(group: InstructionGroupEditor) {
+        return visualNovelPlugin.renderer.renderGroup(group);
     },
 
     getExecutionStates() {
@@ -82,8 +83,20 @@ export const pluginHooks = {
 
     onEditorLoad(editor: Editor) {
         visualNovelPlugin.analyser.onFlowLoad(editor);
+    },
+
+    setProject(project: Project) {
+        visualNovelPlugin.setProject(project);
+    },
+
+    setEngine(engine: JaPNaAEngine2d) {
+        visualNovelPlugin.setEngine(engine);
     }
 };
+
+// load plugins
+const defaultPlugin = new DefaultPlugin();
+const visualNovelPlugin = new VisualNovelPlugin();
 
 let project = new NullProject();
 const projectFilesDisplay = new ProjectFilesDisplay(project);
@@ -97,10 +110,6 @@ new UILayout(
     projectFilesDisplay,
     modalContainer
 ).appendTo(document.body);
-
-// load plugins
-const defaultPlugin = new DefaultPlugin();
-const visualNovelPlugin = new VisualNovelPlugin();
 
 editorContainer.registerPlugin(defaultPlugin);
 editorContainer.registerPlugin(visualNovelPlugin);

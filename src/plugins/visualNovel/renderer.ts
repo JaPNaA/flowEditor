@@ -1,12 +1,25 @@
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Project } from "../../project/Project.js";
 import { PluginRenderer } from "../EditorPlugin.js";
 import { VNContentInstrOneLine } from "./visualNovel.js";
 
 export class VisualNovelRenderer implements PluginRenderer {
-    public renderGroup(group: InstructionGroupEditor, engine: JaPNaAEngine2d): void {
-        const X = engine.canvas.X;
-        X.globalAlpha = 0.4;
+    private project!: Project;
+    private engine!: JaPNaAEngine2d;
+    private pathURLMap = new Map<string, HTMLImageElement>();
+
+    public setProject(project: Project) {
+        this.project = project;
+    }
+
+    public setEngine(engine: JaPNaAEngine2d) {
+        this.engine = engine;
+    }
+
+    public renderGroup(group: InstructionGroupEditor): void {
+        const X = this.engine.canvas.X;
+        X.globalAlpha = 0.1;
 
         let startY = 0;
         let endY = 0;
@@ -59,9 +72,51 @@ export class VisualNovelRenderer implements PluginRenderer {
         group: InstructionGroupEditor,
         X: CanvasRenderingContext2D
     ) {
-        const backgroundColor = context.backgroundColor;
-        if (!backgroundColor) { return; }
-        X.fillStyle = backgroundColor;
-        X.fillRect(group.rect.x, group.rect.y + startY, group.rect.width, endY - startY);
+        if (context.backgroundSrc) {
+            const fillHeight = endY - startY;
+            const image = this.getImage(context.backgroundSrc);
+
+            if (image.width > 0 && image.height > 0) {
+                const scale = InstructionGroupEditor.defaultWidth / image.width;
+                const imageDrawHeight = scale * image.height;
+                if (fillHeight < imageDrawHeight) {
+                    // draw centered
+                    X.drawImage(
+                        image,
+                        0, (imageDrawHeight - fillHeight) / 2 / scale, image.width, fillHeight / scale,
+                        group.rect.x, group.rect.y + startY,
+                        InstructionGroupEditor.defaultWidth, fillHeight
+                    );
+                } else {
+                    // tile
+                    for (let y = 0; y < fillHeight; y += imageDrawHeight) {
+                        const dstDrawTo = Math.min(fillHeight - y, imageDrawHeight);
+                        const srcDrawTo = Math.min(image.height, (fillHeight - y) / scale);
+                        X.drawImage(
+                            image,
+                            0, 0, image.width, srcDrawTo,
+                            group.rect.x, group.rect.y + startY + y, InstructionGroupEditor.defaultWidth, dstDrawTo
+                        );
+                    }
+                }
+            }
+        } else if (context.backgroundColor) {
+            X.fillStyle = context.backgroundColor;
+            X.fillRect(group.rect.x, group.rect.y + startY, group.rect.width, endY - startY);
+        }
+    }
+
+    private getImage(src: string) {
+        const cache = this.pathURLMap.get(src);
+        if (cache) { return cache; }
+        const image = new Image();
+        image.addEventListener("load", () => this.engine.ticker.requestTick());
+        this.pathURLMap.set(src, image);
+
+        this.project.getAsset(src).then(asset => {
+            const url = URL.createObjectURL(asset);
+            image.src = url;
+        });
+        return image;
     }
 }
