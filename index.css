@@ -136,6 +136,7 @@ button {
 }
 
 .instructionLine {
+    color: #ffffff7a;
     padding-left: 12px;
     padding-right: 12px;
     white-space: pre-wrap;
@@ -143,22 +144,44 @@ button {
     min-height: 1.55em;
 }
 
+.instructionLine .editable {
+    color: #ffffffb5;
+    display: inline;
+    height: 1em;
+}
+
 .instructionLine.jump {
-    color: #e6647a;
+    color: #e6647ac9;
     background-color: #ff000017;
 }
 
+.instructionLine.jump .editable {
+    color: #e6647a;
+}
+
 .instructionLine.jump.hanging {
-    color: #cfa3a9;
+    color: #cfa3a96c;
     background-color: #a773732c;
 }
 
+.instructionLine.jump.hanging .editable {
+    color: #cfa3a9;
+}
+
 .instructionLine.control {
-    color: #598ceb;
+    color: #598cebc9;
     background-color: #2019e623;
 }
 
+.instructionLine.control .editable {
+    color: #598ceb;
+}
+
 .instructionLine.secondary {
+    color: #35b39e9c;
+}
+
+.instructionLine.secondary .editable {
     color: #35b39e;
 }
 
@@ -174,11 +197,6 @@ button {
     display: none;
 }
 
-.instructionLine .editable {
-    display: inline;
-    height: 1em;
-}
-
 .instructionLine .branchConnect {
     cursor: pointer;
     pointer-events: all;
@@ -187,7 +205,12 @@ button {
     right: 8px;
 }
 
+.instructionLine .hanging .branchConnect {
+    color: #cfa3a9;
+}
+
 .instructionLine .branchConnect::before {
+    color: #e6647a;
     content: "[>]";
 }
 
