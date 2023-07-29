@@ -343,6 +343,7 @@ export class Editor extends WorldElmWithComponents {
             newData.x = this.engine.mouse.worldPos.x - InstructionGroupEditor.defaultWidth / 2;
             newData.y = this.engine.mouse.worldPos.y - 16;
         }
+        this.undoLog.startGroup();
         const newEditor = new InstructionGroupEditor(this, newData);
         this.addGroup(newEditor);
         newEditor.showElm(); // show so that it can be focused
@@ -360,6 +361,7 @@ export class Editor extends WorldElmWithComponents {
             this.markGroupAsStart(this._groupEditors[0]);
         }
         this.handleClickGroup(newEditor);
+        this.undoLog.endGroup();
     }
 
     private markGroupAsStartHandler() {
