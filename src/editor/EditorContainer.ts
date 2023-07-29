@@ -19,6 +19,10 @@ export class EditorContainer extends Component {
     private editor = new Editor();
     private editorOpenFile?: string;
     private autoSaveInterval: number;
+
+    /** Did the flow successfully load? If not, don't try to save to avoid corruption */
+    private successfulLoad = false;
+
     private ignoreExternallyModified: boolean = false;
 
     constructor(private project: Project) {
@@ -70,6 +74,7 @@ export class EditorContainer extends Component {
         try {
             const save = await this.project.getFlowSave(startFile);
             this.editor.deserialize(save);
+            this.successfulLoad = true;
         } catch (err) {
             console.error(err);
         }
@@ -131,7 +136,8 @@ export class EditorContainer extends Component {
     }
 
     public async setSaveData(saveData: any) {
-        if (!this.editorOpenFile) { return; }
+        if (!this.successfulLoad) { console.warn("Refuse to save due to failure to load"); return; }
+        if (!this.editorOpenFile) { console.warn("No open file to save to"); return; }
         const saveStr = saveData ? JSON.stringify(saveData) : "";
 
         try {
