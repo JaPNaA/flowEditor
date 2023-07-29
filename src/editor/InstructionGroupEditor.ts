@@ -295,7 +295,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         elm.style.width = InstructionGroupEditor.defaultWidth + "px";
 
 
-        this.parentEditor.undoLog.freeze();
+        this.parentEditor.undoLog.startGroup();
 
         for (const instruction of this.data.instructions) {
             this.addInstruction(instruction);
@@ -307,7 +307,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             instruction.setBranchTargets(this.initBranchTargets[index++]);
         }
 
-        this.parentEditor.undoLog.thaw();
+        this.parentEditor.undoLog.endGroup();
 
         this.rect.width = InstructionGroupEditor.defaultWidth;
 
