@@ -235,10 +235,11 @@ export class EditableEditAction implements UndoableAction {
     public perform(): void {
         this.previousValue = this.editable._value;
         this.editable._value = this.newValue;
+        this.editable.update();
     }
 
     public inverse(): EditableEditAction {
-        if (!this.previousValue) { throw new InverseBeforePerformError(); }
+        if (this.previousValue === undefined) { throw new InverseBeforePerformError(); }
         return new EditableEditAction(this.editable, this.previousValue);
     }
 }

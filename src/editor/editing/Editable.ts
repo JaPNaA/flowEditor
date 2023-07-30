@@ -1,4 +1,3 @@
-import { EditorCursor } from "./EditorCursor.js";
 import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { UserInputEvent } from "./TextareaUserInputCapture.js";
 import { InstructionLine } from "../instruction/instructionTypes.js";
@@ -65,17 +64,21 @@ export class Editable extends Elm<"span"> {
         return count;
     }
 
-    public setActive(offsetStart: number, offsetEnd: number, cursor: EditorCursor) {
-        const before = this._value.slice(0, offsetStart);
-        const selected = this._value.slice(offsetStart, offsetEnd);
-        const after = this._value.slice(offsetEnd);
+    public update() {
+        const cursor = this.parentLine.parentInstruction.parentGroup.parentEditor.cursor;
+        if (
+            cursor.activeEditable === this
+        ) {
+            const { start, end } = cursor.getPositions();
+            const before = this._value.slice(0, start!.char);
+            const selected = this._value.slice(start!.char, end!.char);
+            const after = this._value.slice(end!.char);
 
-        cursor.setSelectedText(selected);
+            cursor.setSelectedText(selected);
 
-        this.replaceContents(before, cursor, after);
-    }
-
-    public updateAndDeactivate() {
-        this.replaceContents(this._value);
+            this.replaceContents(before, cursor, after);
+        } else {
+            this.replaceContents(this._value);
+        }
     }
 }

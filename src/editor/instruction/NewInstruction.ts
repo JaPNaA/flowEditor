@@ -141,14 +141,14 @@ export class NewInstructionEditable extends Editable {
         this.onChange.send(event);
     }
 
-    public setActive(offsetStart: number, offsetEnd: number, cursor: EditorCursor): void {
-        super.setActive(offsetStart, offsetEnd, cursor);
-        this.parentLine.parentInstruction.parentGroup.parentEditor.cursor.onKeydownIntercept.subscribe(this.intercepter);
-    }
-
-    public updateAndDeactivate(): void {
-        super.updateAndDeactivate();
-        this.parentLine.parentInstruction.parentGroup.parentEditor.cursor.onKeydownIntercept.unsubscribe(this.intercepter);
+    public update() {
+        super.update();
+        const cursor = this.parentLine.parentInstruction.parentGroup.parentEditor.cursor;
+        if (cursor.activeEditable === this) {
+            cursor.onKeydownIntercept.subscribe(this.intercepter);
+        } else {
+            cursor.onKeydownIntercept.unsubscribe(this.intercepter);
+        }
     }
 
     public acceptAutocomplete(blueprint: InstructionBlueprint) {
