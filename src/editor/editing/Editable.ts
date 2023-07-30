@@ -1,6 +1,8 @@
 import { EditorCursor } from "./EditorCursor.js";
 import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { UserInputEvent } from "./TextareaUserInputCapture.js";
+import { InstructionLine } from "../instruction/instructionTypes.js";
+import { EditableEditAction } from "./actions.js";
 
 export class Editable extends Elm<"span"> {
     public onChange = new EventBus<UserInputEvent>();
@@ -16,21 +18,24 @@ export class Editable extends Elm<"span"> {
      */
     public placeholder?: boolean;
 
-    private value: string;
+    /** DO NOT MUTATE OUTSIDE OF `UndoableAction` */
+    public _value: string;
 
-    constructor(initialText: string) {
+    constructor(initialText: string, public parentLine: InstructionLine) {
         super("span");
         this.class("editable");
         this.append(initialText);
-        this.value = initialText;
+        this._value = initialText;
     }
 
     public getValue(): string {
-        return this.value;
+        return this._value;
     }
 
     public setValue(value: string) {
-        this.value = value;
+        this.parentLine.parentInstruction.parentGroup.parentEditor.undoLog.perform(
+            new EditableEditAction(this, value)
+        );
     }
 
     /** Called by TextareaUserInput after setting a new value for the editable and moving the cursor. */
@@ -54,16 +59,16 @@ export class Editable extends Elm<"span"> {
         }
 
         count += selection.focusOffset;
-        if (count > this.value.length) {
-            return this.value.length;
+        if (count > this._value.length) {
+            return this._value.length;
         }
         return count;
     }
 
     public setActive(offsetStart: number, offsetEnd: number, cursor: EditorCursor) {
-        const before = this.value.slice(0, offsetStart);
-        const selected = this.value.slice(offsetStart, offsetEnd);
-        const after = this.value.slice(offsetEnd);
+        const before = this._value.slice(0, offsetStart);
+        const selected = this._value.slice(offsetStart, offsetEnd);
+        const after = this._value.slice(offsetEnd);
 
         cursor.setSelectedText(selected);
 
@@ -71,6 +76,6 @@ export class Editable extends Elm<"span"> {
     }
 
     public updateAndDeactivate() {
-        this.replaceContents(this.value);
+        this.replaceContents(this._value);
     }
 }

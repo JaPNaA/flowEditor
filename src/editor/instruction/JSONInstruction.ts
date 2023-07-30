@@ -16,7 +16,7 @@ class JSONLine extends InstructionLine implements OneLineInstruction {
     constructor(data: any) {
         super();
         this.elm.append(this.editable = this.registerEditable(
-            new JSONLineEditable(JSON.stringify(data))
+            new JSONLineEditable(JSON.stringify(data), this)
         ));
         this.editable.setParentLine(this);
     }
@@ -33,7 +33,6 @@ class JSONLine extends InstructionLine implements OneLineInstruction {
 
 class JSONLineEditable extends Editable {
     private newlineDetected = false;
-    private parentLine!: InstructionLine;
 
     public setParentLine(parentLine: InstructionLine) {
         this.parentLine = parentLine;
@@ -58,6 +57,7 @@ class JSONLineEditable extends Editable {
         const lines = this.getValue()
             .slice(1, -1)
             .split("\n");
+        this.parentLine.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
         this.setValue(JSON.stringify(lines[0]));
 
         const parentGroup = this.parentLine.parentInstruction.parentGroup;
@@ -79,5 +79,6 @@ class JSONLineEditable extends Editable {
             editable: 0,
             char: lines[i - 1].length + 1 // +1 for left quote only
         });
+        this.parentLine.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
     }
 }

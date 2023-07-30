@@ -2,6 +2,7 @@ import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray
 import { Editor } from "../Editor.js";
 import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
 import { BranchInstructionLine, Instruction } from "../instruction/instructionTypes.js";
+import { Editable } from "./Editable.js";
 
 export class UndoLog {
     private currLogGroup: UndoableAction[] = [];
@@ -224,6 +225,21 @@ export class BranchTargetChangeAction implements UndoableAction {
 
     public inverse(): UndoableAction {
         return new BranchTargetChangeAction(this.previousBranchTarget || null, this.instruction);
+    }
+}
+
+export class EditableEditAction implements UndoableAction {
+    private previousValue?: string;
+    constructor(private editable: Editable, private newValue: string) { }
+
+    public perform(): void {
+        this.previousValue = this.editable._value;
+        this.editable._value = this.newValue;
+    }
+
+    public inverse(): EditableEditAction {
+        if (!this.previousValue) { throw new InverseBeforePerformError(); }
+        return new EditableEditAction(this.editable, this.previousValue);
     }
 }
 

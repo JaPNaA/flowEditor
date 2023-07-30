@@ -145,7 +145,7 @@ export abstract class InstructionLine extends Component {
     }
 
     protected createEditable(text: string | number): Editable {
-        const editable = new Editable(text.toString());
+        const editable = new Editable(text.toString(), this);
         this.registerEditable(editable);
         return editable;
     }

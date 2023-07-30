@@ -588,7 +588,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public openTextOp() {
-        this.textOpDialogue.setEditablesFromGroups(this._groupEditors);
+        this.textOpDialogue.setEditablesFromGroups(this.undoLog, this._groupEditors);
         appHooks.showModal(this.textOpDialogue);
     }
 }

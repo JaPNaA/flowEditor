@@ -27,7 +27,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 
         this.elm.class("newInstructionLine");
         this.elm.append(
-            this.editable = this.registerEditable(new NewInstructionEditable()),
+            this.editable = this.registerEditable(new NewInstructionEditable(this)),
             this.placeholderText = new Elm('span').class("placeholder").append(`Press shortcut or hold shift and type to search...`)
         );
 
@@ -128,11 +128,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 }
 
 export class NewInstructionEditable extends Editable {
-    public parentLine!: NewInstructionLine;
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
 
-    constructor() {
-        super("");
+    constructor(parentLine: NewInstructionLine) {
+        super("", parentLine);
         this.intercepter = this.intercepter.bind(this);
         this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
     }
@@ -154,7 +153,7 @@ export class NewInstructionEditable extends Editable {
 
     public acceptAutocomplete(blueprint: InstructionBlueprint) {
         const newInstruction = blueprint.create();
-        this.parentLine.changeView(newInstruction);
+        (this.parentLine as NewInstructionLine).changeView(newInstruction);
     }
 
     private intercepter(ev: KeyboardEvent) {
