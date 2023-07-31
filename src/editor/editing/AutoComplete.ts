@@ -171,19 +171,47 @@ export class AutoComplete extends Component {
     private defaultSuggester(editable: Editable, type: symbol): AutoCompleteSuggestion[] | null {
         const value = editable.placeholder ? "" : editable.getValue();
         const map = this.defaultHandlerPreviousValues.get(type);
+        const lastUsed = editable.parentLine.parentInstruction.parentGroup.getInstructions()[
+            editable.parentLine.parentInstruction.getIndex() - 1
+        ]?.getLines()[0]?.getEditables().find(editable => editable.autoCompleteType === type)?.getValue();
         if (!map) { return null; }
 
         const suggestions: [AutoCompleteSuggestion, number][] = [];
-        for (const [key, times_] of map) {
-            // uncount the editable's current value
-            const times = key === value ? times_ - 1 : times_;
-            const score = looseStartsWith(value, key);
-            if (score >= 0 && times > 0) {
-                suggestions.push([{
-                    title: key,
-                    fill: key,
-                    subtitle: "(" + times + ")"
-                }, score]);
+
+        if (value) {
+            // sort by best match
+            for (const [key, times_] of map) {
+                // uncount the editable's current value
+                const times = key === value ? times_ - 1 : times_;
+                const score = looseStartsWith(value, key);
+                if (score >= 0 && times > 0) {
+                    suggestions.push([{
+                        title: key,
+                        fill: key,
+                        subtitle: "(" + times + ")"
+                    }, score]);
+                }
+            }
+        } else {
+            // sort by popularity
+            for (const [key, times_] of map) {
+                // uncount the editable's current value
+                const times = key === value ? times_ - 1 : times_;
+                if (times > 0) {
+                    if (key === lastUsed) {
+                        suggestions.push([{
+                            title: key,
+                            fill: key,
+                            subtitle: "repeat (" + times + ")"
+                        }, -Infinity]);
+                    } else {
+                        suggestions.push([{
+                            title: key,
+                            fill: key,
+                            subtitle: "(" + times + ")"
+                        }, -times]);
+                    }
+                }
             }
         }
         return suggestions.sort((a, b) => a[1] - b[1]).map(x => x[0]);
