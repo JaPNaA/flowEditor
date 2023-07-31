@@ -75,6 +75,14 @@ export class AddGroupAction implements UndoableAction {
         this.editor._groupEditors.push(this.group);
         this.editor._children.addChild(this.group);
         this.editor.cursor.registerInstructionGroup(this.group);
+
+        // add parent-child relations
+        for (const child of this.group._childGroups) {
+            child._parentGroups.push(this.group);
+        }
+        for (const parent of this.group._parentGroups) {
+            parent._childGroups.push(this.group);
+        }
     }
 
     public inverse(): RemoveGroupAction {
@@ -89,6 +97,14 @@ export class RemoveGroupAction implements UndoableAction {
         removeElmFromArray(this.group, this.editor._groupEditors);
         this.editor._children.removeChild(this.group);
         this.editor.cursor.unregisterInstructionGroup(this.group);
+
+        // remove parent-child relations
+        for (const child of this.group._childGroups) {
+            removeElmFromArray(this.group, child._parentGroups);
+        }
+        for (const parent of this.group._parentGroups) {
+            removeElmFromArray(this.group, parent._childGroups);
+        }
     }
 
     public inverse(): AddGroupAction {
@@ -196,39 +212,39 @@ export class RemoveInstructionAction implements UndoableAction {
 
 export class BranchTargetChangeAction implements UndoableAction {
     public previousBranchTarget?: InstructionGroupEditor | null;
-    constructor(public branchTarget: InstructionGroupEditor | null, public instruction: BranchInstructionLine) { }
+    constructor(public branchTarget: InstructionGroupEditor | null, public branchLine: BranchInstructionLine) { }
 
     public perform(): void {
-        this.previousBranchTarget = this.instruction.branchTarget;
+        this.previousBranchTarget = this.branchLine.branchTarget;
 
         // remove parent/child relation
         if (this.previousBranchTarget) {
             removeElmFromArray(
                 this.previousBranchTarget,
-                this.instruction.parentInstruction.parentGroup._childGroups
+                this.branchLine.parentInstruction.parentGroup._childGroups
             );
             removeElmFromArray(
-                this.instruction.parentInstruction.parentGroup,
+                this.branchLine.parentInstruction.parentGroup,
                 this.previousBranchTarget._parentGroups
             );
         }
 
         // update instruction
-        this.instruction.branchTarget = this.branchTarget;
-        this.instruction._updateElmState();
+        this.branchLine.branchTarget = this.branchTarget;
+        this.branchLine._updateElmState();
 
         // update parent/child relations
         if (this.branchTarget) {
-            this.branchTarget._parentGroups.push(this.instruction.parentInstruction.parentGroup);
-            this.instruction.parentInstruction.parentGroup._childGroups.push(this.branchTarget);
+            this.branchTarget._parentGroups.push(this.branchLine.parentInstruction.parentGroup);
+            this.branchLine.parentInstruction.parentGroup._childGroups.push(this.branchTarget);
         }
 
         // update render hitboxes
-        this.instruction.parentInstruction.parentGroup.updateAfterMove();
+        this.branchLine.parentInstruction.parentGroup.updateAfterMove();
     }
 
     public inverse(): UndoableAction {
-        return new BranchTargetChangeAction(this.previousBranchTarget || null, this.instruction);
+        return new BranchTargetChangeAction(this.previousBranchTarget || null, this.branchLine);
     }
 }
 

@@ -166,15 +166,16 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }
 }
 
+export interface VNInstructionContext {
+    backgroundColor?: string;
+    backgroundSrc?: string;
+}
+
 /** Visual Novel Content Instruction One Line */
 export class VNContentInstrOneLine<T extends OneLineInstruction = OneLineInstruction> extends InstructionOneLine<T> {
     /** What this instruction sets the context to */
-    public contextSet?: {
-        backgroundColor?: string,
-        backgroundSrc?: string
-    };
-    public backgroundColor?: string;
-    public backgroundSrc?: string;
+    public contextSet?: VNInstructionContext;
+    public context?: VNInstructionContext;
 }
 
 class SayInstruction extends InstructionLine implements OneLineInstruction {

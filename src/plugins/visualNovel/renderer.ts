@@ -3,7 +3,7 @@ import { NewInstruction } from "../../editor/instruction/NewInstruction.js";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Project } from "../../project/Project.js";
 import { PluginRenderer } from "../EditorPlugin.js";
-import { VNContentInstrOneLine } from "./visualNovel.js";
+import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel.js";
 
 export class VisualNovelRenderer implements PluginRenderer {
     private project!: Project;
@@ -24,24 +24,24 @@ export class VisualNovelRenderer implements PluginRenderer {
 
         let startY = 0;
         let endY = 0;
-        let lastContext: VNContentInstrOneLine | undefined;
+        let lastContext: VNInstructionContext | undefined;
 
         for (const instruction of group._instructions) {
             const elm = instruction.getLines()[0].elm.getHTMLElement();
             if (instruction instanceof VNContentInstrOneLine) {
                 if (lastContext) {
-                    if (this.equalContext(lastContext, instruction)) {
+                    if (instruction.context && this.equalContext(lastContext, instruction.context)) {
                         endY = elm.offsetTop + elm.offsetHeight;
                     } else {
                         this.flush(lastContext, startY, endY, group, X);
-                        lastContext = instruction;
+                        lastContext = instruction.context;
                         startY = elm.offsetTop;
                         endY = elm.offsetTop + elm.offsetHeight;
                     }
                 } else {
                     startY = elm.offsetTop;
                     endY = elm.offsetTop + elm.offsetHeight;
-                    lastContext = instruction;
+                    lastContext = instruction.context;
                 }
             } else if (instruction instanceof NewInstruction) {
                 // do nothing
@@ -58,7 +58,7 @@ export class VisualNovelRenderer implements PluginRenderer {
         X.globalAlpha = 1;
     }
 
-    private equalContext(a: VNContentInstrOneLine, b: VNContentInstrOneLine) {
+    private equalContext(a: VNInstructionContext, b: VNInstructionContext) {
         if (a.backgroundSrc && b.backgroundSrc) {
             return a.backgroundSrc === b.backgroundSrc;
         } else if (a.backgroundSrc || b.backgroundSrc) {
@@ -69,7 +69,7 @@ export class VisualNovelRenderer implements PluginRenderer {
     }
 
     private flush(
-        context: VNContentInstrOneLine,
+        context: VNInstructionContext,
         startY: number,
         endY: number,
         group: InstructionGroupEditor,
