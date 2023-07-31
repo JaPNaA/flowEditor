@@ -171,7 +171,13 @@ export class VisualNovelAnalyser implements PluginAnalyser {
         for (let i = startIndex; i < instructions.length; i++) {
             const instruction = instructions[i];
             if (instruction instanceof VNContentInstrOneLine) {
-                if (instruction.contextSet && i !== startIndex) {
+                if (
+                    (instruction.contextSet && i !== startIndex) || // is setter -- stop propagation
+                    (context ?
+                        instruction.context && this.equalContext(instruction.context, context) :
+                        context === instruction.context
+                    ) // is already set -- don't need to propagate
+                ) {
                     return;
                 } else {
                     instruction.context = context;
