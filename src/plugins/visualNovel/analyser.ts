@@ -78,7 +78,8 @@ export class VisualNovelAnalyser implements PluginAnalyser {
         if (action instanceof EditableEditAction) {
             const instruction = action.editable.parentLine.parentInstruction;
             if (instruction instanceof VNContentInstrOneLine && instruction.contextSet) {
-                this.propagateContext(instruction.parentGroup, instruction.getIndex(), instruction.contextSet);
+                instruction.context = instruction.contextSet;
+                this.propagateContext(instruction.parentGroup, instruction.getIndex() + 1, instruction.contextSet);
             }
         } else if (action instanceof AddInstructionAction) {
             const addedInstruction = action.instruction;
@@ -86,8 +87,8 @@ export class VisualNovelAnalyser implements PluginAnalyser {
 
             if (addedInstruction.contextSet) {
                 const newContext = addedInstruction.contextSet;
-                addedInstruction.context = newContext;
-                this.propagateContext(action.group, action.index, newContext);
+                addedInstruction.context = addedInstruction.contextSet;
+                this.propagateContext(action.group, action.index + 1, newContext);
             } else {
                 // update non-context-setting instruction context
                 const instructions = action.group.getInstructions();
@@ -172,7 +173,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
             const instruction = instructions[i];
             if (instruction instanceof VNContentInstrOneLine) {
                 if (
-                    (instruction.contextSet && i !== startIndex) || // is setter -- stop propagation
+                    instruction.contextSet || // is setter -- stop propagation
                     (context ?
                         instruction.context && this.equalContext(instruction.context, context) :
                         context === instruction.context
