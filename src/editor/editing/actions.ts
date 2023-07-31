@@ -255,6 +255,7 @@ export class EditableEditAction implements UndoableAction {
     public perform(): void {
         this.previousValue = this.editable._value;
         this.editable._value = this.newValue;
+        this.editable.placeholder = false;
         this.editable.update();
     }
 
