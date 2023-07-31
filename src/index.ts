@@ -11,6 +11,7 @@ import { UILayout } from "./UILayout.js";
 import { InstructionGroupEditor } from "./editor/InstructionGroupEditor.js";
 import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 import { Editor } from "./editor/Editor.js";
+import { UndoableAction } from "./editor/editing/actions.js";
 
 export const appHooks = {
     focusEditor() {
@@ -83,6 +84,10 @@ export const pluginHooks = {
 
     onEditorLoad(editor: Editor) {
         visualNovelPlugin.analyser.onFlowLoad(editor);
+    },
+
+    onAction(action: UndoableAction) {
+        visualNovelPlugin.analyser.onActionPerformed(action);
     },
 
     setProject(project: Project) {

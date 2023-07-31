@@ -1,5 +1,6 @@
 import { Editor } from "../../editor/Editor.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
+import { UndoableAction } from "../../editor/editing/actions.js";
 import { PluginAnalyser } from "../EditorPlugin.js";
 import { VNContentInstrOneLine } from "./visualNovel.js";
 
@@ -79,8 +80,8 @@ export class VisualNovelAnalyser implements PluginAnalyser {
         }
     }
 
-    public onEdit(): void {
-        throw new Error("Method not implemented.");
+    public onActionPerformed(action: UndoableAction): void {
+        console.log(action);
     }
 
     public dispose(): void {

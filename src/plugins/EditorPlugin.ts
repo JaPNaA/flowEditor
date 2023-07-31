@@ -1,6 +1,7 @@
 import { Editor } from "../editor/Editor";
 import { InstructionGroupEditor } from "../editor/InstructionGroupEditor";
 import { AutoCompleteSuggester } from "../editor/editing/AutoComplete";
+import { UndoableAction } from "../editor/editing/actions";
 import { InstructionBlueprintMin } from "../editor/instruction/InstructionBlueprintRegistery";
 import { Instruction } from "../editor/instruction/instructionTypes";
 import { ExecuterContainer } from "../executer/ExecuterContainer";
@@ -33,6 +34,6 @@ export interface PluginRenderer {
 
 export interface PluginAnalyser {
     onFlowLoad(editor: Editor): void;
-    onEdit(): void;
+    onActionPerformed(action: UndoableAction): void;
     dispose(): void;
 }

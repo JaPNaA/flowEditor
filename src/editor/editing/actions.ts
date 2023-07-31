@@ -1,3 +1,4 @@
+import { pluginHooks } from "../../index.js";
 import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray.js";
 import { Editor } from "../Editor.js";
 import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
@@ -19,7 +20,9 @@ export class UndoLog {
         if (!logs) { return; }
         let log;
         while (log = logs.pop()) {
-            log.inverse().perform();
+            const action = log.inverse();
+            action.perform();
+            pluginHooks.onAction(action);
         }
         this.onAfterActionPerform();
     }
@@ -48,6 +51,7 @@ export class UndoLog {
     public perform(action: UndoableAction) {
         if (!this.frozen) { this.currLogGroup.push(action); }
         action.perform();
+        pluginHooks.onAction(action);
         this.onAfterActionPerform();
     }
 
@@ -65,7 +69,7 @@ export interface UndoableAction {
 }
 
 export class AddGroupAction implements UndoableAction {
-    constructor(private group: InstructionGroupEditor, private editor: Editor) { }
+    constructor(public group: InstructionGroupEditor, public editor: Editor) { }
 
     public perform(): void {
         this.editor._groupEditors.push(this.group);
@@ -79,7 +83,7 @@ export class AddGroupAction implements UndoableAction {
 }
 
 export class RemoveGroupAction implements UndoableAction {
-    constructor(private group: InstructionGroupEditor, private editor: Editor) { }
+    constructor(public group: InstructionGroupEditor, public editor: Editor) { }
 
     public perform(): void {
         removeElmFromArray(this.group, this.editor._groupEditors);
@@ -93,9 +97,9 @@ export class RemoveGroupAction implements UndoableAction {
 }
 
 export class MarkGroupAsStartAction implements UndoableAction {
-    private previousStartGroup?: InstructionGroupEditor;
+    public previousStartGroup?: InstructionGroupEditor;
 
-    constructor(private group: InstructionGroupEditor | undefined, private editor: Editor) { }
+    constructor(public group: InstructionGroupEditor | undefined, public editor: Editor) { }
 
     public perform(): void {
         this.previousStartGroup = this.editor._startGroup;
@@ -114,7 +118,7 @@ export class MarkGroupAsStartAction implements UndoableAction {
 }
 
 export class AddInstructionAction implements UndoableAction {
-    constructor(private instruction: Instruction, private index: number, private group: InstructionGroupEditor) { }
+    constructor(public instruction: Instruction, public index: number, public group: InstructionGroupEditor) { }
 
     public perform(): void {
         const newLines = this.instruction.getLines();
@@ -159,9 +163,9 @@ export class AddInstructionAction implements UndoableAction {
 }
 
 export class RemoveInstructionAction implements UndoableAction {
-    private removedInstruction?: Instruction;
+    public removedInstruction?: Instruction;
 
-    constructor(private index: number, private group: InstructionGroupEditor) { }
+    constructor(public index: number, public group: InstructionGroupEditor) { }
 
     public perform(): void {
         const instruction = this.group._instructions[this.index];
@@ -179,7 +183,7 @@ export class RemoveInstructionAction implements UndoableAction {
         this.group.updateHeight();
     }
 
-    private _removeInstruction(instructionIndex: number) {
+    public _removeInstruction(instructionIndex: number) {
         const instructions = this.group._instructions.splice(instructionIndex, 1);
         if (instructions.length < 0) { throw new Error("Invalid position"); }
     }
@@ -191,8 +195,8 @@ export class RemoveInstructionAction implements UndoableAction {
 }
 
 export class BranchTargetChangeAction implements UndoableAction {
-    private previousBranchTarget?: InstructionGroupEditor | null;
-    constructor(private branchTarget: InstructionGroupEditor | null, private instruction: BranchInstructionLine) { }
+    public previousBranchTarget?: InstructionGroupEditor | null;
+    constructor(public branchTarget: InstructionGroupEditor | null, public instruction: BranchInstructionLine) { }
 
     public perform(): void {
         this.previousBranchTarget = this.instruction.branchTarget;
@@ -229,8 +233,8 @@ export class BranchTargetChangeAction implements UndoableAction {
 }
 
 export class EditableEditAction implements UndoableAction {
-    private previousValue?: string;
-    constructor(private editable: Editable, private newValue: string) { }
+    public previousValue?: string;
+    constructor(public editable: Editable, public newValue: string) { }
 
     public perform(): void {
         this.previousValue = this.editable._value;

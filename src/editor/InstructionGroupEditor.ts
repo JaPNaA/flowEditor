@@ -128,6 +128,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
                     if (removedLine.parentInstruction instanceof NewInstruction) {
                         this.parentEditor.removeGroup(this);
                         this.parentEditor.unsetEditMode();
+                        this.parentEditor.undoLog.endGroup();
                         return;
                     } else {
                         this.requestNewLine(0);
