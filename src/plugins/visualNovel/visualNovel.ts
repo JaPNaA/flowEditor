@@ -329,6 +329,7 @@ class SetSpeechBubblePositionInstruction extends InstructionLine implements OneL
 class BackgroundInstruction extends VNContentInstrOneLine<BackgroundInstructionLine> {
     constructor(data: ControlBackground) {
         super(new BackgroundInstructionLine(data));
+
         this.contextSet = {
             backgroundColor: data.color && "#" + data.color,
             backgroundSrc: data.src
@@ -355,16 +356,30 @@ class BackgroundInstructionLine extends InstructionLine implements OneLineInstru
             )
         );
         this.backgroundEditable.autoCompleteType = autocompleteTypeBackground;
+        this.backgroundEditable.onChange.subscribe(value => {
+            const serialized = this.parseBackgroundString(value);
+            (this.parentInstruction as BackgroundInstruction).contextSet = {
+                backgroundColor: serialized.color && "#" + serialized.color,
+                backgroundSrc: serialized.src
+            };
+        });
         this.elm.class("secondary");
     }
 
     public serialize(): ControlBackground {
-        const parts = this.backgroundEditable.getValue().trim().split(" ");
+        return this.parseBackgroundString(this.backgroundEditable.getValue());
+    }
+
+    private parseBackgroundString(backgroundStr: string): ControlBackground {
+        const parts = backgroundStr.trim().split(" ");
         const data: ControlBackground = { visualNovelCtrl: "background" };
 
         for (const part of parts) {
             if (part.startsWith("#")) { // color: #fff
-                data.color = part.slice(1);
+                const hex = part.slice(1);
+                if ([3, 4, 6, 8].includes(hex.length)) {
+                    data.color = hex;
+                }
             } else if (part.match(/^-?\d+(\.\d*)?,-?\d+(\.\d*)?$/)) { // vec2: 0,2.5
                 const [x, y] = part.split(",").map(x => parseFloat(x));
                 data.x = x;

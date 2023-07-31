@@ -1,6 +1,6 @@
 import { Editor } from "../../editor/Editor.js";
 import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
-import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, RemoveGroupAction, RemoveInstructionAction, UndoableAction } from "../../editor/editing/actions.js";
+import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, RemoveGroupAction, RemoveInstructionAction, UndoableAction } from "../../editor/editing/actions.js";
 import { PluginAnalyser } from "../EditorPlugin.js";
 import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel.js";
 
@@ -75,7 +75,12 @@ export class VisualNovelAnalyser implements PluginAnalyser {
     }
 
     public onActionPerformed(action: UndoableAction): void {
-        if (action instanceof AddInstructionAction) {
+        if (action instanceof EditableEditAction) {
+            const instruction = action.editable.parentLine.parentInstruction;
+            if (instruction instanceof VNContentInstrOneLine && instruction.contextSet) {
+                this.propagateContext(instruction.parentGroup, instruction.getIndex(), instruction.contextSet);
+            }
+        } else if (action instanceof AddInstructionAction) {
             const addedInstruction = action.instruction;
             if (!(addedInstruction instanceof VNContentInstrOneLine)) { return; }
 

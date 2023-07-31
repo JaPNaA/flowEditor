@@ -31,7 +31,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             this.placeholderText = new Elm('span').class("placeholder").append(`Press shortcut or hold shift and type to search...`)
         );
 
-        this.editable.onChange.subscribe(changes => {
+        this.editable.onCheckInput.subscribe(changes => {
             if (changes.newContent && changes.newContent[0] === "\n") {
                 this.splitGroupHere();
                 return;
@@ -128,6 +128,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 }
 
 export class NewInstructionEditable extends Editable {
+    public onCheckInput = new EventBus<UserInputEvent>();
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
 
     constructor(parentLine: NewInstructionLine) {
@@ -138,7 +139,7 @@ export class NewInstructionEditable extends Editable {
 
     public checkInput(event: UserInputEvent): void {
         // allow all
-        this.onChange.send(event);
+        this.onCheckInput.send(event);
     }
 
     public update() {

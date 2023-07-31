@@ -4,7 +4,7 @@ import { InstructionLine } from "../instruction/instructionTypes.js";
 import { EditableEditAction } from "./actions.js";
 
 export class Editable extends Elm<"span"> {
-    public onChange = new EventBus<UserInputEvent>();
+    public onChange = new EventBus<string>();
     /** The type of value autocomplete tries to complete this editable's value with */
     public autoCompleteType?: symbol;
     /**
@@ -32,6 +32,7 @@ export class Editable extends Elm<"span"> {
     }
 
     public setValue(value: string) {
+        this.onChange.send(value);
         this.parentLine.parentInstruction.parentGroup.parentEditor.undoLog.perform(
             new EditableEditAction(this, value)
         );
@@ -41,7 +42,6 @@ export class Editable extends Elm<"span"> {
     public afterChangeApply() { }
 
     public checkInput(event: UserInputEvent) {
-        this.onChange.send(event);
         if (event.added.includes("\n")) {
             event.reject();
         }
