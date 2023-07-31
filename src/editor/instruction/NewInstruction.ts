@@ -1,5 +1,4 @@
 import { Editable } from "../editing/Editable.js";
-import { EditorCursor } from "../editing/EditorCursor.js";
 import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } from "./instructionTypes.js";
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture.js";
 import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
@@ -14,10 +13,15 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
         this.line.splitGroupHere();
         return true;
     }
+
+    public removeLine(line: InstructionLine): boolean {
+        this.line.editable.deactivate();
+        return super.removeLine(line);
+    }
 }
 
 export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
-    private editable: NewInstructionEditable;
+    public editable: NewInstructionEditable;
     public isBranch: boolean = false;
     private placeholderText: Elm<'span'>;
     private isEmpty = true;
@@ -130,6 +134,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 export class NewInstructionEditable extends Editable {
     public onCheckInput = new EventBus<UserInputEvent>();
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
+    private isActive = false;
 
     constructor(parentLine: NewInstructionLine) {
         super("", parentLine);
@@ -146,10 +151,20 @@ export class NewInstructionEditable extends Editable {
         super.update();
         const cursor = this.parentLine.parentInstruction.parentGroup.parentEditor.cursor;
         if (cursor.activeEditable === this) {
-            cursor.onKeydownIntercept.subscribe(this.intercepter);
+            if (!this.isActive) {
+                cursor.onKeydownIntercept.subscribe(this.intercepter);
+            }
+            this.isActive = true;
         } else {
-            cursor.onKeydownIntercept.unsubscribe(this.intercepter);
+            this.deactivate();
         }
+    }
+
+    public deactivate() {
+        if (!this.isActive) { return; }
+        const cursor = this.parentLine.parentInstruction.parentGroup.parentEditor.cursor;
+        cursor.onKeydownIntercept.unsubscribe(this.intercepter);
+        this.isActive = false;
     }
 
     public acceptAutocomplete(blueprint: InstructionBlueprint) {
