@@ -1,5 +1,4 @@
 import { EditorSaveData } from "../editor/Editor.js";
-import { newInstructionData } from "../editor/toolchain/flowToInstructionData.js";
 import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { DetectedExternallyModifiedError, Project } from "./Project.js";
 
