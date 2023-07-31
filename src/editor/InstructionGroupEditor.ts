@@ -34,6 +34,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     private static collisionType = Symbol();
     private hitbox = new Hitbox(this.rect, this);
 
+    private isSetup = false;
     private selected = false;
     private initBranchTargets: ((InstructionGroupEditor | null)[] | null)[] = [];
 
@@ -313,9 +314,12 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.rect.width = InstructionGroupEditor.defaultWidth;
 
         this.updateAfterMove();
+        this.isSetup = true;
     }
 
     public draw(): void {
+        if (!this.isSetup) { return; }
+
         const X = this.engine.canvas.X;
         const elm = this.elm.getHTMLElement();
 
