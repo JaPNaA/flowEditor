@@ -10,6 +10,7 @@ interface Context extends VNInstructionContext {
 
 export class VisualNovelAnalyser implements PluginAnalyser {
     private groupStartContexts = new Map<InstructionGroupEditor, Context>();
+    private visitedGroupsSet = new Set<InstructionGroupEditor>();
 
     public onFlowLoad(editor: Editor): void {
         let context: Context | undefined = undefined;
@@ -75,6 +76,8 @@ export class VisualNovelAnalyser implements PluginAnalyser {
     }
 
     public onActionPerformed(action: UndoableAction): void {
+        this.visitedGroupsSet.clear();
+
         if (action instanceof EditableEditAction) {
             const instruction = action.editable.parentLine.parentInstruction;
             if (instruction instanceof VNContentInstrOneLine && instruction.contextSet) {
@@ -187,6 +190,8 @@ export class VisualNovelAnalyser implements PluginAnalyser {
         }
 
         for (const child of group._childGroups) {
+            if (this.visitedGroupsSet.has(group)) { continue; }
+            this.visitedGroupsSet.add(group);
             this.updateGroupStart(child);
         }
     }
