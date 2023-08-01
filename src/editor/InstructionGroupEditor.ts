@@ -271,8 +271,8 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             instructions: instructions,
             branches: branches,
             children: childrenUids,
-            x: this.rect.x,
-            y: this.rect.y
+            x: Math.round(this.rect.x),
+            y: Math.round(this.rect.y)
         };
     }
 
