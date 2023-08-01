@@ -474,15 +474,15 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             branches: [],
             instructions: []
         });
+        this.parentEditor.addGroup(newGroup);
         let i = 0;
         for (const instruction of movingInstructions) {
             newGroup.insertInstruction(instruction, i++);
         }
-        this.parentEditor.addGroup(newGroup);
 
         // add link from this to new group
         const lastInstruction = this._instructions[this._instructions.length - 1];
-        if (lastInstruction.isAlwaysJump()) {
+        if (lastInstruction && lastInstruction.isAlwaysJump()) {
             const targets = lastInstruction.getBranchTargets();
             const newTargets = [];
             if (targets) {
