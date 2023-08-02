@@ -4,6 +4,7 @@ import { download } from "../utils.js";
 import { FileProject } from "./FileProject.js";
 import { NullProject } from "./NullProject.js";
 import { Project } from "./Project.js";
+import { FileAccessAPIFileSystem } from "../../filesystem/FS.js";
 
 export class ProjectFilesDisplay extends Component {
     private project!: Project;
@@ -31,7 +32,7 @@ export class ProjectFilesDisplay extends Component {
             }
             const handle = await showDirectoryPicker({ mode: "readwrite" });
             await handle.requestPermission({ mode: "readwrite" });
-            const project = new FileProject(handle);
+            const project = new FileProject(new FileAccessAPIFileSystem(handle));
             appHooks.openProject(project);
         });
 

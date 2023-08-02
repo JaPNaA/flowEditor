@@ -1,7 +1,7 @@
-import { pluginHooks } from "../index.js";
 import { Component, JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorPlugin } from "../EditorPlugin.js";
-import { DetectedExternallyModifiedError, Project } from "../../project/Project.js";
+import { pluginHooks } from "../index.js";
+import { DetectedExternallyModifiedError, Project } from "../project/Project.js";
 import { Editor } from "./Editor.js";
 
 export class EditorContainer extends Component {
@@ -72,7 +72,7 @@ export class EditorContainer extends Component {
 
     public async setup() {
         if (!this.project.isReady()) { await this.project.onReady.promise(); }
-        const startFile = this.project.getStartFlowPath();
+        const startFile = this.project.getStartFlowSavePath();
         try {
             const save = await this.project.getFlowSave(startFile);
             this.editor.deserialize(save);

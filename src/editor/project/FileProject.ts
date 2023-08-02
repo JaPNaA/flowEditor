@@ -1,6 +1,8 @@
-import { DetectedExternallyModifiedError, Project } from "./Project.js";
-import { EditorSaveData } from "../editor/Editor.js";
+import { FlowData } from "../../FlowRunner.js";
+import { FSReadWrite } from "../../filesystem/FS.js";
 import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EditorSaveData } from "../editor/Editor.js";
+import { DetectedExternallyModifiedError, Project } from "./Project.js";
 
 export class FileProject implements Project {
     public onReady = new EventBus();
@@ -11,14 +13,16 @@ export class FileProject implements Project {
     private ready = false;
     private cannotOpen = false;
 
-    private indexFile!: FileSystemFileHandle;
+    private indexFile!: string;
     private index!: ProjectIndex;
-    private assetsDirectory!: FileSystemDirectoryHandle;
-    private flowsDirectory!: FileSystemDirectoryHandle;
+    private assetsDirectory!: FSReadWrite;
+    private flowsDirectory!: FSReadWrite;
+    private compiledFlowsDirectory!: FSReadWrite;
 
     private lastModifiedMap = new Map<string, number>();
 
-    constructor(private directoryHandle: FileSystemDirectoryHandle) {
+
+    constructor(private fileSystem: FSReadWrite) {
         this.setup();
     }
 
@@ -27,11 +31,7 @@ export class FileProject implements Project {
     }
 
     public async getAsset(path: string): Promise<Blob> {
-        return new Blob([
-            await this.assetsDirectory.getFileHandle(path)
-                .then(handle => handle.getFile())
-                .then(file => file.arrayBuffer())
-        ]);
+        return this.assetsDirectory.read(path);
     }
 
     public async listAssets(): Promise<string[]> {
@@ -41,34 +41,33 @@ export class FileProject implements Project {
     }
 
     public async writeAsset(path: string, blob: Blob): Promise<void> {
-        const handle = await this.assetsDirectory.getFileHandle(path, { create: true });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        writable.close();
+        return this.assetsDirectory.write(path, blob);
     }
 
     public async moveAsset(pathFrom: string, pathTo: string): Promise<void> {
-        const handle = await this.assetsDirectory.getFileHandle(pathFrom);
-        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
-        return handle.move(pathTo);
+        return this.assetsDirectory.mv(pathFrom, pathTo);
     }
 
     public async removeAsset(path: string): Promise<void> {
-        const handle = await this.assetsDirectory.getFileHandle(path);
-        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
-        return handle.remove();
+        return this.assetsDirectory.rm(path);
     }
 
 
-    public getStartFlowPath(): string {
+    public getStartFlowSavePath(): string {
         return this.index.startFlow;
     }
 
     public async getFlowSave(path: string): Promise<EditorSaveData> {
-        const file = await this.flowsDirectory.getFileHandle(path)
-            .then(handle => handle.getFile());
-        this.lastModifiedMap.set(path, file.lastModified);
-        return JSON.parse(await file.text());
+        const [data, date] = await Promise.all([
+            this.flowsDirectory.read(path)
+                .then(blob => blob.text())
+                .then(str => JSON.parse(str)),
+            this.flowsDirectory.lastModified(path)
+        ]);
+        if (date) {
+            this.lastModifiedMap.set(path, date);
+        }
+        return data;
     }
 
     public async listFlowSaves(): Promise<string[]> {
@@ -78,50 +77,82 @@ export class FileProject implements Project {
     }
 
     public async writeFlowSave(path: string, content: string, force?: boolean): Promise<void> {
-        const handle = await this.flowsDirectory.getFileHandle(path, { create: true });
+        const lastModified = await this.flowsDirectory.lastModified(path);
         if (!force) {
-            this.throwIfUnexpectedLastModifiedFlowSave(path, handle);
+            await this.throwIfUnexpectedLastModifiedFlowSave(path, lastModified);
         }
 
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-        this.lastModifiedMap.set(path, (await handle.getFile()).lastModified);
+        await this.flowsDirectory.write(path, new Blob([content]));
+        const newLastModified = await this.flowsDirectory.lastModified(path);
+        if (newLastModified) {
+            this.lastModifiedMap.set(path, newLastModified);
+        }
     }
 
     public async moveFlowSave(pathFrom: string, pathTo: string): Promise<void> {
-        const handle = await this.flowsDirectory.getFileHandle(pathFrom);
-        const expectedLastModified = await this.throwIfUnexpectedLastModifiedFlowSave(pathFrom, handle);
-        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
-        await handle.move(pathTo);
-        if (expectedLastModified !== undefined) {
-            this.lastModifiedMap.set(pathTo, expectedLastModified);
+        const lastModified = await this.flowsDirectory.lastModified(pathFrom);
+        this.throwIfUnexpectedLastModifiedFlowSave(pathFrom, lastModified);
+
+        await this.flowsDirectory.mv(pathFrom, pathTo);
+
+        if (lastModified !== null) {
+            this.lastModifiedMap.set(pathTo, lastModified);
             this.lastModifiedMap.delete(pathFrom);
         }
     }
 
     public async removeFlowSave(path: string): Promise<void> {
-        const handle = await this.flowsDirectory.getFileHandle(path);
-        await this.throwIfUnexpectedLastModifiedFlowSave(path, handle);
-        // @ts-ignore -- not defined in Global.d.ts, but exists in chrome
-        await handle.remove();
-        this.lastModifiedMap.delete(path);
+        const lastModified = await this.flowsDirectory.lastModified(path);
+        this.throwIfUnexpectedLastModifiedFlowSave(path, lastModified);
+
+        await this.flowsDirectory.rm(path);
     }
 
     public async checkIsLatestFlowSave(path: string): Promise<boolean> {
         const expectedLastModified = this.lastModifiedMap.get(path);
         if (expectedLastModified === undefined) { return true; }
-        const handle = await this.flowsDirectory.getFileHandle(path);
-        const file = await handle.getFile();
-        const lastModified = file.lastModified;
+        const lastModified = await this.flowsDirectory.lastModified(path);
         return lastModified === expectedLastModified;
+    }
+
+    public getStartFlowPath_(): string {
+        return this.getStartFlowSavePath();
+    }
+
+    public async getFlow(path: string): Promise<FlowData> {
+        const file = await this.compiledFlowsDirectory.read(path);
+        const text = await file.text();
+        return JSON.parse(text);
+    }
+
+    public async listFlows(): Promise<string[]> {
+        const flows: string[] = [];
+        this.recursiveAddFilesToArray(this.compiledFlowsDirectory, "", flows);
+        return flows;
+    }
+
+    public writeFlow(path: string, data: string): Promise<void> {
+        return this.compiledFlowsDirectory.write(path, new Blob([data]));
+    }
+
+    public moveFlow(pathFrom: string, pathTo: string): Promise<void> {
+        return this.compiledFlowsDirectory.mv(pathFrom, pathTo);
+    }
+
+    public removeFlow(path: string): Promise<void> {
+        return this.compiledFlowsDirectory.rm(path);
+    }
+
+    public flush(): Promise<void> {
+        return Promise.resolve();
     }
 
     private async setup() {
         // open index file
         try {
-            this.indexFile = await this.directoryHandle.getFileHandle(FileProject.indexFilePath);
-            this.name = this.directoryHandle.name;
+            await this.fileSystem.read(FileProject.indexFilePath);
+            this.indexFile = FileProject.indexFilePath;
+            this.name = this.fileSystem.name;
         } catch (err) {
             console.warn(err);
 
@@ -131,11 +162,7 @@ export class FileProject implements Project {
                     confirm("The selected directory is not a project directory. Would you like to create a project directory?")
                 ) {
                     // check directory is empty
-                    let empty = true;
-                    for await (const _ of this.directoryHandle.values()) {
-                        empty = false;
-                        break;
-                    }
+                    let empty = (await this.fileSystem.ls("")).length <= 0;
 
                     if (!empty) {
                         const name = prompt("Please name the project", "Unnamed Flow Project");
@@ -145,7 +172,8 @@ export class FileProject implements Project {
                             this.name = "Unnamed Flow Project";
                         }
 
-                        this.directoryHandle = await this.directoryHandle.getDirectoryHandle(this.name, { create: true });
+                        await this.fileSystem.mkdir(this.name);
+                        this.fileSystem = await this.fileSystem.cd(this.name);
                     }
 
                     try {
@@ -166,14 +194,12 @@ export class FileProject implements Project {
     private async setupNewProject() {
         if (this.ready) { throw new Error("Cannot setup new project after ready"); }
 
-        this.index = JSON.parse(JSON.stringify(initialProjectIndex));
-        this.indexFile = await this.directoryHandle.getFileHandle(FileProject.indexFilePath, { create: true });
-        const writer = (await this.indexFile.createWritable()).getWriter();
-        await writer.write(JSON.stringify(this.index));
-        await writer.close();
-
-        this.flowsDirectory = await this.directoryHandle.getDirectoryHandle(this.index.paths.flows, { create: true });
-        this.assetsDirectory = await this.directoryHandle.getDirectoryHandle(this.index.paths.assets, { create: true });
+        this.index = JSON.parse(JSON.stringify(defaultProjectIndex));
+        await this.fileSystem.write(FileProject.indexFilePath, new Blob([JSON.stringify(this.index)]));
+        this.indexFile = FileProject.indexFilePath;
+        this.flowsDirectory = await this.getOrMakeDirectory(this.index.paths.flows);
+        this.assetsDirectory = await this.getOrMakeDirectory(this.index.paths.assets);
+        this.compiledFlowsDirectory = await this.getOrMakeDirectory(this.index.paths.compiledFlows!);
 
         this.setReady();
     }
@@ -181,11 +207,29 @@ export class FileProject implements Project {
     private async setupOpenProject() {
         if (this.ready) { throw new Error("Cannot open project after ready"); }
 
-        this.index = JSON.parse(await (await this.indexFile.getFile()).text());
-        this.flowsDirectory = await this.directoryHandle.getDirectoryHandle(this.index.paths.flows);
-        this.assetsDirectory = await this.directoryHandle.getDirectoryHandle(this.index.paths.assets);
+        this.indexFile = FileProject.indexFilePath;
+        this.index = {
+            ...defaultProjectIndex,
+            ...JSON.parse(await ((await this.fileSystem.read(this.indexFile)).text()))
+        };
+        const paths = {
+            ...defaultProjectIndexPaths,
+            ...this.index.paths
+        };
+        this.flowsDirectory = await this.getOrMakeDirectory(paths.flows);
+        this.assetsDirectory = await this.getOrMakeDirectory(paths.assets);
+        this.compiledFlowsDirectory = await this.getOrMakeDirectory(paths.compiledFlows);
 
         this.setReady();
+    }
+
+    private async getOrMakeDirectory(path: string) {
+        try {
+            return await this.fileSystem.cd(path);
+        } catch (err) {
+            await this.fileSystem.mkdir(path);
+            return this.fileSystem.cd(path);
+        }
     }
 
     private setReady() {
@@ -194,45 +238,50 @@ export class FileProject implements Project {
         this.onReady.send();
     }
 
-    private async recursiveAddFilesToArray(directory: FileSystemDirectoryHandle, basePath: string, items: string[]) {
+    private async recursiveAddFilesToArray(directory: FSReadWrite, basePath: string, items: string[]) {
         const promises = [];
-        for await (const item of directory.values()) {
+        for (const item of await directory.ls(basePath)) {
             if (
-                item.kind === "file" &&
+                item.type === "file" &&
                 !item.name.endsWith(".crswap") // ignore swap files Chrome generates
             ) {
-                items.push(basePath + item.name);
-            } else if (item.kind === "directory") {
-                promises.push(this.recursiveAddFilesToArray(item, basePath + item.name + "/", items));
+                items.push(item.path);
+            } else if (item.type === "directory") {
+                promises.push(this.recursiveAddFilesToArray(directory, item.path, items));
             }
         }
         await Promise.all(promises);
     }
 
-    private async throwIfUnexpectedLastModifiedFlowSave(path: string, handle: FileSystemFileHandle): Promise<number | undefined> {
+    private async throwIfUnexpectedLastModifiedFlowSave(path: string, lastModified: number | null): Promise<void> {
+        if (lastModified === null) { return; }
         const expectedLastModified = this.lastModifiedMap.get(path);
         if (expectedLastModified !== undefined) {
-            const lastModified = (await handle.getFile()).lastModified;
             if (lastModified !== expectedLastModified) {
                 throw new DetectedExternallyModifiedError();
             }
-            return lastModified;
         }
     }
 }
 
 interface ProjectIndex {
-    paths: {
-        flows: string;
-        assets: string;
-    };
+    paths: ProjectIndexPaths;
     startFlow: string;
 }
 
-const initialProjectIndex: ProjectIndex = {
-    paths: {
-        flows: "flows",
-        assets: "assets"
-    },
+interface ProjectIndexPaths {
+    flows: string;
+    assets: string;
+    compiledFlows?: string;
+}
+
+const defaultProjectIndexPaths: Required<ProjectIndexPaths> = {
+    flows: "flows",
+    assets: "assets",
+    compiledFlows: "flow"
+};
+
+const defaultProjectIndex: ProjectIndex = {
+    paths: defaultProjectIndexPaths,
     startFlow: "start.json"
 };

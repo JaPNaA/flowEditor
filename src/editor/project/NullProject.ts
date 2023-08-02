@@ -1,6 +1,7 @@
 import { EditorSaveData } from "../editor/Editor.js";
 import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { DetectedExternallyModifiedError, Project } from "./Project.js";
+import { FlowData } from "../../FlowRunner.js";
 
 /**
  * The NullProject is open when the user has not opened any project.
@@ -34,7 +35,7 @@ export class NullProject implements Project {
         throw new Error("Cannot remove assets in NullProject");
     }
 
-    public getStartFlowPath(): string {
+    public getStartFlowSavePath(): string {
         return "localstorage";
     }
 
@@ -71,6 +72,34 @@ export class NullProject implements Project {
 
     public async removeFlowSave(path: string): Promise<void> {
         throw new Error("Cannot remove flow saves in NullProject");
+    }
+
+    public writeFlow(path: string, data: string): Promise<void> {
+        throw new Error("Cannot write flows in NullProject");
+    }
+
+    public moveFlow(pathFrom: string, pathTo: string): Promise<void> {
+        throw new Error("Cannot move flows in NullProject");
+    }
+
+    public removeFlow(path: string): Promise<void> {
+        throw new Error("Cannot remove flows in NullProject");
+    }
+
+    public getStartFlowPath_(): string {
+        throw new Error("Cannot get start flow path in NullProject");
+    }
+
+    public getFlow(path: string): Promise<FlowData> {
+        throw new Error("Cannot get flow in NullProject");
+    }
+
+    public listFlows(): Promise<string[]> {
+        throw new Error("Cannot list flows in NullProject");
+    }
+
+    public flush(): Promise<void> {
+        return Promise.resolve();
     }
 
     public async checkIsLatestFlowSave(path: string): Promise<boolean> {

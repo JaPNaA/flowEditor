@@ -1,26 +1,9 @@
 import { EditorSaveData } from "../editor/Editor.js";
-import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { FileAccessReadWrite } from "../../filesystem/FileAccess.js";
 
-export interface Project {
-    /** Event fired when ready. */
-    onReady: EventBus<void>;
-    /** Returns true if the project is ready */
-    isReady(): boolean;
-
-    /** Get an asset file */
-    getAsset(path: string): Promise<Blob>;
-    /** List all asset files */
-    listAssets(): Promise<string[]>;
-
-    /** Write an asset file */
-    writeAsset(path: string, blob: Blob): Promise<void>;
-    /** Move an asset file */
-    moveAsset(pathFrom: string, pathTo: string): Promise<void>;
-    /** Remove an asset file */
-    removeAsset(path: string): Promise<void>;
-
+export interface Project extends FileAccessReadWrite {
     /** Get the 'start' flow's path */
-    getStartFlowPath(): string;
+    getStartFlowSavePath(): string;
     /** Get a flow save */
     getFlowSave(path: string): Promise<EditorSaveData>;
     /** List all flow saves */
