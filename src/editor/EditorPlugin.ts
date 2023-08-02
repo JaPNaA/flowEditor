@@ -4,9 +4,9 @@ import { AutoCompleteSuggester } from "./editor/editing/AutoComplete.js";
 import { UndoableAction } from "./editor/editing/actions.js";
 import { InstructionBlueprintMin } from "./editor/instruction/InstructionBlueprintRegistery.js";
 import { Instruction } from "./editor/instruction/instructionTypes.js";
-import { ExecuterContainer } from "./executer/ExecuterContainer.js";
 import { Project } from "./project/Project.js";
 import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Executer } from "../executer/Executer.js";
 
 
 export interface EditorPlugin {
@@ -22,7 +22,7 @@ export interface EditorPlugin {
 }
 
 export interface PluginExecuter {
-    start(executerContainer: ExecuterContainer): Promise<void>;
+    start(executerContainer: Executer): Promise<void>;
     run(data: any): boolean;
     stop(): Promise<void>;
     setState(state: any): void;

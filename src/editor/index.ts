@@ -59,7 +59,7 @@ export const appHooks = {
 
 export const pluginHooks = {
     startExecution(): Promise<void> {
-        return visualNovelPlugin.executer.start(executerContainer);
+        return visualNovelPlugin.executer.start(executerContainer.executer);
     },
 
     runInstruction(instruction: any) {

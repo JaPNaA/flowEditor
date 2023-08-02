@@ -1,14 +1,17 @@
 import { Executer } from "../../executer/Executer.js";
+import { FileAccessRead } from "../../filesystem/FileAccess.js";
 import { Component, Elm } from "../../japnaaEngine2d/elements.js";
 import { appHooks, pluginHooks } from "../index.js";
 import { Project } from "../project/Project.js";
 import { requestFile } from "../utils.js";
 
 export class ExecuterContainer extends Component {
-    private executer = new Executer(pluginHooks);
+    public executer: Executer;
 
-    constructor(private project: Project) {
+    constructor(files: FileAccessRead) {
         super("executerContainer");
+
+        this.executer = new Executer(pluginHooks, files);
 
         this.elm.append(
             new Elm().class("fileOperationsBar", "operationsBar").append(
@@ -40,11 +43,11 @@ export class ExecuterContainer extends Component {
     }
 
     public getProject() {
-        return this.project;
+        return this.executer.files;
     }
 
     public setProject(project: Project) {
-        this.project = project;
+        this.executer.files = project;
     }
 
     public writeVariable(key: string, value: number) {

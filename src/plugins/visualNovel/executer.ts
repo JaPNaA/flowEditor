@@ -1,6 +1,6 @@
 import { PluginExecuter } from "../../editor/EditorPlugin.js";
-import { ExecuterContainer } from "../../editor/executer/ExecuterContainer.js";
-import { Project } from "../../editor/project/Project.js";
+import { Executer } from "../../executer/Executer.js";
+import { FileAccessRead } from "../../filesystem/FileAccess.js";
 import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
 import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
@@ -48,7 +48,7 @@ export class VisualNovelExecuter implements PluginExecuter {
             `;
         }));
     private game?: VisualNovelGame;
-    private executerContainer!: ExecuterContainer;
+    private executer!: Executer;
 
     private stringVariables: string[] = [];
 
@@ -73,14 +73,14 @@ export class VisualNovelExecuter implements PluginExecuter {
         this.getVariable = this.getVariable.bind(this);
     }
 
-    public start(executerContainer: ExecuterContainer): Promise<void> {
-        this.executerContainer = executerContainer;
-        this.executerContainer.addOutputDisplay(this.elm);
+    public start(executer: Executer): Promise<void> {
+        this.executer = executer;
+        this.executer.addOutputDisplay(this.elm);
         this.game = new VisualNovelGame(this.elm.getHTMLElement());
-        this.game.setProject(executerContainer.getProject());
+        this.game.setProject(executer.files);
         this.game.getChooserChosenEventBus()
-            .subscribe(choice => this.executerContainer.input(choice));
-        this.game.onContinue.subscribe(() => this.executerContainer.resume());
+            .subscribe(choice => this.executer.input(choice));
+        this.game.onContinue.subscribe(() => this.executer.resume());
         this.stringVariables.length = 0;
 
         return Promise.resolve();
@@ -92,24 +92,24 @@ export class VisualNovelExecuter implements PluginExecuter {
 
         switch (data.visualNovelCtrl) {
             case "say":
-                this.executerContainer.log(`${data.char}: "${data.text}"`);
+                this.executer.log.log(`${data.char}: "${data.text}"`);
                 this.game.characterSay(
                     visualNovelMdToHTML(data.char, this.getVariable),
                     visualNovelMdToHTML(data.text, this.getVariable)
                 );
-                this.executerContainer.pause();
+                this.executer.pause();
                 return true;
             case "say-add":
-                this.executerContainer.log('"' + data.text + '"');
+                this.executer.log.log('"' + data.text + '"');
                 this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
-                this.executerContainer.pause();
+                this.executer.pause();
                 return true;
             case "show":
-                this.executerContainer.log(`Show ${data.src}`);
+                this.executer.log.log(`Show ${data.src}`);
                 this.game.showImage(replaceVariables(data.src, this.getVariable));
                 return true;
             case "background":
-                this.executerContainer.log(`Background set to ${JSON.stringify(data)}`);
+                this.executer.log.log(`Background set to ${JSON.stringify(data)}`);
                 this.game.setBackground({
                     ...data,
                     src: data.src && replaceVariables(data.src, this.getVariable)
@@ -126,12 +126,12 @@ export class VisualNovelExecuter implements PluginExecuter {
                 this.game.setSpeechBubbleSettings(data);
                 return true;
             case "wait":
-                this.executerContainer.pause();
-                setTimeout(() => this.executerContainer.resume(), data.time);
+                this.executer.pause();
+                setTimeout(() => this.executer.resume(), data.time);
                 return true;
             case "bgm":
                 this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
-                this.executerContainer.logSecondary("Set background music: " + data.src);
+                this.executer.log.logSecondary("Set background music: " + data.src);
                 return true;
             case "bgmSettings":
                 this.game.setBackgroundMusicSettings(data);
@@ -143,7 +143,7 @@ export class VisualNovelExecuter implements PluginExecuter {
                 this.game.setSFXSettings(data);
                 return true;
             case "strset":
-                this.executerContainer.writeVariable(data.v, this.stringVariables.push(data.str));
+                this.executer.writeVariable(data.v, this.stringVariables.push(data.str));
                 return true;
             default:
                 return false;
@@ -171,7 +171,7 @@ export class VisualNovelExecuter implements PluginExecuter {
 
     /** Function used to map flow variable to string */
     private getVariable(str: string): string | undefined {
-        const pointer = this.executerContainer.getVariable(str);
+        const pointer = this.executer.getVariable(str);
         if (pointer === undefined) { return; }
         return this.stringVariables[pointer - 1] === undefined ?
             pointer.toString() : this.stringVariables[pointer - 1];
@@ -187,7 +187,7 @@ class VisualNovelGame {
     private background = new Background();
     private imageDisplayer = new ImageDisplayer();
     private audio = new AudioPlayer();
-    private project!: Project;
+    private project!: FileAccessRead;
 
     constructor(parentElm: HTMLElement) {
         this.engine = new JaPNaAEngine2d({
@@ -202,7 +202,7 @@ class VisualNovelGame {
         this.speechBubble.onNextRequested.subscribe(this.onContinue);
     }
 
-    public setProject(project: Project) {
+    public setProject(project: FileAccessRead) {
         this.project = project;
         this.background.project = project;
         this.imageDisplayer.project = project;
@@ -405,7 +405,7 @@ class ChooserChoice extends Elm {
 }
 
 class Background extends WorldElm {
-    public project!: Project;
+    public project!: FileAccessRead;
 
     private color: string = "#000";
     private image?: HTMLImageElement;
@@ -479,7 +479,7 @@ class Background extends WorldElm {
 }
 
 class ImageDisplayer extends WorldElm {
-    public project!: Project;
+    public project!: FileAccessRead;
 
     private image?: HTMLImageElement;
     private zoom: number = 1;
@@ -804,7 +804,7 @@ class SpeechBubbleElm extends Elm {
 }
 
 class AudioPlayer {
-    public project!: Project;
+    public project!: FileAccessRead;
 
     private backgroundMusic: HTMLAudioElement = new Audio();
     private backgroundMusicSrc: string = "";
