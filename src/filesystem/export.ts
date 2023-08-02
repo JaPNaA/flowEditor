@@ -1,8 +1,8 @@
-import { FlowData } from "../FlowRunner";
-import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d";
-import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray";
-import { FSRead, FSReadWrite } from "./FS";
-import { FileAccessRead, FileAccessReadWrite } from "./FileAccess";
+import { FlowData } from "../FlowRunner.js";
+import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
+import { FSRead, FSReadWrite } from "./FS.js";
+import { FileAccessRead, FileAccessReadWrite } from "./FileAccess.js";
 
 export class ExportReader<T extends FSRead = FSRead> implements FileAccessRead {
     public onReady = new EventBus<void>();
