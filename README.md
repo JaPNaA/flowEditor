@@ -1,8 +1,10 @@
 # Flow Editor
 
+## Flows
+
 A flow is a small program / script encoded in JSON. Designed for character dialogue or scripting game events.
 
-## Specifications
+### Specifications
 
 ```ts
 // This is the root of the JSON file
@@ -58,3 +60,19 @@ export interface ControlNop {
     ctrl: "nop";
 }
 ```
+
+## Project organization
+
+All source code is under `src`
+
+In `src`, there are a few items:
+
+  - `editor` is the flow editor program. It depends on everything in `src` (including the `executer` program).
+    - entry: `editor/index.ts`
+  - `executer` is the flow executing program. It does not depend on `editor`. A version of `executer` is included in executable flow exports.
+    - entry: `executer/index.ts`
+  - `filesystem`, `japnaaEngine2d`, and `FlowRunner.ts` are all standalone shared library files
+    - `japnaaEngine2d` is a renamed copy of the `src` directory in [JaPNaA/japnaaEngine2d](https://github.com/JaPNaA/japnaaEngine2d)
+  - `plugins` contain plugins that can modify the editor and executer.
+
+<small>Note: executer is _not_ spelt incorrectly -- it's a style choice. Yup.</small>
