@@ -121,3 +121,24 @@ export class FileAccessAPIFileSystem implements FSReadWrite {
         return curr;
     }
 }
+
+export class NetworkFileSystem implements FSRead {
+    public name: string;
+
+    constructor(private baseUrl: string) {
+        this.name = baseUrl;
+    }
+
+    public join(...paths: string[]): string {
+        return paths.filter(x => x).join("/");
+    }
+
+    public async read(path: string): Promise<Blob> {
+        return fetch(this.join(this.baseUrl, path))
+            .then(res => res.blob());
+    }
+
+    public async cd(path: string) {
+        return new NetworkFileSystem(this.join(this.baseUrl, path));
+    }
+}
