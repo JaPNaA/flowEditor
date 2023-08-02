@@ -92,7 +92,7 @@ export class VisualNovelExecuter implements PluginExecuter {
 
         switch (data.visualNovelCtrl) {
             case "say":
-                this.executerContainer.log.log(`${data.char}: "${data.text}"`);
+                this.executerContainer.log(`${data.char}: "${data.text}"`);
                 this.game.characterSay(
                     visualNovelMdToHTML(data.char, this.getVariable),
                     visualNovelMdToHTML(data.text, this.getVariable)
@@ -100,16 +100,16 @@ export class VisualNovelExecuter implements PluginExecuter {
                 this.executerContainer.pause();
                 return true;
             case "say-add":
-                this.executerContainer.log.log('"' + data.text + '"');
+                this.executerContainer.log('"' + data.text + '"');
                 this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
                 this.executerContainer.pause();
                 return true;
             case "show":
-                this.executerContainer.log.log(`Show ${data.src}`);
+                this.executerContainer.log(`Show ${data.src}`);
                 this.game.showImage(replaceVariables(data.src, this.getVariable));
                 return true;
             case "background":
-                this.executerContainer.log.log(`Background set to ${JSON.stringify(data)}`);
+                this.executerContainer.log(`Background set to ${JSON.stringify(data)}`);
                 this.game.setBackground({
                     ...data,
                     src: data.src && replaceVariables(data.src, this.getVariable)
@@ -131,7 +131,7 @@ export class VisualNovelExecuter implements PluginExecuter {
                 return true;
             case "bgm":
                 this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
-                this.executerContainer.log.logSecondary("Set background music: " + data.src);
+                this.executerContainer.logSecondary("Set background music: " + data.src);
                 return true;
             case "bgmSettings":
                 this.game.setBackgroundMusicSettings(data);

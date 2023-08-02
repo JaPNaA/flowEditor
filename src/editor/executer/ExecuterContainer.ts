@@ -74,4 +74,12 @@ export class ExecuterContainer extends Component {
     public resume() {
         this.executer.resume();
     }
+
+    public log(message: string) {
+        this.executer.log.log(message);
+    }
+
+    public logSecondary(message: string) {
+        this.executer.log.logSecondary(message);
+    }
 }
