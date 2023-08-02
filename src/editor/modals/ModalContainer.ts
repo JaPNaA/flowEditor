@@ -1,4 +1,4 @@
-import { Component } from "../japnaaEngine2d/elements.js";
+import { Component } from "../../japnaaEngine2d/elements.js";
 
 export class ModalContainer extends Component {
     constructor() {

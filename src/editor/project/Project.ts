@@ -1,5 +1,5 @@
-import { EditorSaveData } from "../editor/Editor";
-import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d";
+import { EditorSaveData } from "../editor/Editor.js";
+import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 
 export interface Project {
     /** Event fired when ready. */

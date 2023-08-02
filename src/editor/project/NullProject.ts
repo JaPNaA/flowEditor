@@ -1,5 +1,5 @@
 import { EditorSaveData } from "../editor/Editor.js";
-import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { DetectedExternallyModifiedError, Project } from "./Project.js";
 
 /**

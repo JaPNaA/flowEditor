@@ -1,17 +1,17 @@
-import { ExecuterContainer } from "./executer/ExecuterContainer.js";
-import { EditorContainer } from "./editor/EditorContainer.js";
-import VisualNovelPlugin from "./plugins/visualNovel/visualNovel.js";
-import { Component, Elm } from "./japnaaEngine2d/elements.js";
-import { DefaultPlugin } from "./plugins/default/default.js";
-import { Project } from "./project/Project.js";
-import { NullProject } from "./project/NullProject.js";
-import { ModalContainer } from "./modals/ModalContainer.js";
-import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
+import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Component } from "../japnaaEngine2d/elements.js";
+import { DefaultPlugin } from "../plugins/default/default.js";
+import VisualNovelPlugin from "../plugins/visualNovel/visualNovel.js";
 import { UILayout } from "./UILayout.js";
-import { InstructionGroupEditor } from "./editor/InstructionGroupEditor.js";
-import { JaPNaAEngine2d } from "./japnaaEngine2d/JaPNaAEngine2d.js";
 import { Editor } from "./editor/Editor.js";
+import { EditorContainer } from "./editor/EditorContainer.js";
+import { InstructionGroupEditor } from "./editor/InstructionGroupEditor.js";
 import { UndoableAction } from "./editor/editing/actions.js";
+import { ExecuterContainer } from "./executer/ExecuterContainer.js";
+import { ModalContainer } from "./modals/ModalContainer.js";
+import { NullProject } from "./project/NullProject.js";
+import { Project } from "./project/Project.js";
+import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
 
 export const appHooks = {
     focusEditor() {

@@ -1,7 +1,7 @@
 import { pluginHooks } from "../index.js";
-import { Component, JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { EditorPlugin } from "../plugins/EditorPlugin.js";
-import { DetectedExternallyModifiedError, Project } from "../project/Project.js";
+import { Component, JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EditorPlugin } from "../EditorPlugin.js";
+import { DetectedExternallyModifiedError, Project } from "../../project/Project.js";
 import { Editor } from "./Editor.js";
 
 export class EditorContainer extends Component {

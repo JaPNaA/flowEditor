@@ -1,5 +1,5 @@
 import { appHooks } from "../../index.js";
-import { Component, Elm } from "../../japnaaEngine2d/elements.js";
+import { Component, Elm } from "../../../japnaaEngine2d/elements.js";
 import { getAncestorWhich } from "../../utils.js";
 import { Editable } from "../editing/Editable.js";
 import { InstructionGroupEditor } from "../InstructionGroupEditor.js";

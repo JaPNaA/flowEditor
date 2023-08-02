@@ -1,8 +1,8 @@
-import { ExecuterContainer } from "../../executer/ExecuterContainer.js";
+import { PluginExecuter } from "../../editor/EditorPlugin.js";
+import { ExecuterContainer } from "../../editor/executer/ExecuterContainer.js";
+import { Project } from "../../editor/project/Project.js";
 import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
-import { Project } from "../../project/Project.js";
-import { PluginExecuter } from "../EditorPlugin.js";
 import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
 import { replaceVariables, visualNovelMdToHTML } from "./visualNovelMd.js";
 

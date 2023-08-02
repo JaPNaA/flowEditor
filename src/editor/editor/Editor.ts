@@ -1,9 +1,9 @@
 import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
 import { UIDGenerator } from "./toolchain/UIDGenerator.js";
 import { InstructionData, newInstructionData } from "./toolchain/flowToInstructionData.js";
-import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { EditorCursor } from "./editing/EditorCursor.js";
-import { ControlItem } from "../FlowRunner.js";
+import { ControlItem } from "../../FlowRunner.js";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions.js";
 import { GridBackground } from "./ui/GridBackground.js";
 import { EditorGroupNavigator } from "./ui/EditorGroupNavigator.js";

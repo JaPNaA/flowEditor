@@ -1,7 +1,7 @@
-import { FlowRunner, FlowRunnerOutput, FlowRunnerState } from "../FlowRunner.js";
+import { FlowRunner, FlowRunnerOutput, FlowRunnerState } from "../../FlowRunner.js";
+import { Component, Elm } from "../../japnaaEngine2d/elements.js";
+import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray.js";
 import { appHooks, pluginHooks } from "../index.js";
-import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
 import { Project } from "../project/Project.js";
 import { requestFile } from "../utils.js";
 

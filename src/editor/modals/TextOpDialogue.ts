@@ -1,4 +1,4 @@
-import { Component, Elm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Component, Elm } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { InstructionGroupEditor } from "../editor/InstructionGroupEditor.js";
 import { Editable } from "../editor/editing/Editable.js";
 import { UndoLog } from "../editor/editing/actions.js";

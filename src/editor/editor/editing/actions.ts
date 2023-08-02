@@ -1,5 +1,5 @@
 import { pluginHooks } from "../../index.js";
-import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray.js";
+import { removeElmFromArray } from "../../../japnaaEngine2d/util/removeElmFromArray.js";
 import { Editor } from "../Editor.js";
 import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
 import { BranchInstructionLine, Instruction } from "../instruction/instructionTypes.js";

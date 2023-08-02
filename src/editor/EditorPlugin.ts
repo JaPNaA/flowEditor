@@ -1,12 +1,13 @@
-import { Editor } from "../editor/Editor";
-import { InstructionGroupEditor } from "../editor/InstructionGroupEditor";
-import { AutoCompleteSuggester } from "../editor/editing/AutoComplete";
-import { UndoableAction } from "../editor/editing/actions";
-import { InstructionBlueprintMin } from "../editor/instruction/InstructionBlueprintRegistery";
-import { Instruction } from "../editor/instruction/instructionTypes";
-import { ExecuterContainer } from "../executer/ExecuterContainer";
-import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d";
-import { Project } from "../project/Project";
+import { Editor } from "./editor/Editor.js";
+import { InstructionGroupEditor } from "./editor/InstructionGroupEditor.js";
+import { AutoCompleteSuggester } from "./editor/editing/AutoComplete.js";
+import { UndoableAction } from "./editor/editing/actions.js";
+import { InstructionBlueprintMin } from "./editor/instruction/InstructionBlueprintRegistery.js";
+import { Instruction } from "./editor/instruction/instructionTypes.js";
+import { ExecuterContainer } from "./executer/ExecuterContainer.js";
+import { Project } from "./project/Project.js";
+import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+
 
 export interface EditorPlugin {
     name: string;

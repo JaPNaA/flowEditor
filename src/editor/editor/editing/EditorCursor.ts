@@ -1,5 +1,5 @@
 import { TextareaUserInputCapture } from "./TextareaUserInputCapture.js";
-import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
 import { getAncestorWhich, isAncestor } from "../../utils.js";
 import { Editable } from "./Editable.js";

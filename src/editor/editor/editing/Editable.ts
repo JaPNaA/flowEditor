@@ -1,4 +1,4 @@
-import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { UserInputEvent } from "./TextareaUserInputCapture.js";
 import { InstructionLine } from "../instruction/instructionTypes.js";
 import { EditableEditAction } from "./actions.js";

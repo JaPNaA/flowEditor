@@ -1,6 +1,6 @@
-import { JaPNaAEngine2d, SubscriptionsComponent } from "../../japnaaEngine2d/JaPNaAEngine2d";
-import { Editor } from "../Editor";
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { JaPNaAEngine2d, SubscriptionsComponent } from "../../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Editor } from "../Editor.js";
+import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
 
 /*
 

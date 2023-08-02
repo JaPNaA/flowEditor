@@ -1,6 +1,6 @@
+import { Component, Elm } from "../japnaaEngine2d/elements.js";
 import { EditorContainer } from "./editor/EditorContainer.js";
 import { ExecuterContainer } from "./executer/ExecuterContainer.js";
-import { Component, Elm } from "./japnaaEngine2d/elements.js";
 import { ModalContainer } from "./modals/ModalContainer.js";
 import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
 

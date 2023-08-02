@@ -3,7 +3,7 @@ import { EditorCursorPositionAbsolute } from "./editing/EditorCursor.js";
 import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture.js";
 import { UIDGenerator } from "./toolchain/UIDGenerator.js";
 import { InstructionData } from "./toolchain/flowToInstructionData.js";
-import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { getAncestorWhich } from "../utils.js";
 import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions.js";
 import { NewInstruction } from "./instruction/NewInstruction.js";

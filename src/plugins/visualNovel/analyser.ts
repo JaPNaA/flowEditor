@@ -1,7 +1,7 @@
-import { Editor } from "../../editor/Editor.js";
-import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
-import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, RemoveGroupAction, RemoveInstructionAction, UndoableAction } from "../../editor/editing/actions.js";
-import { PluginAnalyser } from "../EditorPlugin.js";
+import { Editor } from "../../editor/editor/Editor.js";
+import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEditor.js";
+import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, RemoveGroupAction, RemoveInstructionAction, UndoableAction } from "../../editor/editor/editing/actions.js";
+import { PluginAnalyser } from "../../editor/EditorPlugin.js";
 import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel.js";
 
 interface Context extends VNInstructionContext {

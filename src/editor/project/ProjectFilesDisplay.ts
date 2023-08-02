@@ -1,5 +1,5 @@
 import { appHooks } from "../index.js";
-import { Component, Elm } from "../japnaaEngine2d/elements.js";
+import { Component, Elm } from "../../japnaaEngine2d/elements.js";
 import { download } from "../utils.js";
 import { FileProject } from "./FileProject.js";
 import { NullProject } from "./NullProject.js";

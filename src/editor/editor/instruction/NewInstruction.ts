@@ -1,7 +1,7 @@
 import { Editable } from "../editing/Editable.js";
 import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } from "./instructionTypes.js";
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture.js";
-import { Elm, EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester.js";
 import { InstructionBlueprint } from "./InstructionBlueprintRegistery.js";
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {

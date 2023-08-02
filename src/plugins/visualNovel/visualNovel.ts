@@ -1,16 +1,16 @@
 import { ControlItem } from "../../FlowRunner.js";
-import { globalAutocompleteTypes } from "../../editor/editing/AutoComplete.js";
-import { Editable } from "../../editor/editing/Editable.js";
-import { InstructionGroupEditor } from "../../editor/InstructionGroupEditor.js";
-import { InstructionBlueprintMin } from "../../editor/instruction/InstructionBlueprintRegistery.js";
-import { EditorPlugin } from "../EditorPlugin.js";
+import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEditor.js";
+import { globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete.js";
+import { Editable } from "../../editor/editor/editing/Editable.js";
+import { InstructionBlueprintMin } from "../../editor/editor/instruction/InstructionBlueprintRegistery.js";
+import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes.js";
+import { Project } from "../../editor/project/Project.js";
+import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EditorPlugin } from "../../editor/EditorPlugin.js";
+import { VisualNovelAnalyser } from "./analyser.js";
 import { ControlBackground, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls.js";
 import { VisualNovelExecuter } from "./executer.js";
-import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/instruction/instructionTypes.js";
 import { VisualNovelRenderer } from "./renderer.js";
-import { VisualNovelAnalyser } from "./analyser.js";
-import { Project } from "../../project/Project.js";
-import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();

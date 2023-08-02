@@ -1,6 +1,6 @@
 import { DetectedExternallyModifiedError, Project } from "./Project.js";
 import { EditorSaveData } from "../editor/Editor.js";
-import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 
 export class FileProject implements Project {
     public onReady = new EventBus();
