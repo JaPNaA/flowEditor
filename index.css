@@ -1,33 +1,3 @@
-/* Prevent select-scrolling */
-html {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-}
-
-body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-}
-
-button {
-    cursor: pointer;
-    border: none;
-    padding: 4px 8px;
-    color: inherit;
-    background-color: transparent;
-}
-
-::-webkit-scrollbar {
-    width: 2px;
-    background-color: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: #ffffff3d;
-}
-
 .main {
     width: 100vw;
     height: 100vh;
@@ -345,36 +315,12 @@ button {
     cursor: row-resize;
 }
 
-.executerContainer {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    /** Prevent this from overgrowing */
-    min-height: 0;
-    width: 100%;
-}
-
 .collapsed .executerContainer .fileOperationsBar {
     position: absolute;
     right: 0;
     width: auto;
     white-space: pre;
     z-index: 2;
-}
-
-.executerContainer .operationsBar {
-    background-color: #3a3a3a;
-    line-height: 1;
-}
-
-.executerContainer .operationsBar button {
-    background-color: #535353;
-    color: #c9c9c9;
-}
-
-.executerContainer .operationsBar button:hover {
-    background-color: #686868;
-    color: #e9e9e9;
 }
 
 .executerContainer .fileOperationsBar {
@@ -388,45 +334,6 @@ button {
 
 .executerContainer .fileOperationsBar button.deleteAndReload:hover {
     background-color: #942a2a;
-}
-
-.executer {
-    display: flex;
-    flex-basis: 0;
-    flex-grow: 1;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    flex-direction: column;
-}
-
-.collapsed .executerContainer .executer {
-    display: none;
-}
-
-.executer .outputLog {
-    flex-grow: 1;
-    padding: 8px;
-    font-family: monospace;
-    /** Prevent this from overgrowing */
-    min-height: 0;
-    flex-basis: 0;
-    word-wrap: break-word;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.executer .outputLog .log.secondary {
-    color: #7797ff;
-}
-
-.executer .saves button.saveButton {
-    color: #22e753;
-}
-
-.executer .chooseInput button {
-    background-color: #333333;
-    margin-right: 8px;
 }
 
 .modalContainer {
