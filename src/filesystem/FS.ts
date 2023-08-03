@@ -142,3 +142,93 @@ export class NetworkFileSystem implements FSRead {
         return new NetworkFileSystem(this.join(this.baseUrl, path));
     }
 }
+
+export class InMemoryFileSystem implements FSReadWrite {
+    public name: string;
+    private files = new Map<string, Blob | InMemoryFileSystem>();
+
+    constructor() {
+        this.name = "InMemoryFileSystem";
+    }
+
+    public join(...paths: string[]): string {
+        return paths.filter(x => x).join("/");
+    }
+
+    public async read(path: string): Promise<Blob> {
+        const file = this.files.get(path);
+        if (file instanceof Blob) {
+            return file;
+        } else {
+            throw new Error("File not found");
+        }
+    }
+
+    public async lastModified(path: string): Promise<number | null> {
+        return null;
+    }
+
+    public async ls(path: string): Promise<FSReference[]> {
+        const dir = await this.resolveDirectory(path);
+        const items: FSReference[] = [];
+        for (const [name, file] of dir.files) {
+            items.push({
+                type: file instanceof Blob ? "file" : "directory",
+                name,
+                path: this.join(path, name)
+            });
+        }
+        return items;
+    }
+
+    public async cd(path: string) {
+        return this.resolveDirectory(path);
+    }
+
+    public async write(path: string, blob: Blob): Promise<void> {
+        const [parentDir, fileName] = await this.resolveParentDir(path, { create: true });
+        parentDir.files.set(fileName, blob);
+    }
+
+    public async mv(from: string, to: string): Promise<void> {
+        const [fromDir, fromName] = await this.resolveParentDir(from);
+        const [toDir, toName] = await this.resolveParentDir(to, { create: true });
+        toDir.files.set(toName, fromDir.files.get(fromName)!);
+        fromDir.files.delete(fromName);
+    }
+
+    public async rm(path: string): Promise<void> {
+        const [parentDir, fileName] = await this.resolveParentDir(path);
+        parentDir.files.delete(fileName);
+    }
+
+    public async mkdir(path: string): Promise<void> {
+        await this.resolveDirectory(path, { create: true });
+    }
+
+    private async resolveParentDir(path: string, options?: { create: boolean }): Promise<[InMemoryFileSystem, string]> {
+        const parts = path.split("/");
+        const fileName = parts.pop();
+        if (!fileName) { throw new Error("Invalid path"); }
+        return [await this.resolveDirectory(parts.join("/"), options), fileName];
+    }
+
+    private async resolveDirectory(path: string, options?: { create: boolean }): Promise<InMemoryFileSystem> {
+        if (!path) { return this; }
+        const parts = path.split("/");
+        let curr: InMemoryFileSystem = this;
+        for (const part of parts) {
+            const next = curr.files.get(part);
+            if (next instanceof InMemoryFileSystem) {
+                curr = next;
+            } else if (options?.create) {
+                const newDir = new InMemoryFileSystem();
+                curr.files.set(part, newDir);
+                curr = newDir;
+            } else {
+                throw new Error("Can't find directory");
+            }
+        }
+        return curr;
+    }
+}

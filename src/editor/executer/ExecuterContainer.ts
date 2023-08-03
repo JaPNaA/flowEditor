@@ -1,5 +1,6 @@
 import { Executer } from "../../executer/Executer.js";
-import { FileAccessRead } from "../../filesystem/FileAccess.js";
+import { Exporter } from "../../exporter/Exporter.js";
+import { FileAccessReadWrite } from "../../filesystem/FileAccess.js";
 import { Component, Elm } from "../../japnaaEngine2d/elements.js";
 import { appHooks, pluginHooks } from "../index.js";
 import { Project } from "../project/Project.js";
@@ -8,7 +9,7 @@ import { requestFile } from "../utils.js";
 export class ExecuterContainer extends Component {
     public executer: Executer;
 
-    constructor(files: FileAccessRead) {
+    constructor(files: FileAccessReadWrite) {
         super("executerContainer");
 
         this.executer = new Executer(pluginHooks, files);
@@ -30,6 +31,14 @@ export class ExecuterContainer extends Component {
                 ),
                 new Elm("button").append("TextOp").onActivate(() => {
                     appHooks.requestEditorTextOp();
+                }),
+                new Elm("button").append("Export").onActivate(async () => {
+                    const project = this.getProject() as FileAccessReadWrite;
+                    const startFlowFile = JSON.stringify({ flow: appHooks.getCompiledFlowFromEditor() });
+                    
+                    project.writeFlow(project.getStartFlowPath_(), startFlowFile);
+
+                    await new Exporter(project).exportToSingleHTML();
                 }),
                 new Elm("button").append("Delete all").class("deleteAndReload").onActivate(() => {
                     if (confirm("Delete editor contents and reload?")) {
