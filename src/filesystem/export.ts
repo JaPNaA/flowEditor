@@ -13,7 +13,7 @@ export class ExportReader<T extends FSRead = FSRead> implements FileAccessRead {
     protected static flowListPath = "flowsList.txt";
     protected static flowPath = "flow";
 
-    private ready = true;
+    protected ready = true;
 
     constructor(protected fs: T) { }
 
@@ -53,15 +53,26 @@ export class ExportReadWriter extends ExportReader<FSReadWrite> implements FileA
     private assetList!: string[];
     private flowsList!: string[];
 
+    constructor(fs: FSReadWrite) {
+        super(fs);
+        this.ready = false;
+        Promise.all([
+            this.loadAssetListToCache(),
+            this.loadFlowListToCache()
+        ]).then(() => {
+            this.ready = true;
+            this.onReady.send();
+        });
+    }
+
     public async listAssets(): Promise<string[]> {
-        await this.loadAssetListToCache();
         return this.assetList;
     }
 
     public async writeAsset(path: string, blob: Blob): Promise<void> {
-        await this.loadAssetListToCache();
         if (!this.assetList.includes(path)) {
             this.assetList.push(path);
+            console.log(path);
         }
         await this.fs.write(this.fs.join(ExportReader.assetsPath, path), blob);
     }
@@ -83,7 +94,6 @@ export class ExportReadWriter extends ExportReader<FSReadWrite> implements FileA
     }
 
     public writeFlow(path: string, data: string): Promise<void> {
-        this.loadFlowListToCache();
         if (!this.flowsList.includes(path)) {
             this.flowsList.push(path);
         }
@@ -117,13 +127,25 @@ export class ExportReadWriter extends ExportReader<FSReadWrite> implements FileA
 
     private async loadAssetListToCache() {
         if (this.assetList) { return; }
-        const text = await this.fs.read(ExportReader.assetsListPath).then(blob => blob.text());
-        this.assetList = text.split("\n");
+        this.assetList = [];
+        const text = await this.readOrCreate(ExportReader.assetsListPath).then(blob => blob.text());
+        this.assetList = text.split("\n").filter(x => x);
     }
 
     private async loadFlowListToCache() {
         if (this.flowsList) { return; }
-        const text = await this.fs.read(ExportReader.flowListPath).then(blob => blob.text());
-        this.flowsList = text.split("\n");
+        this.flowsList = [];
+        const text = await this.readOrCreate(ExportReader.flowListPath).then(blob => blob.text());
+        this.flowsList = text.split("\n").filter(x => x);
+    }
+
+    private async readOrCreate(path: string): Promise<Blob> {
+        try {
+            return await this.fs.read(path);
+        } catch (err) {
+            const newBlob = new Blob();
+            await this.fs.write(path, newBlob);
+            return newBlob;
+        }
     }
 }
