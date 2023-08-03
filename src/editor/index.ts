@@ -103,7 +103,7 @@ export const pluginHooks = {
 const defaultPlugin = new DefaultPlugin();
 const visualNovelPlugin = new VisualNovelPlugin();
 
-let project = new NullProject();
+let project: Project = new NullProject();
 const projectFilesDisplay = new ProjectFilesDisplay(project);
 const executerContainer = new ExecuterContainer(project);
 const editorContainer = new EditorContainer(project);

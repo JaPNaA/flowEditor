@@ -8,6 +8,7 @@ import { FlowData } from "../../FlowRunner.js";
  */
 export class NullProject implements Project {
     public onReady = new EventBus();
+    private exportedFlow: string = "";
 
     private lastRead?: string;
 
@@ -75,7 +76,11 @@ export class NullProject implements Project {
     }
 
     public writeFlow(path: string, data: string): Promise<void> {
-        throw new Error("Cannot write flows in NullProject");
+        if (path !== "localstorageExported") {
+            throw new Error("Cannot write to other flows in NullProject");
+        }
+        this.exportedFlow = data;
+        return Promise.resolve();
     }
 
     public moveFlow(pathFrom: string, pathTo: string): Promise<void> {
@@ -87,15 +92,18 @@ export class NullProject implements Project {
     }
 
     public getStartFlowPath_(): string {
-        throw new Error("Cannot get start flow path in NullProject");
+        return "localstorageExported";
     }
 
     public getFlow(path: string): Promise<FlowData> {
-        throw new Error("Cannot get flow in NullProject");
+        if (path !== "localstorageExported") {
+            throw new Error("Cannot access other flows in NullProject");
+        }
+        return Promise.resolve(JSON.parse(this.exportedFlow));
     }
 
     public listFlows(): Promise<string[]> {
-        throw new Error("Cannot list flows in NullProject");
+        return Promise.resolve(["localstorageExported"]);
     }
 
     public flush(): Promise<void> {
