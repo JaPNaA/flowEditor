@@ -1,4 +1,3 @@
-import { download } from "../editor/utils.js";
 import { InMemoryFileSystem } from "../filesystem/FS.js";
 import { FileStructureRead } from "../filesystem/FileStructure.js";
 import { ExportReadWriter } from "../filesystem/export.js";
@@ -37,7 +36,6 @@ export class Exporter {
             });
         await Promise.all([assetsPromise, flowsPromise]);
         await this.exportFiles.flush();
-        // temp, remove this export!
-        download(await new SingleHTMLFileExporter(this.exportFiles).export(), "export.html");
+        return new SingleHTMLFileExporter(this.exportFiles).export();
     }
 }

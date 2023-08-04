@@ -4,7 +4,7 @@ import { FileStructureReadWrite } from "../../filesystem/FileStructure.js";
 import { Component, Elm } from "../../japnaaEngine2d/elements.js";
 import { appHooks, pluginHooks } from "../index.js";
 import { Project } from "../project/Project.js";
-import { requestFile } from "../utils.js";
+import { download, requestFile } from "../utils.js";
 
 export class ExecuterContainer extends Component {
     public executer: Executer;
@@ -35,10 +35,10 @@ export class ExecuterContainer extends Component {
                 new Elm("button").append("Export").onActivate(async () => {
                     const project = this.getProject() as FileStructureReadWrite;
                     const startFlowFile = JSON.stringify({ flow: appHooks.getCompiledFlowFromEditor() });
-                    
+
                     await project.writeFlow(project.getStartFlowPath_(), startFlowFile);
 
-                    await new Exporter(project).exportToSingleHTML();
+                    download(await new Exporter(project).exportToSingleHTML(), "export.html");
                 }),
                 new Elm("button").append("Delete all").class("deleteAndReload").onActivate(() => {
                     if (confirm("Delete editor contents and reload?")) {
