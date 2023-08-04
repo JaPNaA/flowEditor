@@ -33,7 +33,8 @@ export class Exporter {
                     );
                 }
                 return Promise.all(promises);
-            });
+            })
+            .then(() => this.exportFiles.moveFlow(this.files.getStartFlowPath(), this.exportFiles.getStartFlowPath()));
         await Promise.all([assetsPromise, flowsPromise]);
         await this.exportFiles.flush();
         return new SingleHTMLFileExporter(this.exportFiles).export();
