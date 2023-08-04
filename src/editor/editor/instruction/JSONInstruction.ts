@@ -1,6 +1,6 @@
-import { Editable } from "../editing/Editable.js";
-import { InstructionLine, OneLineInstruction, InstructionOneLine } from "./instructionTypes.js";
-import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture.js";
+import { Editable } from "../editing/Editable";
+import { InstructionLine, OneLineInstruction, InstructionOneLine } from "./instructionTypes";
+import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture";
 
 export class JSONInstruction extends InstructionOneLine<JSONLine> {
     constructor(data: any) {

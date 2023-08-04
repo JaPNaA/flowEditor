@@ -1,14 +1,14 @@
-import { Editor, InstructionElmData } from "./Editor.js";
-import { EditorCursorPositionAbsolute } from "./editing/EditorCursor.js";
-import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture.js";
-import { UIDGenerator } from "./toolchain/UIDGenerator.js";
-import { InstructionData } from "./toolchain/flowToInstructionData.js";
-import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { getAncestorWhich } from "../utils.js";
-import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions.js";
-import { NewInstruction } from "./instruction/NewInstruction.js";
-import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes.js";
-import { pluginHooks } from "../index.js";
+import { Editor, InstructionElmData } from "./Editor";
+import { EditorCursorPositionAbsolute } from "./editing/EditorCursor";
+import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture";
+import { UIDGenerator } from "./toolchain/UIDGenerator";
+import { InstructionData } from "./toolchain/flowToInstructionData";
+import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { getAncestorWhich } from "../utils";
+import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions";
+import { NewInstruction } from "./instruction/NewInstruction";
+import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes";
+import { pluginHooks } from "../index";
 
 export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public static defaultWidth = 720 + 24; // 24 is padding

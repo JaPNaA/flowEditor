@@ -1,7 +1,7 @@
-import { Component, Elm } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { InstructionGroupEditor } from "../editor/InstructionGroupEditor.js";
-import { Editable } from "../editor/editing/Editable.js";
-import { UndoLog } from "../editor/editing/actions.js";
+import { Component, Elm } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { InstructionGroupEditor } from "../editor/InstructionGroupEditor";
+import { Editable } from "../editor/editing/Editable";
+import { UndoLog } from "../editor/editing/actions";
 
 export class TextOpDialogue extends Component {
     private textarea = new Elm("textarea")

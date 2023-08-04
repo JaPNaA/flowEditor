@@ -1,7 +1,7 @@
-import { InMemoryFileSystem } from "../filesystem/FS.js";
-import { FileStructureRead } from "../filesystem/FileStructure.js";
-import { ExportReadWriter } from "../filesystem/export.js";
-import { SingleHTMLFileExporter } from "./SingleHTMLFileExporter.js";
+import { InMemoryFileSystem } from "../filesystem/FS";
+import { FileStructureRead } from "../filesystem/FileStructure";
+import { ExportReadWriter } from "../filesystem/export";
+import { SingleHTMLFileExporter } from "./SingleHTMLFileExporter";
 
 export class Exporter {
     private exportFiles = new ExportReadWriter(new InMemoryFileSystem());

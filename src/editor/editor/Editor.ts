@@ -1,19 +1,19 @@
-import { InstructionGroupEditor } from "./InstructionGroupEditor.js";
-import { UIDGenerator } from "./toolchain/UIDGenerator.js";
-import { InstructionData, newInstructionData } from "./toolchain/flowToInstructionData.js";
-import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { EditorCursor } from "./editing/EditorCursor.js";
-import { ControlItem } from "../../FlowRunner.js";
-import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions.js";
-import { GridBackground } from "./ui/GridBackground.js";
-import { EditorGroupNavigator } from "./ui/EditorGroupNavigator.js";
-import { appHooks } from "../index.js";
-import { SmoothCamera } from "./ui/SmoothCamera.js";
-import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprintRegistery.js";
-import { Instruction } from "./instruction/instructionTypes.js";
-import { InstructionDeserializer } from "./toolchain/InstructionDeserializer.js";
-import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester.js";
-import { TextOpDialogue } from "../modals/TextOpDialogue.js";
+import { InstructionGroupEditor } from "./InstructionGroupEditor";
+import { UIDGenerator } from "./toolchain/UIDGenerator";
+import { InstructionData, newInstructionData } from "./toolchain/flowToInstructionData";
+import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { EditorCursor } from "./editing/EditorCursor";
+import { ControlItem } from "../../FlowRunner";
+import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions";
+import { GridBackground } from "./ui/GridBackground";
+import { EditorGroupNavigator } from "./ui/EditorGroupNavigator";
+import { appHooks } from "../index";
+import { SmoothCamera } from "./ui/SmoothCamera";
+import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprintRegistery";
+import { Instruction } from "./instruction/instructionTypes";
+import { InstructionDeserializer } from "./toolchain/InstructionDeserializer";
+import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester";
+import { TextOpDialogue } from "../modals/TextOpDialogue";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();

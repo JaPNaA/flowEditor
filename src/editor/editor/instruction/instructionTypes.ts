@@ -1,10 +1,10 @@
-import { appHooks } from "../../index.js";
-import { Component, Elm } from "../../../japnaaEngine2d/elements.js";
-import { getAncestorWhich } from "../../utils.js";
-import { Editable } from "../editing/Editable.js";
-import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
-import { TextareaUserInputCaptureAreas } from "../editing/TextareaUserInputCapture.js";
-import { BranchTargetChangeAction } from "../editing/actions.js";
+import { appHooks } from "../../index";
+import { Component, Elm } from "../../../japnaaEngine2d/elements";
+import { getAncestorWhich } from "../../utils";
+import { Editable } from "../editing/Editable";
+import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { TextareaUserInputCaptureAreas } from "../editing/TextareaUserInputCapture";
+import { BranchTargetChangeAction } from "../editing/actions";
 
 export abstract class Instruction {
     public parentGroup!: InstructionGroupEditor;

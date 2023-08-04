@@ -1,10 +1,10 @@
-import { Executer } from "../../executer/Executer.js";
-import { Exporter } from "../../exporter/Exporter.js";
-import { FileStructureReadWrite } from "../../filesystem/FileStructure.js";
-import { Component, Elm } from "../../japnaaEngine2d/elements.js";
-import { appHooks, pluginHooks } from "../index.js";
-import { Project } from "../project/Project.js";
-import { download, requestFile } from "../utils.js";
+import { Executer } from "../../executer/Executer";
+import { Exporter } from "../../exporter/Exporter";
+import { FileStructureReadWrite } from "../../filesystem/FileStructure";
+import { Component, Elm } from "../../japnaaEngine2d/elements";
+import { appHooks, pluginHooks } from "../index";
+import { Project } from "../project/Project";
+import { download, requestFile } from "../utils";
 
 export class ExecuterContainer extends Component {
     public executer: Executer;

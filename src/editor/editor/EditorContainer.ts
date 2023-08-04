@@ -1,8 +1,8 @@
-import { Component, JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { EditorPlugin } from "../EditorPlugin.js";
-import { pluginHooks } from "../index.js";
-import { DetectedExternallyModifiedError, Project } from "../project/Project.js";
-import { Editor } from "./Editor.js";
+import { Component, JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { EditorPlugin } from "../EditorPlugin";
+import { pluginHooks } from "../index";
+import { DetectedExternallyModifiedError, Project } from "../project/Project";
+import { Editor } from "./Editor";
 
 export class EditorContainer extends Component {
     public preventSaveOnExit = false;

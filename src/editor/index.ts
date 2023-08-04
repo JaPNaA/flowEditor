@@ -1,17 +1,17 @@
-import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d.js";
-import { Component } from "../japnaaEngine2d/elements.js";
-import { DefaultPlugin } from "../plugins/default/default.js";
-import VisualNovelPlugin from "../plugins/visualNovel/visualNovel.js";
-import { UILayout } from "./UILayout.js";
-import { Editor } from "./editor/Editor.js";
-import { EditorContainer } from "./editor/EditorContainer.js";
-import { InstructionGroupEditor } from "./editor/InstructionGroupEditor.js";
-import { UndoableAction } from "./editor/editing/actions.js";
-import { ExecuterContainer } from "./executer/ExecuterContainer.js";
-import { ModalContainer } from "./modals/ModalContainer.js";
-import { NullProject } from "./project/NullProject.js";
-import { Project } from "./project/Project.js";
-import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
+import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d";
+import { Component } from "../japnaaEngine2d/elements";
+import { DefaultPlugin } from "../plugins/default/default";
+import VisualNovelPlugin from "../plugins/visualNovel/visualNovel";
+import { UILayout } from "./UILayout";
+import { Editor } from "./editor/Editor";
+import { EditorContainer } from "./editor/EditorContainer";
+import { InstructionGroupEditor } from "./editor/InstructionGroupEditor";
+import { UndoableAction } from "./editor/editing/actions";
+import { ExecuterContainer } from "./executer/ExecuterContainer";
+import { ModalContainer } from "./modals/ModalContainer";
+import { NullProject } from "./project/NullProject";
+import { Project } from "./project/Project";
+import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay";
 
 export const appHooks = {
     focusEditor() {

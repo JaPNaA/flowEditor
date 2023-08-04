@@ -1,9 +1,9 @@
-import { PluginRenderer } from "../../editor/EditorPlugin.js";
-import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEditor.js";
-import { NewInstruction } from "../../editor/editor/instruction/NewInstruction.js";
-import { Project } from "../../editor/project/Project.js";
-import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel.js";
+import { PluginRenderer } from "../../editor/EditorPlugin";
+import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEditor";
+import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
+import { Project } from "../../editor/project/Project";
+import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel";
 
 export class VisualNovelRenderer implements PluginRenderer {
     private project!: Project;

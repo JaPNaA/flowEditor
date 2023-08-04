@@ -1,7 +1,7 @@
-import { EditorSaveData } from "../editor/Editor.js";
-import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { DetectedExternallyModifiedError, Project } from "./Project.js";
-import { FlowData } from "../../FlowRunner.js";
+import { EditorSaveData } from "../editor/Editor";
+import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { DetectedExternallyModifiedError, Project } from "./Project";
+import { FlowData } from "../../FlowRunner";
 
 /**
  * The NullProject is open when the user has not opened any project.

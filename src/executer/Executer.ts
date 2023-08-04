@@ -1,8 +1,8 @@
-import { FlowData, FlowRunner, FlowRunnerOutput, FlowRunnerState } from "../FlowRunner.js";
-import { FileStructureRead } from "../filesystem/FileStructure.js";
-import { Component, Elm } from "../japnaaEngine2d/elements.js";
-import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
-import { PluginHooks } from "./ExecuterPlugin.js";
+import { FlowData, FlowRunner, FlowRunnerOutput, FlowRunnerState } from "../FlowRunner";
+import { FileStructureRead } from "../filesystem/FileStructure";
+import { Component, Elm } from "../japnaaEngine2d/elements";
+import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray";
+import { PluginHooks } from "./ExecuterPlugin";
 
 export class Executer extends Component {
     private outputDisplays: Elm;

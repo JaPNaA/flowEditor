@@ -1,8 +1,8 @@
-import { looseStartsWith } from "../../utils.js";
-import { Editable } from "../editing/Editable.js";
-import { AutoCompleteSuggester } from "../editing/AutoComplete.js";
-import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery.js";
-import { NewInstructionEditable } from "./NewInstruction.js";
+import { looseStartsWith } from "../../utils";
+import { Editable } from "../editing/Editable";
+import { AutoCompleteSuggester } from "../editing/AutoComplete";
+import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
+import { NewInstructionEditable } from "./NewInstruction";
 
 export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggester {
     public static symbol = Symbol();

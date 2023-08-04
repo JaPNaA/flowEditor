@@ -1,6 +1,6 @@
-import { FlowData } from "../FlowRunner.js";
-import { FileStructureRead } from "../filesystem/FileStructure.js";
-import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { FlowData } from "../FlowRunner";
+import { FileStructureRead } from "../filesystem/FileStructure";
+import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d";
 
 export class SingleHTMLFileExporter {
     constructor(private fs: FileStructureRead) { }

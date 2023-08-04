@@ -1,7 +1,7 @@
-import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { UserInputEvent } from "./TextareaUserInputCapture.js";
-import { InstructionLine } from "../instruction/instructionTypes.js";
-import { EditableEditAction } from "./actions.js";
+import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
+import { UserInputEvent } from "./TextareaUserInputCapture";
+import { InstructionLine } from "../instruction/instructionTypes";
+import { EditableEditAction } from "./actions";
 
 export class Editable extends Elm<"span"> {
     public onChange = new EventBus<string>();

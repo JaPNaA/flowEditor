@@ -1,5 +1,5 @@
-import { FlowData } from "../FlowRunner.js";
-import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
+import { FlowData } from "../FlowRunner";
+import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d";
 
 /** Filesystem used while editing or exporting */
 export interface FileStructureReadWrite extends FileStructureRead {

@@ -1,6 +1,6 @@
-import { SingleHTMLFileFileStructure } from "../exporter/SingleHTMLFileExporter.js";
-import { VisualNovelExecuter } from "../plugins/visualNovel/executer.js";
-import { Executer } from "./Executer.js";
+import { SingleHTMLFileFileStructure } from "../exporter/SingleHTMLFileExporter";
+import { VisualNovelExecuter } from "../plugins/visualNovel/executer";
+import { Executer } from "./Executer";
 
 document.body.classList.add("executerContainer");
 const fs = new SingleHTMLFileFileStructure();

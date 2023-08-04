@@ -1,12 +1,12 @@
-import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "../../FlowRunner.js";
-import { AutoCompleteSuggester, globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete.js";
-import { Editable } from "../../editor/editor/editing/Editable.js";
-import { TextareaUserInputCaptureAreas } from "../../editor/editor/editing/TextareaUserInputCapture.js";
-import { InstructionBlueprintMin } from "../../editor/editor/instruction/InstructionBlueprintRegistery.js";
-import { JSONInstruction } from "../../editor/editor/instruction/JSONInstruction.js";
-import { NewInstruction } from "../../editor/editor/instruction/NewInstruction.js";
-import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes.js";
-import { EditorPlugin } from "../../editor/EditorPlugin.js";
+import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "../../FlowRunner";
+import { AutoCompleteSuggester, globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete";
+import { Editable } from "../../editor/editor/editing/Editable";
+import { TextareaUserInputCaptureAreas } from "../../editor/editor/editing/TextareaUserInputCapture";
+import { InstructionBlueprintMin } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
+import { JSONInstruction } from "../../editor/editor/instruction/JSONInstruction";
+import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
+import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes";
+import { EditorPlugin } from "../../editor/EditorPlugin";
 
 const autocompleteTypeCompareOp = Symbol();
 

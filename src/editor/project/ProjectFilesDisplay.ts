@@ -1,10 +1,10 @@
-import { appHooks } from "../index.js";
-import { Component, Elm } from "../../japnaaEngine2d/elements.js";
-import { download } from "../utils.js";
-import { FileProject } from "./FileProject.js";
-import { NullProject } from "./NullProject.js";
-import { Project } from "./Project.js";
-import { FileAccessAPIFileSystem } from "../../filesystem/FS.js";
+import { appHooks } from "../index";
+import { Component, Elm } from "../../japnaaEngine2d/elements";
+import { download } from "../utils";
+import { FileProject } from "./FileProject";
+import { NullProject } from "./NullProject";
+import { Project } from "./Project";
+import { FileAccessAPIFileSystem } from "../../filesystem/FS";
 
 export class ProjectFilesDisplay extends Component {
     private project!: Project;

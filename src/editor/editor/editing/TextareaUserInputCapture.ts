@@ -1,5 +1,5 @@
-import { Editable } from "./Editable.js";
-import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d.js";
+import { Editable } from "./Editable";
+import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 
 /** A string represents an editable area with text. A number represents uneditable space by <number> spaces. */
 export type TextareaUserInputCaptureAreas = (Editable | number)[];

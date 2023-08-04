@@ -1,9 +1,9 @@
-import { pluginHooks } from "../../index.js";
-import { removeElmFromArray } from "../../../japnaaEngine2d/util/removeElmFromArray.js";
-import { Editor } from "../Editor.js";
-import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
-import { BranchInstructionLine, Instruction } from "../instruction/instructionTypes.js";
-import { Editable } from "./Editable.js";
+import { pluginHooks } from "../../index";
+import { removeElmFromArray } from "../../../japnaaEngine2d/util/removeElmFromArray";
+import { Editor } from "../Editor";
+import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { BranchInstructionLine, Instruction } from "../instruction/instructionTypes";
+import { Editable } from "./Editable";
 
 export class UndoLog {
     private currLogGroup: UndoableAction[] = [];

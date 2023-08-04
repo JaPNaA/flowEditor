@@ -1,8 +1,8 @@
-import { Component, Elm } from "../japnaaEngine2d/elements.js";
-import { EditorContainer } from "./editor/EditorContainer.js";
-import { ExecuterContainer } from "./executer/ExecuterContainer.js";
-import { ModalContainer } from "./modals/ModalContainer.js";
-import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay.js";
+import { Component, Elm } from "../japnaaEngine2d/elements";
+import { EditorContainer } from "./editor/EditorContainer";
+import { ExecuterContainer } from "./executer/ExecuterContainer";
+import { ModalContainer } from "./modals/ModalContainer";
+import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay";
 
 export class UILayout extends Component {
     private rightPanel: Elm;

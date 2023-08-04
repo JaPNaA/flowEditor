@@ -1,9 +1,9 @@
-import { TextareaUserInputCapture } from "./TextareaUserInputCapture.js";
-import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { InstructionGroupEditor } from "../InstructionGroupEditor.js";
-import { getAncestorWhich, isAncestor } from "../../utils.js";
-import { Editable } from "./Editable.js";
-import { AutoComplete } from "./AutoComplete.js";
+import { TextareaUserInputCapture } from "./TextareaUserInputCapture";
+import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
+import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { getAncestorWhich, isAncestor } from "../../utils";
+import { Editable } from "./Editable";
+import { AutoComplete } from "./AutoComplete";
 
 export class EditorCursor extends Elm<"span"> {
     public groupEditorsElmsMap = new WeakMap<HTMLDivElement, InstructionGroupEditor>();

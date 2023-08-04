@@ -1,5 +1,5 @@
-import { JSONInstruction } from "../instruction/JSONInstruction.js";
-import { Instruction } from "../instruction/instructionTypes.js";
+import { JSONInstruction } from "../instruction/JSONInstruction";
+import { Instruction } from "../instruction/instructionTypes";
 
 export type Deserializer = (data: any) => Instruction | undefined;
 

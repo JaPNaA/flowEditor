@@ -1,5 +1,5 @@
-import { EditorSaveData } from "../editor/Editor.js";
-import { FileStructureReadWrite } from "../../filesystem/FileStructure.js";
+import { EditorSaveData } from "../editor/Editor";
+import { FileStructureReadWrite } from "../../filesystem/FileStructure";
 
 export interface Project extends FileStructureReadWrite {
     /** Get the 'start' flow's path */

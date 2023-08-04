@@ -1,10 +1,10 @@
-import { PluginExecuter } from "../../editor/EditorPlugin.js";
-import { Executer } from "../../executer/Executer.js";
-import { FileStructureRead } from "../../filesystem/FileStructure.js";
-import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
-import { Elm } from "../../japnaaEngine2d/elements.js";
-import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
-import { replaceVariables, visualNovelMdToHTML } from "./visualNovelMd.js";
+import { PluginExecuter } from "../../editor/EditorPlugin";
+import { Executer } from "../../executer/Executer";
+import { FileStructureRead } from "../../filesystem/FileStructure";
+import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { Elm } from "../../japnaaEngine2d/elements";
+import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls";
+import { replaceVariables, visualNovelMdToHTML } from "./visualNovelMd";
 
 export class VisualNovelExecuter implements PluginExecuter {
     private elm = new Elm().class("visualNovelExecuter")
