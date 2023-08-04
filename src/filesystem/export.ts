@@ -45,7 +45,7 @@ export class ExportReader<T extends FSRead = FSRead> implements FileStructureRea
     public async listFlows(): Promise<string[]> {
         const file = await this.fs.read(ExportReader.flowListPath);
         const text = await file.text();
-        return text.split("\n");
+        return text.split("\n").filter(x => x);
     }
 }
 

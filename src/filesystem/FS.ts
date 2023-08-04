@@ -156,7 +156,8 @@ export class InMemoryFileSystem implements FSReadWrite {
     }
 
     public async read(path: string): Promise<Blob> {
-        const file = this.files.get(path);
+        const [dir, fileName] = await this.resolveParentDir(path);
+        const file = dir.files.get(fileName);
         if (file instanceof Blob) {
             return file;
         } else {
