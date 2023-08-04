@@ -34,7 +34,7 @@ export interface FileStructureRead {
     listAssets(): Promise<string[]>;
 
     /** Get the 'start' flow's path */
-    getStartFlowPath_(): string; // todo: remove '_'; was originally added to help differentiate when renaming `getStartFlowPath` -> `getStartFlowSavePath`
+    getStartFlowPath(): string;
     /** Get flow */
     getFlow(path: string): Promise<FlowData>;
     /** List all flow saves */

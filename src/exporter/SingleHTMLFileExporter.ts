@@ -64,7 +64,7 @@ export class SingleHTMLFileFileStructure implements FileStructureRead {
         return Promise.resolve(Object.keys(assets));
     }
 
-    public getStartFlowPath_(): string {
+    public getStartFlowPath(): string {
         return "start.json";
     }
 

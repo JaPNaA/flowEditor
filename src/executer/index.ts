@@ -29,6 +29,6 @@ const executer = new Executer({
 
 const visualNovelExecuter = new VisualNovelExecuter();
 
-fs.getFlow(fs.getStartFlowPath_()).then(json => executer.execute(json));
+fs.getFlow(fs.getStartFlowPath()).then(json => executer.execute(json));
 
 // document.body.removeChild(document.getElementById("noLoadError")!);

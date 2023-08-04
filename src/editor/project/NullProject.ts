@@ -91,7 +91,7 @@ export class NullProject implements Project {
         throw new Error("Cannot remove flows in NullProject");
     }
 
-    public getStartFlowPath_(): string {
+    public getStartFlowPath(): string {
         return "localstorageExported";
     }
 

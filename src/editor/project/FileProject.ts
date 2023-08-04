@@ -115,7 +115,7 @@ export class FileProject implements Project {
         return lastModified === expectedLastModified;
     }
 
-    public getStartFlowPath_(): string {
+    public getStartFlowPath(): string {
         return this.getStartFlowSavePath();
     }
 

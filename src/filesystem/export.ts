@@ -31,7 +31,7 @@ export class ExportReader<T extends FSRead = FSRead> implements FileStructureRea
         return text.split("\n");
     }
 
-    public getStartFlowPath_(): string {
+    public getStartFlowPath(): string {
         return ExportReader.startFlowName;
     }
 
