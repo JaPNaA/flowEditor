@@ -45,8 +45,8 @@ jobs:
       - run: rm src/japnaaEngine2d
       - run: mv japnaaEngine2d/src src/japnaaEngine2d
       - run: rm -r japnaaEngine2d
-      - run: npm install typescript
-      - run: npx tsc
+      - run: npm i
+      - run: npm run build
       - run: rm -r node_modules
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
