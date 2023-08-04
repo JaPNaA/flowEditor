@@ -38,7 +38,7 @@ export class SingleHTMLFileExporter {
             commonCSS, executerCSS,
             "html { position: fixed; width: 100%; height: 100%; } body { margin: 0; padding: 0; overflow: hidden; height: 100vh; background-color: #181818; }</style><title>Flow Editor Export</title></head><body>\x3cscript>const assets = JSON.parse(",
             JSON.stringify(JSON.stringify(assetFiles)),
-            "); const flows = JSON.parse(`",
+            "); const flows = JSON.parse(String.raw`",
             JSON.stringify(flowFiles),
             "`);",
             executerBundleJS,
