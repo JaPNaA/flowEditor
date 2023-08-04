@@ -58,7 +58,7 @@ export class EditorContainer extends Component {
 
         this.elm.attribute("tabindex", "0");
 
-        this.autoSaveInterval = setInterval(async () => {
+        this.autoSaveInterval = window.setInterval(async () => {
             if (this.preventSaveOnExit) { return; }
             if (!this.editor.dirty) { return; }
             console.log("autosave");
