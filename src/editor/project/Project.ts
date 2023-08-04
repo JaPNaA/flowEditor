@@ -1,7 +1,7 @@
 import { EditorSaveData } from "../editor/Editor.js";
-import { FileAccessReadWrite } from "../../filesystem/FileAccess.js";
+import { FileStructureReadWrite } from "../../filesystem/FileStructure.js";
 
-export interface Project extends FileAccessReadWrite {
+export interface Project extends FileStructureReadWrite {
     /** Get the 'start' flow's path */
     getStartFlowSavePath(): string;
     /** Get a flow save */

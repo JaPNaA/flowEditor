@@ -2,7 +2,7 @@ import { FlowData } from "../FlowRunner.js";
 import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 
 /** Filesystem used while editing or exporting */
-export interface FileAccessReadWrite extends FileAccessRead {
+export interface FileStructureReadWrite extends FileStructureRead {
     /** Write an asset file */
     writeAsset(path: string, blob: Blob): Promise<void>;
     /** Move an asset file */
@@ -22,7 +22,7 @@ export interface FileAccessReadWrite extends FileAccessRead {
 }
 
 /** Filesystem used in exported version */
-export interface FileAccessRead {
+export interface FileStructureRead {
     /** Event fired when ready. */
     onReady: EventBus<void>;
     /** Returns true if the filesystem is ready */

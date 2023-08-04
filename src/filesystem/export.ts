@@ -2,9 +2,9 @@ import { FlowData } from "../FlowRunner.js";
 import { EventBus } from "../japnaaEngine2d/JaPNaAEngine2d.js";
 import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
 import { FSRead, FSReadWrite } from "./FS.js";
-import { FileAccessRead, FileAccessReadWrite } from "./FileAccess.js";
+import { FileStructureRead, FileStructureReadWrite } from "./FileStructure.js";
 
-export class ExportReader<T extends FSRead = FSRead> implements FileAccessRead {
+export class ExportReader<T extends FSRead = FSRead> implements FileStructureRead {
     public onReady = new EventBus<void>();
 
     protected static assetsListPath = "assetsList.txt";
@@ -49,7 +49,7 @@ export class ExportReader<T extends FSRead = FSRead> implements FileAccessRead {
     }
 }
 
-export class ExportReadWriter extends ExportReader<FSReadWrite> implements FileAccessReadWrite {
+export class ExportReadWriter extends ExportReader<FSReadWrite> implements FileStructureReadWrite {
     private assetList!: string[];
     private flowsList!: string[];
 
@@ -72,7 +72,6 @@ export class ExportReadWriter extends ExportReader<FSReadWrite> implements FileA
     public async writeAsset(path: string, blob: Blob): Promise<void> {
         if (!this.assetList.includes(path)) {
             this.assetList.push(path);
-            console.log(path);
         }
         await this.fs.write(this.fs.join(ExportReader.assetsPath, path), blob);
     }

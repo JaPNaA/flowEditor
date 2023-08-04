@@ -1,6 +1,6 @@
 import { PluginExecuter } from "../../editor/EditorPlugin.js";
 import { Executer } from "../../executer/Executer.js";
-import { FileAccessRead } from "../../filesystem/FileAccess.js";
+import { FileStructureRead } from "../../filesystem/FileStructure.js";
 import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d.js";
 import { Elm } from "../../japnaaEngine2d/elements.js";
 import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls.js";
@@ -187,7 +187,7 @@ class VisualNovelGame {
     private background = new Background();
     private imageDisplayer = new ImageDisplayer();
     private audio = new AudioPlayer();
-    private project!: FileAccessRead;
+    private project!: FileStructureRead;
 
     constructor(parentElm: HTMLElement) {
         this.engine = new JaPNaAEngine2d({
@@ -202,7 +202,7 @@ class VisualNovelGame {
         this.speechBubble.onNextRequested.subscribe(this.onContinue);
     }
 
-    public setProject(project: FileAccessRead) {
+    public setProject(project: FileStructureRead) {
         this.project = project;
         this.background.project = project;
         this.imageDisplayer.project = project;
@@ -405,7 +405,7 @@ class ChooserChoice extends Elm {
 }
 
 class Background extends WorldElm {
-    public project!: FileAccessRead;
+    public project!: FileStructureRead;
 
     private color: string = "#000";
     private image?: HTMLImageElement;
@@ -479,7 +479,7 @@ class Background extends WorldElm {
 }
 
 class ImageDisplayer extends WorldElm {
-    public project!: FileAccessRead;
+    public project!: FileStructureRead;
 
     private image?: HTMLImageElement;
     private zoom: number = 1;
@@ -804,7 +804,7 @@ class SpeechBubbleElm extends Elm {
 }
 
 class AudioPlayer {
-    public project!: FileAccessRead;
+    public project!: FileStructureRead;
 
     private backgroundMusic: HTMLAudioElement = new Audio();
     private backgroundMusicSrc: string = "";

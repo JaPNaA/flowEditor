@@ -1,5 +1,5 @@
 import { FlowData, FlowRunner, FlowRunnerOutput, FlowRunnerState } from "../FlowRunner.js";
-import { FileAccessRead } from "../filesystem/FileAccess.js";
+import { FileStructureRead } from "../filesystem/FileStructure.js";
 import { Component, Elm } from "../japnaaEngine2d/elements.js";
 import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray.js";
 import { PluginHooks } from "./ExecuterPlugin.js";
@@ -14,7 +14,7 @@ export class Executer extends Component {
     private paused = true;
     private lastChoice: any[] = [];
 
-    constructor(private pluginHooks: PluginHooks, public files: FileAccessRead) {
+    constructor(private pluginHooks: PluginHooks, public files: FileStructureRead) {
         super("executer");
 
         this.saves = new StateSaver(this, pluginHooks);

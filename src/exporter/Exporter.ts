@@ -1,11 +1,11 @@
 import { InMemoryFileSystem } from "../filesystem/FS.js";
-import { FileAccessRead } from "../filesystem/FileAccess.js";
+import { FileStructureRead } from "../filesystem/FileStructure.js";
 import { ExportReadWriter } from "../filesystem/export.js";
 
 export class Exporter {
     private exportFiles = new ExportReadWriter(new InMemoryFileSystem());
 
-    constructor(private files: FileAccessRead) { }
+    constructor(private files: FileStructureRead) { }
 
     public async exportToSingleHTML() {
         if (!this.files.isReady) { await this.files.onReady.promise(); }
