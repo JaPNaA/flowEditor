@@ -23,14 +23,26 @@ export class SingleHTMLFileExporter {
                     .then(arrayBuffer => assetFiles[asset] = arrayBufferToBase64(arrayBuffer))
             );
         }
+        let commonCSS!: Blob;
+        let executerCSS!: Blob;
+        let executerBundleJS!: Blob;
+        promises.push(
+            fetch("common.css").then(response => response.blob()).then(blob => commonCSS = blob),
+            fetch("executer.css").then(response => response.blob()).then(blob => executerCSS = blob),
+            fetch("build/executer-bundle.js").then(response => response.blob()).then(blob => executerBundleJS = blob),
+        );
         await Promise.all(promises);
 
         return new Blob([
-            "<!DOCTYPE html><html><meta charset=\"UTF-8\"><head><link rel='stylesheet' href='http://localhost:8080/common.css' /><link rel='stylesheet' href='http://localhost:8080/executer.css' /><style>html { position: fixed; width: 100%; height: 100%; } body { margin: 0; padding: 0; overflow: hidden; height: 100vh; background-color: #181818; }</style><title>Flow Editor Export</title></head><body><script>const assets = JSON.parse(",
+            "<!DOCTYPE html><html><meta charset=\"UTF-8\"><head><style>",
+            commonCSS, executerCSS,
+            "html { position: fixed; width: 100%; height: 100%; } body { margin: 0; padding: 0; overflow: hidden; height: 100vh; background-color: #181818; }</style><title>Flow Editor Export</title></head><body>\x3cscript>const assets = JSON.parse(",
             JSON.stringify(JSON.stringify(assetFiles)),
             "); const flows = JSON.parse(`",
             JSON.stringify(flowFiles),
-            "`);</script><script src='http://localhost:8080/build/executer/index.js' type='module'></script></body></html>"
+            "`);",
+            executerBundleJS,
+            "\x3c/script></body></html>"
         ]);
     }
 }
