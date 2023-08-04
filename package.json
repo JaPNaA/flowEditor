@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "An editor and exporter for flows",
   "main": "index.html",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --config webpack.config.js",
+    "build-dev": "webpack --config webpack-dev.config.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +18,13 @@
   "bugs": {
     "url": "https://github.com/JaPNaA/flowEditor/issues"
   },
-  "homepage": "https://github.com/JaPNaA/flowEditor#readme"
+  "homepage": "https://github.com/JaPNaA/flowEditor#readme",
+  "dependencies": {
+    "less-loader": "^11.1.3",
+    "ts-loader": "^9.4.4",
+    "webpack": "^5.88.2"
+  },
+  "devDependencies": {
+    "webpack-cli": "^5.1.4"
+  }
 }
