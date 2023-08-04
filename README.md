@@ -71,6 +71,9 @@ In `src`, there are a few items:
     - entry: `editor/index.ts`
   - `executer` is the flow executing program. It does not depend on `editor`. A version of `executer` is included in executable flow exports.
     - entry: `executer/index.ts`
+  - `exporter` is a library depending on `filesystem`
+    - to export, will request for compiled `.js` files from `executer` and dependencies
+    - entry: `exporter/Exporter.ts`, `new Exporter(project)`
   - `filesystem`, `japnaaEngine2d`, and `FlowRunner.ts` are all standalone shared library files
     - `japnaaEngine2d` is a renamed copy of the `src` directory in [JaPNaA/japnaaEngine2d](https://github.com/JaPNaA/japnaaEngine2d)
   - `plugins` contain plugins that can modify the editor and executer.
