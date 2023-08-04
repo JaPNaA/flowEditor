@@ -36,7 +36,7 @@ export class ExecuterContainer extends Component {
                     const project = this.getProject() as FileStructureReadWrite;
                     const startFlowFile = JSON.stringify({ flow: appHooks.getCompiledFlowFromEditor() });
                     
-                    project.writeFlow(project.getStartFlowPath_(), startFlowFile);
+                    await project.writeFlow(project.getStartFlowPath_(), startFlowFile);
 
                     await new Exporter(project).exportToSingleHTML();
                 }),

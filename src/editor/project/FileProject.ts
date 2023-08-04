@@ -127,7 +127,7 @@ export class FileProject implements Project {
 
     public async listFlows(): Promise<string[]> {
         const flows: string[] = [];
-        this.recursiveAddFilesToArray(this.compiledFlowsDirectory, "", flows);
+        await this.recursiveAddFilesToArray(this.compiledFlowsDirectory, "", flows);
         return flows;
     }
 
