@@ -1,6 +1,8 @@
+import { download } from "../editor/utils.js";
 import { InMemoryFileSystem } from "../filesystem/FS.js";
 import { FileStructureRead } from "../filesystem/FileStructure.js";
 import { ExportReadWriter } from "../filesystem/export.js";
+import { SingleHTMLFileExporter } from "./SingleHTMLFileExporter.js";
 
 export class Exporter {
     private exportFiles = new ExportReadWriter(new InMemoryFileSystem());
@@ -35,6 +37,7 @@ export class Exporter {
             });
         await Promise.all([assetsPromise, flowsPromise]);
         await this.exportFiles.flush();
-        console.log(this.exportFiles);
+        // temp, remove this export!
+        download(await new SingleHTMLFileExporter(this.exportFiles).export(), "export.html");
     }
 }
