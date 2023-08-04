@@ -1,0 +1,19 @@
+{
+  "name": "floweditor",
+  "version": "1.0.0",
+  "description": "An editor and exporter for flows",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JaPNaA/flowEditor.git"
+  },
+  "author": "JaPNaA",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JaPNaA/flowEditor/issues"
+  },
+  "homepage": "https://github.com/JaPNaA/flowEditor#readme"
+}
