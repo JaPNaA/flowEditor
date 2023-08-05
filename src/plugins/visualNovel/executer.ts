@@ -4,48 +4,14 @@ import { FileStructureRead } from "../../filesystem/FileStructure";
 import { EventBus, JaPNaAEngine2d, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { Elm } from "../../japnaaEngine2d/elements";
 import { ControlBackground, ControlSpeechBubbleSettings, isVisualNovelControlItem } from "./controls";
+import { visualNovelExecuterCSS } from "./visualNovelExecuterCSS";
 import { replaceVariables, visualNovelMdToHTML } from "./visualNovelMd";
 
 export class VisualNovelExecuter implements PluginExecuter {
     private elm = new Elm().class("visualNovelExecuter")
         .attribute("tabindex", "0")
         .append(new Elm("style").withSelf(s => {
-            s.getHTMLElement().innerHTML = `
-            .visualNovelMD .volume[level='#'] {
-                font-size: 0.6em;
-                opacity: 0.4;
-                font-style: italic;
-            }
-
-            .visualNovelMD .volume[level='##'] {
-                font-size: 0.7em;
-                opacity: 0.8;
-                font-style: italic;
-            }
-
-            .visualNovelMD .volume[level='###'] {
-                font-size: 0.8em;
-            }
-
-            .visualNovelMD .volume[level='####'] {
-                font-size: 1.2em;
-                font-weight: 600;
-                color: #fff;
-            }
-
-            .visualNovelMD .volume[level='#####'] {
-                font-size: 2em;
-                font-weight: 600;
-                color: #fff;
-            }
-
-            .visualNovelMD .volume[level='######'] {
-                font-size: 6em;
-                font-weight: 1000;
-                color: #fff;
-                line-height: 0.92;
-            }
-            `;
+            s.getHTMLElement().innerHTML = visualNovelExecuterCSS;
         }));
     private game?: VisualNovelGame;
     private executer!: Executer;
