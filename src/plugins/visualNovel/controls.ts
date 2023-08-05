@@ -1,25 +1,53 @@
 export type VisualNovelControlItem =
-    ControlBackground | ControlShow |
-    ControlSay | ControlSayAdd |
+    /** Visuals controls */
+    ControlShow | ControlHide |
+    // Visual controls -- object generation
+    ControlShape |
+    // Visual controls -- positioning
+    ControlArrange | ControlArrangeSettings | ControlAnimate |
+    ControlSetParent |
+
+    /** Text controls */
+    ControlText | ControlSay | ControlSayAdd |
     ControlSpeechBubbleSettings |
+    /** Interactivity controls */
     ControlChoose |
-    ControlWait |
+    /** Sound controls */
     ControlBackgroundMusic | ControlSFX |
     ControlBackgroundMusicSettings | ControlSFXSettings |
-    ControlSetVariableString;
+    /** String controls */
+    ControlSetVariableString |
+    /** Misc controls */
+    ControlWait;
 
 export function isVisualNovelControlItem(item: any): item is VisualNovelControlItem {
     return typeof item.visualNovelCtrl === "string";
 }
 
-export interface ControlBackground {
-    visualNovelCtrl: "background";
+export interface ControlShow {
+    visualNovelCtrl: "show";
+    id: string;
+}
+
+export interface ControlHide {
+    visualNovelCtrl: "hide";
+    id: string;
+}
+
+export interface ControlShape {
+    visualNovelCtrl: "shape";
     /**
-     * Specify background color with #.
-     * Will be ignored by executer.
-     * @deprecated
+     * Points that make up the shape. (One point is made up of two numbers.)
+     * If only one point is provided, it makes a rectangle from (0, 0) to
+     * (points[0], points[1]).
+     * If not provided, but...
+     *   - color is provided: the shape is a rectangle from the (0, 0) to
+     *     (screen width, screen height).
+     *   - src is provided: the shape is a rectangle from (0, 0) to
+     *     (image width, image height)
+     *   - nothing is provided: the shape is a rectangle from (0, 0) to (0, 0).
      */
-    background?: string;
+    points?: number[];
     /**
      * URL or path of an image to use for the background.
      */
@@ -31,28 +59,161 @@ export interface ControlBackground {
      * Default: #fff
      */
     color?: string;
+    id: number;
     /**
-     * How zoomed-in is the background? Default: 1.
-     * Values 1 and over are guaranteed to cover the entire screen.
+     * If defined, is a shortcut to add a `parent` instruction to parent this
+     * graphic to the graphic with id `parent`.
      */
-    zoom?: number;
-    /** 0 to 100 -- x position of the zoom center? Default: 50 */
-    x?: number;
-    /** 0 to 100 -- y position of is the zoom center? Default: 50 */
-    y?: number;
+    parent?: number;
 }
 
-export interface ControlShow {
-    visualNovelCtrl: "show";
-    src: string;
+export interface ControlArrange {
+    visualNovelCtrl: "arrange";
+    id: number;
+    add?: number[];
+    remove?: number[];
 }
 
+export interface ControlArrangeSettings {
+    visualNovelCtrl: "arrangeSettings";
+    id: number;
+    direction: "horizontal" | "vertical";
+    width?: number;
+    height?: number;
+    margin?: number;
+    /**
+     * start: place elements at start (left or top)
+     * middle (default): place elements centered
+     * end: place elements at end (right or bottom)
+     */
+    alignment?: "start" | "middle" | "end";
+    /**
+     * minimum: keep elements as close as possible (margin apart)
+     * maximum (default): keep elements as far as possible (spanning entire width/height)
+     */
+    spacing?: "minimum" | "maximum";
+    transitionTime?: number;
+    transitionEasing?: BezierEasingCurve;
+}
+
+export interface ControlAnimate {
+    visualNovelCtrl: "animate";
+    length: number;
+    /**
+     * If number provided: number of times to loop.
+     * If true: loop infinitely
+     * If false or undefined: don't loop (= 1)
+     */
+    loop?: number | boolean;
+    /**
+     * [start time, VisualNovelAnimationEvent][]
+     */
+    events: [number, VisualNovelAnimationEvent][];
+    /** Default easing: linear */
+    easing?: BezierEasingCurve;
+}
+
+export type VisualNovelAnimationEvent =
+    AnimationEventPosition |
+    AnimationEventPositionAnchor |
+    AnimationEventTransformAnchor |
+    AnimationEventRotation |
+    AnimationEventScale |
+    AnimationEventFilter;
+
+interface BaseVisualNovelAnimationEvent<T> {
+    key: string;
+    /** Default: matches parent animation length */
+    length?: number;
+    /** Default: graphic original value, before animation */
+    from?: T;
+    to: T;
+    easing?: BezierEasingCurve;
+}
+
+interface AnimationEventPosition extends BaseVisualNovelAnimationEvent<[number, number]> {
+    key: "pos";
+}
+
+interface AnimationEventPositionAnchor extends BaseVisualNovelAnimationEvent<[number, number]> {
+    key: "posAnchor";
+}
+
+interface AnimationEventTransformAnchor extends BaseVisualNovelAnimationEvent<[number, number]> {
+    key: "transformAnchor";
+}
+
+interface AnimationEventRotation extends BaseVisualNovelAnimationEvent<number> {
+    key: "rotation";
+}
+
+interface AnimationEventScale extends BaseVisualNovelAnimationEvent<{
+    /**
+     * Fit (default) - when scale: 1, the entire graphic fits in the screen.
+     * Cover - when scale: 1, the graphic covers the entire screen.
+     */
+    base: "fit" | "cover",
+    /**
+     * Default: 1.
+     */
+    scale?: number
+}> {
+    key: "scale";
+}
+
+interface AnimationEventFilter extends BaseVisualNovelAnimationEvent<AnimationFilter> {
+    key: "filter";
+}
+
+export type AnimationFilter =
+    AnimationFilterOpacity |
+    AnimationFilterHSV |
+    AnimationFilterInvert |
+    AnimationFilterSepia;
+
+interface AnimationFilterOpacity extends Array<any> {
+    0: "opacity";
+    1: number;
+}
+
+interface AnimationFilterHSV extends Array<any> {
+    0: "hsv";
+    1: number;
+    2: number;
+    3: number;
+}
+
+interface AnimationFilterInvert extends Array<any> {
+    0: "invert";
+    1: number;
+}
+
+interface AnimationFilterSepia extends Array<any> {
+    0: "sepia";
+    1: number;
+}
+
+interface ControlSetParent {
+    visualNovelCtrl: "parent";
+    parent: number;
+    child: number;
+}
+
+/** Write text onto an object */
+export interface ControlText {
+    visualNovelCtrl: "text";
+    text: string;
+    id: number;
+}
+
+/** Write text onto the current speech bubble with gradual reveal */
 export interface ControlSay {
     visualNovelCtrl: "say";
     char: string;
     text: string;
 }
 
+/** Add text onto the current speech bubble with gradual reveal */
 export interface ControlSayAdd {
     visualNovelCtrl: "say-add";
     text: string;
@@ -71,6 +232,11 @@ export interface ControlChoose {
 
 export interface ControlSpeechBubbleSettings {
     visualNovelCtrl: "speechBubbleSettings";
+    /**
+     * Set graphic as the current speech bubble. `say` and `say-add` will write
+     * text to this graphic.
+     */
+    id?: number;
     /** Bubble visible or hidden */
     visible?: boolean;
     /** 0 to 100 -- Bubble position X */
@@ -139,4 +305,15 @@ export interface ControlSetVariableString {
     visualNovelCtrl: "strset";
     v: string;
     str: string;
+}
+
+export interface BezierEasingCurve extends Array<number> {
+    /* x1 */
+    0: number;
+    /* y1 */
+    1: number;
+    /* x2 */
+    2: number;
+    /* y2 */
+    3: number;
 }
