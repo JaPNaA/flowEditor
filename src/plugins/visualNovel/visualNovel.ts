@@ -8,7 +8,7 @@ import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../../editor/EditorPlugin";
 import { VisualNovelAnalyser } from "./analyser";
-import { ControlBackground, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
+import { ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
 import { VisualNovelExecuter } from "./executer";
 import { VisualNovelRenderer } from "./renderer";
 
@@ -108,11 +108,11 @@ export default class VisualNovelPlugin implements EditorPlugin {
             volume: 0.6
         }))
     }, {
-        instructionName: "set variable to string",
-        description: "Sets the value of a variable to string (by setting the value to a number identifying the string.)",
+        instructionName: "set variable to text",
+        description: "Sets the value of a variable to text (by setting the value to a number identifying the text.)",
         create: () => new VNContentInstrOneLine(new SetVariableStringInstruction({
             visualNovelCtrl: "strset",
-            v: "string",
+            v: "text",
             str: ""
         }))
     }];
