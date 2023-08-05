@@ -202,6 +202,7 @@ interface ControlSetParent {
 /** Write text onto an object */
 export interface ControlText {
     visualNovelCtrl: "text";
+    /** Formatted text */
     text: string;
     id: number;
 }
@@ -210,12 +211,14 @@ export interface ControlText {
 export interface ControlSay {
     visualNovelCtrl: "say";
     char: string;
+    /** Formatted text */
     text: string;
 }
 
 /** Add text onto the current speech bubble with gradual reveal */
 export interface ControlSayAdd {
     visualNovelCtrl: "say-add";
+    /** Formatted text */
     text: string;
 }
 
@@ -227,7 +230,8 @@ export interface ControlSayAdd {
  */
 export interface ControlChoose {
     visualNovelCtrl: "choose";
-    options?: string[];
+    /** List of graphics as options. If undefined, means unset choose. */
+    options?: number[];
 }
 
 export interface ControlSpeechBubbleSettings {

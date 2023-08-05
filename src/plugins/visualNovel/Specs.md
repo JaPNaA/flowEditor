@@ -8,7 +8,7 @@ There are two objects instructions can reference by number ("pointers"). Pointer
 
 ## Strings
 
-Instructions that access strings: `strset`, `text`, `say`, `say-add`.
+Instructions that access strings: `strset`, `text`, `say`, `say-add`. Additionally, `shape`, `sfx` and `bgm` can use string substitution in the `src` attribute.
 
 Pointers must have values greater than 0.
 
