@@ -2,7 +2,7 @@ export type VisualNovelControlItem =
     /** Visuals controls */
     ControlShow | ControlHide |
     // Visual controls -- object generation
-    ControlShape |
+    ControlGraphic |
     // Visual controls -- positioning
     ControlArrange | ControlArrangeSettings | ControlAnimate |
     ControlSetParent |
@@ -34,32 +34,42 @@ export interface ControlHide {
     id: string;
 }
 
-export interface ControlShape {
-    visualNovelCtrl: "shape";
+export interface ControlGraphic {
+    visualNovelCtrl: "graphic";
+    id: number;
     /**
      * Points that make up the shape. (One point is made up of two numbers.)
      * If only one point is provided, it makes a rectangle from (0, 0) to
      * (points[0], points[1]).
      * If not provided, but...
-     *   - color is provided: the shape is a rectangle from the (0, 0) to
-     *     (screen width, screen height).
      *   - src is provided: the shape is a rectangle from (0, 0) to
      *     (image width, image height)
-     *   - nothing is provided: the shape is a rectangle from (0, 0) to (0, 0).
+     *   - src not provided but fill is provided: the shape is a rectangle
+     *     from the (0, 0) to (screen width, screen height).
+     *   - nothing is provided: the shape has no points.
      */
     points?: number[];
     /**
-     * URL or path of an image to use for the background.
+     * URL or path of an image to use for the graphic.
      */
     src?: string;
     /**
-     * The background color of the background.
-     * Usually not seen unless the background image is transparent or doesn't
-     * cover the entire screen.
-     * Default: #fff
+     * The background color of the graphic.
+     * Usually not seen unless the texture is transparent or doesn't cover the
+     * entire screen.
+     * Default: transparent
      */
-    color?: string;
-    id: number;
+    fill?: string;
+    /**
+     * The border color of the graphic.
+     * Default: transparent
+     */
+    stroke?: string;
+    /**
+     * The border width of the graphic.
+     * Default: 1
+     */
+    strokeWidth?: number;
     /**
      * If defined, is a shortcut to add a `parent` instruction to parent this
      * graphic to the graphic with id `parent`.
@@ -98,6 +108,8 @@ export interface ControlArrangeSettings {
 
 export interface ControlAnimate {
     visualNovelCtrl: "animate";
+    /** id of graphic */
+    id: number;
     length: number;
     /**
      * If number provided: number of times to loop.

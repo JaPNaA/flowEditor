@@ -32,7 +32,12 @@ Instructions that access graphics: `show`, `hide`, `shape`, `animate`, `arrange`
 
 Pointers to graphics must have values greater than 0.
 
-By convention, graphic 1 is the parent to all non-ui graphics, and graphic 2 is a parent to all ui graphics.
+By convention graphics 1-4 form this tree:
+  - graphic 3 (parent of non-ui)
+    - graphic 1 (parent of non-background)
+      - by default, all graphics without a specified parent make graphic 1 the parent
+    - graphic 2 (parent of background graphics)
+  - graphic 4 (parent of ui graphics)
 
 Pointers to "special" graphics have a value less than 0.
   - -1: **stage graphic**
@@ -46,7 +51,7 @@ An example of using `animate` to make a graphic appear and 'jump':
 
 ```json
 { "visualNovelCtrl": "shape", "src": "...", "id": 1 }
-{ "visualNovelCtrl": "animate", "length": 500, "events": [
+{ "visualNovelCtrl": "animate", "length": 500, "id": 1, "events": [
     [0, {
         "key": "posAnchor",
         "from": [50, 50], // set initial position (optional)
@@ -66,6 +71,8 @@ An example of using `animate` to make a graphic appear and 'jump':
 Note: if the animation length is less than the time it takes to finish the last event, the event will be stopped at point the animation ends.
 
 ## Arrangements
+
+Pointers to arrangements must have a value greater than 0.
 
 Instructions that access arrangements: `arrange`, `arrangeSettings`.
 
