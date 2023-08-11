@@ -39,14 +39,19 @@ export interface ControlGraphic {
     id: number;
     /**
      * Points that make up the shape. (One point is made up of two numbers.)
-     * If only one point is provided, it makes a rectangle from (0, 0) to
+     * If only one point is provided, the shape is a rectangle from (0, 0) to
      * (points[0], points[1]).
+     * If two points are provided, the shape is a rectangle from
+     * (points[0], points[1]) to (points[2], points[3]).
      * If not provided, but...
-     *   - src is provided: the shape is a rectangle from (0, 0) to
-     *     (image width, image height)
-     *   - src not provided but fill is provided: the shape is a rectangle
-     *     from the (0, 0) to (screen width, screen height).
+     *   - src or fill is provided: the shape is a square from (0, 0) to
+     *     (100, 100)
      *   - nothing is provided: the shape has no points.
+     * 
+     * Points are percentages relative to the texture. (ex. (100, 100) is 
+     * the pixel point at x and y max(textureWidth, textureHeight))
+     * If there is no texture, the percentages are relative to the screen.
+     * (ex. (100, 100) is the point at x and y max(screenWidth, screenHeight))
      */
     points?: number[];
     /**

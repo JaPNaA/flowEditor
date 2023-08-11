@@ -14,7 +14,7 @@ export class GraphicDisplayer extends WorldElmWithComponents {
         if (previousGraphic) {
             this.children.removeChild(previousGraphic);
         }
-        const newGraphic = new VNGraphic(graphic)
+        const newGraphic = new VNGraphic(graphic, this.project);
         this.graphics[graphic.id] = newGraphic;
         this.children.addChild(newGraphic);
         this.engine.ticker.requestTick();
@@ -41,12 +41,16 @@ export class VNGraphic extends WorldElm {
     private scale: number; // 1: image fits or covers the screen (determined by scaleBase)
     private rotation: number; // 0 to 2pi
 
+    /* Caches */
     private texture?: HTMLImageElement;
     private textureLoaded = false;
+    private pointsMinX = 0;
+    private pointsWidth = 0;
+    private pointsMinY = 0;
+    private pointsHeight = 0;
 
-    constructor(graphic: ControlGraphic) {
+    constructor(graphic: ControlGraphic, private project: FileStructureRead) {
         super();
-        this.textureSrc = graphic.src;
         this.fill = graphic.fill ? "#" + graphic.fill : undefined;
         this.stroke = graphic.stroke ? "#" + graphic.stroke : undefined;
         this.strokeWidth = graphic.strokeWidth;
@@ -58,6 +62,10 @@ export class VNGraphic extends WorldElm {
         this.scale = 1;
         this.rotation = 0;
 
+        if (graphic.src) {
+            this.setTexture(graphic.src);
+        }
+
         if (graphic.points) {
             if (graphic.points.length === 2) {
                 // rectangle shorthand
@@ -66,6 +74,14 @@ export class VNGraphic extends WorldElm {
                     graphic.points[0], 0,
                     graphic.points[0], graphic.points[1],
                     0, graphic.points[1]
+                ];
+            } else if (graphic.points.length === 4) {
+                // rectangle shorthand (2)
+                this.points = [
+                    graphic.points[0], graphic.points[1],
+                    graphic.points[2], graphic.points[1],
+                    graphic.points[2], graphic.points[3],
+                    graphic.points[0], graphic.points[3]
                 ];
             } else {
                 this.points = graphic.points;
@@ -81,19 +97,57 @@ export class VNGraphic extends WorldElm {
                 this.points = [];
             }
         }
+
+        this.updatePointLimits();
     }
 
     public draw() {
         const X = this.engine.canvas.X;
 
-        X.beginPath();
-        X.moveTo(this.points[0], this.points[1]);
-        for (let i = 2; i < this.points.length; i += 2) {
-            X.lineTo(this.points[i], this.points[i + 1]);
+        let pointScale;
+
+        // scale points
+        if (this.texture && this.textureLoaded) {
+            pointScale = Math.max(this.texture.width, this.texture.height) / 100;
+        } else {
+            pointScale = 1;
         }
+
+        // scale graphic
+        const screenRatio = this.engine.sizer.width / this.engine.sizer.height;
+        const imageRatio = this.pointsWidth / this.pointsHeight;
+        let scale;
+        if (screenRatio > imageRatio === (this.scaleBase === "fit")) {
+            // match height
+            scale = this.engine.sizer.height / this.pointsHeight;
+        } else {
+            // match width
+            scale = this.engine.sizer.width / this.pointsWidth;
+        }
+
+        // translate graphic
+        const x = (this.engine.sizer.width - this.pointsWidth * scale) * this.positionAnchor.x - this.pointsMinX * scale;
+        const y = (this.engine.sizer.height - this.pointsHeight * scale) * this.positionAnchor.y - this.pointsMinY * scale;
+        X.save();
+        X.translate(x, y);
+        X.scale(scale / pointScale, scale / pointScale);
+        console.log(this.pointsMinX, this.pointsMinY)
+
+        // draw graphic
+        X.beginPath();
+
+        X.moveTo(this.points[0] * pointScale, this.points[1] * pointScale);
+        for (let i = 2; i < this.points.length; i += 2) {
+            X.lineTo(this.points[i] * pointScale, this.points[i + 1] * pointScale);
+        }
+
         if (this.fill) {
             X.fillStyle = this.fill;
             X.fill();
+        }
+        if (this.texture) {
+            X.clip();
+            X.drawImage(this.texture, 0, 0);
         }
         if (this.stroke) {
             X.strokeStyle = this.stroke;
@@ -101,80 +155,65 @@ export class VNGraphic extends WorldElm {
             X.stroke();
         }
 
-        // if (this.texture && this.textureLoaded) {
-        //     const screenRatio = this.engine.sizer.width / this.engine.sizer.height;
-        //     const imageRatio = this.texture.width / this.texture.height;
-        //     let scale;
-        //     if (screenRatio > imageRatio === (this.scaleBase === "fit")) {
-        //         // match height
-        //         scale = this.engine.sizer.height / this.texture.height;
-        //     } else {
-        //         // match width
-        //         scale = this.engine.sizer.width / this.texture.width;
-        //     }
-        //     scale *= this.zoom;
-
-        //     let x = (this.engine.sizer.width - this.texture.width * scale) * this.focusX;
-        //     let y = (this.engine.sizer.height - this.texture.height * scale) * this.focusY;
-        //     X.drawImage(this.texture, x, y, this.texture.width * scale, this.texture.height * scale);
-        // }
+        X.restore();
     }
 
-    public async showImage(src: string) {
-        // this.src = src;
-        // if (this.texture) { URL.revokeObjectURL(this.texture.src); }
-        // if (src) {
-        //     this.texture = new Image();
-        //     this.texture.src = URL.createObjectURL(
-        //         await this.project.getAsset(src)
-        //     );
-        //     this.imageLoaded = false;
-        //     this.texture.onload = () => {
-        //         this.imageLoaded = true;
-        //         this.engine.ticker.requestTick();
-        //     };
-        // } else {
-        //     this.texture = undefined;
-        // }
+    private async setTexture(src: string) {
+        this.textureSrc = src;
+        if (this.texture) { URL.revokeObjectURL(this.texture.src); }
+        if (src) {
+            this.texture = new Image();
+            this.texture.src = URL.createObjectURL(
+                await this.project.getAsset(src)
+            );
+            this.textureLoaded = false;
+            this.texture.onload = () => {
+                this.textureLoaded = true;
+                this.engine.ticker.requestTick();
+            };
+        } else {
+            this.texture = undefined;
+        }
 
-        // // this.zoom = background.zoom === undefined ? 1 : background.zoom;
-        // // this.focusX = background.x === undefined ? 0.5 : background.x / 100;
-        // // this.focusY = background.y === undefined ? 0.5 : background.y / 100;
+        // this.color = background.color ? "#" + background.color : "#fff";
+        // this.zoom = background.zoom === undefined ? 1 : background.zoom;
+        // this.focusX = background.x === undefined ? 0.5 : background.x / 100;
+        // this.focusY = background.y === undefined ? 0.5 : background.y / 100;
     }
 
-    // public async set(background: ControlBackground) {
-    //     this.background = background;
-    //     if (this.texture) { URL.revokeObjectURL(this.texture.src); }
-    //     if (background.src) {
-    //         this.texture = new Image();
-    //         this.texture.src = URL.createObjectURL(
-    //             await this.project.getAsset(background.src)
-    //         );
-    //         this.imageLoaded = false;
-    //         this.texture.onload = () => {
-    //             this.imageLoaded = true;
-    //             this.engine.ticker.requestTick();
-    //         };
-    //     } else {
-    //         this.texture = undefined;
-    //     }
+    private updatePointLimits() {
+        let pointsMaxX = this.pointsMinX = this.points[0];
+        let pointsMaxY = this.pointsMinY = this.points[1];
 
-    //     this.color = background.color ? "#" + background.color : "#fff";
-    //     this.zoom = background.zoom === undefined ? 1 : background.zoom;
-    //     this.focusX = background.x === undefined ? 0.5 : background.x / 100;
-    //     this.focusY = background.y === undefined ? 0.5 : background.y / 100;
-    // }
+        for (let i = 2; i < this.points.length; i += 2) {
+            if (this.points[i] < this.pointsMinX) {
+                this.pointsMinX = this.points[i];
+            }
+            if (this.points[i] > pointsMaxX) {
+                pointsMaxX = this.points[i];
+            }
+            if (this.points[i + 1] < this.pointsMinY) {
+                this.pointsMinY = this.points[i + 1];
+            }
+            if (this.points[i + 1] > pointsMaxY) {
+                pointsMaxY = this.points[i + 1];
+            }
+        }
+
+        this.pointsWidth = pointsMaxX - this.pointsMinX;
+        this.pointsHeight = pointsMaxY - this.pointsMinY;
+    }
 
     public getState() {
         // return this.src;
     }
 
     public setState(state: any) {
-        if (state) {
-            this.showImage(state);
-        } else {
-            this.showImage("");
-        }
+        // if (state) {
+        //     this.showImage(state);
+        // } else {
+        //     this.showImage("");
+        // }
     }
 
     public remove(): void {
