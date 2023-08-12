@@ -51,18 +51,18 @@ An example of using `animate` to make a graphic appear and 'jump':
 
 ```json
 { "visualNovelCtrl": "shape", "src": "...", "id": 1 }
-{ "visualNovelCtrl": "animate", "length": 500, "id": 1, "events": [
+{ "visualNovelCtrl": "animate", "length": 0.5, "id": 1, "events": [
     [0, {
         "key": "posAnchor",
         "from": [50, 50], // set initial position (optional)
         "to": [50, 60],
         "easing": [0.5, 1, 0.89, 1], // ease out quad
-        "length": 250
-    }], [250, {
+        "length": 0.25
+    }], [0.25, {
         "key": "posAnchor",
         "to": [50, 50],
         "easing": [0.11, 0, 0.5, 0], // ease in quad
-        "length": 250
+        "length": 0.25
     }]
 ] }
 { "visualNovelCtrl": "show", "id": 1 }
