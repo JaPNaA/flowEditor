@@ -71,6 +71,9 @@ export class VisualNovelExecuter implements PluginExecuter {
                 this.executer.log.log(`Graphic ${JSON.stringify(data)}`);
                 this.game.graphic(data);
                 return true;
+            case "animate":
+                this.game.playAnimation(data);
+                return true;
             // case "choose":
             //     if (data.options) {
             //         this.game.showChoices(data.options.map(v => visualNovelMdToHTML(v, this.getVariable)));

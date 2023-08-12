@@ -9,7 +9,7 @@
 export class BezierEasingCurve {
     private isLinear: boolean = false;
 
-    private sampleValues: Float32Array | Array<number>;
+    private sampleValues!: Float32Array | Array<number>;
 
     constructor(public points: [number, number, number, number]) {
         const [mX1, mY1, mX2, mY2] = points;
@@ -20,6 +20,7 @@ export class BezierEasingCurve {
 
         if (mX1 === mY1 && mX2 === mY2) {
             this.isLinear = true;
+            return;
         }
 
         // Precompute samples table

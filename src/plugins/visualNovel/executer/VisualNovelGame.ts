@@ -1,7 +1,8 @@
 import { Executer } from "../../../executer/Executer";
 import { FileStructureRead } from "../../../filesystem/FileStructure";
 import { EventBus, JaPNaAEngine2d } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { ControlGraphic, ControlSpeechBubbleSettings } from "../controls";
+import { ControlAnimate, ControlGraphic, ControlSpeechBubbleSettings } from "../controls";
+import { AnimationPlayer } from "./AnimationPlayer";
 import { AudioPlayer } from "./AudioPlayer";
 import { Chooser } from "./Chooser";
 import { GraphicDisplayer, VNGraphic } from "./GraphicDisplayer";
@@ -13,6 +14,7 @@ export class VisualNovelGame {
     private engine: JaPNaAEngine2d;
 
     private graphicDisplayer = new GraphicDisplayer();
+    private animationPlayer = new AnimationPlayer();
     private chooser = new Chooser();
     private audio = new AudioPlayer();
     private project!: FileStructureRead;
@@ -29,6 +31,7 @@ export class VisualNovelGame {
         });
         this.engine.world.addElm(this.graphicDisplayer);
         this.engine.world.addElm(this.chooser);
+        this.engine.world.addElm(this.animationPlayer);
         // this.speechBubble.onNextRequested.subscribe(this.onContinue);
     }
 
@@ -37,6 +40,10 @@ export class VisualNovelGame {
         // this.background.project = project;
         this.graphicDisplayer.project = project;
         this.audio.project = project;
+    }
+
+    public playAnimation(control: ControlAnimate) {
+        this.animationPlayer.addAnimation(this.graphicDisplayer.getGraphic(control.id), control);
     }
 
     public characterSay(charHTML: string, text: string) {

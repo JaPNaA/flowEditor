@@ -19,27 +19,33 @@ export class GraphicDisplayer extends WorldElmWithComponents {
         this.children.addChild(newGraphic);
         this.engine.ticker.requestTick();
     }
+
+    public getGraphic(id: number) {
+        const graphic = this.graphics[id];
+        if (!graphic) { throw new Error("No graphic with id " + id); }
+        return graphic;
+    }
 }
 
 export class VNGraphic extends WorldElm {
     /* What the graphic looks like */
     private textureSrc?: string;
-    private points: number[];
-    private fill?: string; // hex color
-    private stroke?: string; // hex color
-    private strokeWidth?: number;
-    private filters: AnimationFilter[] = [];
+    public points: number[];
+    public fill?: string; // hex color
+    public stroke?: string; // hex color
+    public strokeWidth?: number;
+    public filters: AnimationFilter[] = [];
 
     /* Position */
-    private parent: number; // graphic id; note: the child is subject to the parent's transforms.
-    private position: Vec2;
-    private positionAnchor: Vec2;
+    public parent: number; // graphic id; note: the child is subject to the parent's transforms.
+    public position: Vec2M;
+    public positionAnchor: Vec2M;
 
     /* Transforms */
-    private transformAnchor: Vec2;
-    private scaleBase: "fit" | "cover";
-    private scale: number; // 1: image fits or covers the screen (determined by scaleBase)
-    private rotation: number; // 0 to 2pi
+    public transformAnchor: Vec2;
+    public scaleBase: "fit" | "cover";
+    public scale: number; // 1: image fits or covers the screen (determined by scaleBase)
+    public rotation: number; // 0 to 2pi
 
     /* Caches */
     private texture?: HTMLImageElement;
@@ -131,7 +137,6 @@ export class VNGraphic extends WorldElm {
         X.save();
         X.translate(x, y);
         X.scale(scale / pointScale, scale / pointScale);
-        console.log(this.pointsMinX, this.pointsMinY)
 
         // draw graphic
         X.beginPath();

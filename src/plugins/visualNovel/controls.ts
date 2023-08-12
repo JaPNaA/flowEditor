@@ -337,4 +337,5 @@ export interface BezierEasingCurve extends Array<number> {
     2: number;
     /* y2 */
     3: number;
+    length: 4;
 }
