@@ -39,10 +39,10 @@ export class VNGraphic extends WorldElm {
     /* Position */
     public parent: number; // graphic id; note: the child is subject to the parent's transforms.
     public position: Vec2M;
-    public positionAnchor: Vec2M;
+    public positionAnchor?: Vec2M;
 
     /* Transforms */
-    public transformAnchor: Vec2;
+    public transformAnchor?: Vec2;
     public scaleBase: "fit" | "cover";
     public scale: number; // 1: image fits or covers the screen (determined by scaleBase)
     public rotation: number; // 0 to 2pi
@@ -62,8 +62,6 @@ export class VNGraphic extends WorldElm {
         this.strokeWidth = graphic.strokeWidth;
         this.parent = graphic.parent === undefined ? 1 : graphic.parent;
         this.position = new Vec2M(0.5, 0.5);
-        this.positionAnchor = this.position;
-        this.transformAnchor = this.positionAnchor;
         this.scaleBase = "fit";
         this.scale = 1;
         this.rotation = 0;
@@ -132,10 +130,12 @@ export class VNGraphic extends WorldElm {
         }
 
         // translate graphic
-        const x = (this.engine.sizer.width - this.pointsWidth * scale) * this.positionAnchor.x - this.pointsMinX * scale;
-        const y = (this.engine.sizer.height - this.pointsHeight * scale) * this.positionAnchor.y - this.pointsMinY * scale;
+        const positionAnchor = this.positionAnchor || this.position;
+        const x = this.position.x * this.engine.sizer.width - (positionAnchor.x * this.pointsWidth + this.pointsMinX) * scale;
+        const y = this.position.y * this.engine.sizer.height - (positionAnchor.y * this.pointsHeight + this.pointsMinY) * scale;
         X.save();
         X.translate(x, y);
+        console.log(x, y, this.position, positionAnchor);
         X.scale(scale / pointScale, scale / pointScale);
 
         // draw graphic

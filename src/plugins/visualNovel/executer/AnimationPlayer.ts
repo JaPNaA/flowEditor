@@ -52,7 +52,7 @@ class Animation {
     private adjustedTime = 0;
     private nextEventIndex = 0;
 
-    constructor(private graphic: VNGraphic, private control: ControlAnimate) {
+    constructor(private graphic: VNGraphic, control: ControlAnimate) {
         this.length = control.length;
         this.loop = control.loop;
         this.events = control.events;
@@ -72,33 +72,20 @@ class Animation {
         for (i = this.nextEventIndex; i < this.events.length; i++) {
             const [startTime, event] = this.events[i];
             if (startTime < this.adjustedTime) {
-                switch (event.key) {
-                    case "pos":
-                        this.activeEvents.push({
-                            start: startTime,
-                            length: event.length === undefined ? this.length - startTime : event.length,
-                            easing: event.easing && new BezierEasingCurve(event.easing),
-                            animater: new PositionAnimater(
-                                event.from ?
-                                    new Vec2M(event.from[0], event.from[1]) :
-                                    this.graphic.position.clone(),
-                                new Vec2M(event.to[0], event.to[1])
-                            )
-                        });
-                        break;
-                }
+                this.activateEvent(startTime, event);
             } else {
                 break;
             }
         }
         this.nextEventIndex = i;
 
-        for (let i = this.activeEvents.length - 1; i >= 0; i--) {
+        for (let i = 0; i < this.activeEvents.length; i++) {
             const event = this.activeEvents[i];
             const endTime = event.start + event.length;
             if (this.adjustedTime >= endTime) {
                 event.animater.setAt(this.graphic, 1);
                 this.activeEvents.splice(i, 1);
+                i--;
             } else {
                 const progress = (this.adjustedTime - event.start) / event.length;
                 event.animater.setAt(
@@ -106,6 +93,40 @@ class Animation {
                     event.easing ? event.easing.at(progress) : progress
                 );
             }
+        }
+    }
+
+    private activateEvent(startTime: number, event: VisualNovelAnimationEvent) {
+        const activeEventBase = {
+            start: startTime,
+            length: event.length === undefined ? this.length - startTime : event.length,
+            easing: event.easing && new BezierEasingCurve(event.easing)
+        };
+        switch (event.key) {
+            case "pos":
+                this.activeEvents.push({
+                    ...activeEventBase,
+                    animater: new PositionAnimater(
+                        event.from ?
+                            new Vec2M(event.from[0], event.from[1]).scale(0.01) :
+                            this.graphic.position.clone(),
+                        new Vec2M(event.to[0], event.to[1]).scale(0.01)
+                    )
+                });
+                break;
+            case "posAnchor":
+                this.activeEvents.push({
+                    ...activeEventBase,
+                    animater: new PositionAnchorAnimater(
+                        event.from ?
+                            new Vec2M(event.from[0], event.from[1]).scale(0.01) :
+                            this.graphic.positionAnchor ?
+                                this.graphic.positionAnchor.clone() :
+                                this.graphic.position.clone(),
+                        new Vec2M(event.to[0], event.to[1]).scale(0.01)
+                    )
+                });
+                break;
         }
     }
 }
@@ -123,7 +144,17 @@ class PositionAnimater implements Animater {
     constructor(private from: Vec2, private to: Vec2) { }
 
     public setAt(graphic: VNGraphic, progress: number): void {
-        graphic.position.copy(this.from.clone().lerp(progress, this.to).scale(0.01));
-        console.log(this.from, this.to, progress, this.from.clone().lerp(progress, this.to));
+        graphic.position.copy(this.from.clone().lerp(progress, this.to));
+    }
+}
+
+class PositionAnchorAnimater implements Animater {
+    constructor(private from: Vec2, private to: Vec2) { }
+
+    public setAt(graphic: VNGraphic, progress: number): void {
+        if (!graphic.positionAnchor) {
+            graphic.positionAnchor = this.from.clone();
+        }
+        graphic.positionAnchor.copy(this.from.clone().lerp(progress, this.to));
     }
 }
