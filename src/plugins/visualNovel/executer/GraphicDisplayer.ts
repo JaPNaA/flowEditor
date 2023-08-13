@@ -125,6 +125,7 @@ export class VNGraphic extends WorldElm {
                 // match width
                 scale = this.engine.sizer.width / this.pointsWidth;
             }
+            scale *= this.scale;
         } else {
             scale = 1;
         }
@@ -135,7 +136,6 @@ export class VNGraphic extends WorldElm {
         const y = this.position.y * this.engine.sizer.height - (positionAnchor.y * this.pointsHeight + this.pointsMinY) * scale;
         X.save();
         X.translate(x, y);
-        console.log(x, y, this.position, positionAnchor);
         X.scale(scale / pointScale, scale / pointScale);
 
         // draw graphic
@@ -189,6 +189,17 @@ export class VNGraphic extends WorldElm {
         // this.zoom = background.zoom === undefined ? 1 : background.zoom;
         // this.focusX = background.x === undefined ? 0.5 : background.x / 100;
         // this.focusY = background.y === undefined ? 0.5 : background.y / 100;
+    }
+
+    /**
+     * The fit to cover factor is the number `x` such that
+     * `{ baseScale: "cover", scale: 1 }` = `{ baseScale: "fit", scale: x }`
+     */
+    public getFitToCoverFactor() {
+        if (this.pointsHeight === 0) { return 1; }
+        const graphicAspect = this.pointsWidth / this.pointsHeight;
+        const screenAspect = this.engine.sizer.width / this.engine.sizer.height;
+        return graphicAspect > screenAspect ? graphicAspect / screenAspect : screenAspect / graphicAspect;
     }
 
     private updatePointLimits() {

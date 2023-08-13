@@ -66,12 +66,16 @@ class Animation {
             this.done = true;
             this.realTime = this.length;
         }
-        this.adjustedTime = this.easing ? this.easing.at(this.realTime / this.length) * this.length : this.realTime
+        if (this.length > 0) {
+            this.adjustedTime = this.easing ? this.easing.at(this.realTime / this.length) * this.length : this.realTime;
+        } else {
+            this.adjustedTime = 0;
+        }
 
         let i;
         for (i = this.nextEventIndex; i < this.events.length; i++) {
             const [startTime, event] = this.events[i];
-            if (startTime < this.adjustedTime) {
+            if (startTime <= this.adjustedTime) {
                 this.activateEvent(startTime, event);
             } else {
                 break;
@@ -127,6 +131,16 @@ class Animation {
                     )
                 });
                 break;
+            case "scale":
+                this.activeEvents.push({
+                    ...activeEventBase,
+                    animater: new ScaleAnimater(
+                        event.from ? { base: "fit", scale: 1, ...event.from } :
+                            { base: this.graphic.scaleBase, scale: this.graphic.scale },
+                        { base: "fit", scale: 1, ...event.to }
+                    )
+                });
+                break;
         }
     }
 }
@@ -156,5 +170,30 @@ class PositionAnchorAnimater implements Animater {
             graphic.positionAnchor = this.from.clone();
         }
         graphic.positionAnchor.copy(this.from.clone().lerp(progress, this.to));
+    }
+}
+
+interface ScaleSettings {
+    base: "fit" | "cover";
+    scale: number;
+}
+
+class ScaleAnimater implements Animater {
+    constructor(private from: ScaleSettings, private to: ScaleSettings) { }
+
+    public setAt(graphic: VNGraphic, progress: number): void {
+        if (progress < 1) {
+            graphic.scaleBase = "fit";
+            const fitScaleFrom = this.from.base === "fit" ?
+                this.from.scale : this.from.scale * graphic.getFitToCoverFactor();
+            const fitScaleTo = this.to.base === "fit" ?
+                this.to.scale : this.to.scale * graphic.getFitToCoverFactor();
+
+            graphic.scale = fitScaleFrom ** (1 - progress) * fitScaleTo ** progress;
+        } else {
+            graphic.scaleBase = this.to.base;
+            graphic.scale = this.to.scale;
+        }
+        console.log(this.from, this.to, graphic.scale);
     }
 }

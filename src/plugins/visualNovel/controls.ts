@@ -172,7 +172,7 @@ interface AnimationEventScale extends BaseVisualNovelAnimationEvent<{
      * Fit (default) - when scale: 1, the entire graphic fits in the screen.
      * Cover - when scale: 1, the graphic covers the entire screen.
      */
-    base: "fit" | "cover",
+    base?: "fit" | "cover",
     /**
      * Default: 1.
      */
