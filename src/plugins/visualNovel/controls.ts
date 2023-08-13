@@ -44,7 +44,10 @@ export interface ControlGraphic {
      * If two points are provided, the shape is a rectangle from
      * (points[0], points[1]) to (points[2], points[3]).
      * If not provided, but...
-     *   - src or fill is provided: the shape is a square from (0, 0) to
+     *   - src is provided: the shape is a rectangle from (0, 0) to
+     *     (100, 100), cropped to fit the texture (so one of width or
+     *     height is 100, and the other is smaller)
+     *   - fill is provided: the shape is a square from (0, 0) to
      *     (100, 100)
      *   - nothing is provided: the shape has no points.
      * 

@@ -30,7 +30,7 @@ export class GraphicDisplayer extends WorldElmWithComponents {
 export class VNGraphic extends WorldElm {
     /* What the graphic looks like */
     private textureSrc?: string;
-    public points: number[];
+    public points?: number[];
     public fill?: string; // hex color
     public stroke?: string; // hex color
     public strokeWidth?: number;
@@ -91,12 +91,8 @@ export class VNGraphic extends WorldElm {
                 this.points = graphic.points;
             }
         } else {
-            if (graphic.src) {
-                // TODO rectangle matching size of texture
-                this.points = [];
-            } else if (graphic.fill) {
-                // TODO rectangle matching size of screen
-                this.points = [];
+            if (graphic.src || graphic.fill) {
+                // this.points = auto;
             } else {
                 this.points = [];
             }
@@ -118,15 +114,19 @@ export class VNGraphic extends WorldElm {
         }
 
         // scale graphic
-        const screenRatio = this.engine.sizer.width / this.engine.sizer.height;
-        const imageRatio = this.pointsWidth / this.pointsHeight;
         let scale;
-        if (screenRatio > imageRatio === (this.scaleBase === "fit")) {
-            // match height
-            scale = this.engine.sizer.height / this.pointsHeight;
+        if (this.pointsWidth !== 0 && this.pointsHeight !== 0) {
+            const screenRatio = this.engine.sizer.width / this.engine.sizer.height;
+            const imageRatio = this.pointsWidth / this.pointsHeight;
+            if (screenRatio > imageRatio === (this.scaleBase === "fit")) {
+                // match height
+                scale = this.engine.sizer.height / this.pointsHeight;
+            } else {
+                // match width
+                scale = this.engine.sizer.width / this.pointsWidth;
+            }
         } else {
-            // match width
-            scale = this.engine.sizer.width / this.pointsWidth;
+            scale = 1;
         }
 
         // translate graphic
@@ -141,9 +141,13 @@ export class VNGraphic extends WorldElm {
         // draw graphic
         X.beginPath();
 
-        X.moveTo(this.points[0] * pointScale, this.points[1] * pointScale);
-        for (let i = 2; i < this.points.length; i += 2) {
-            X.lineTo(this.points[i] * pointScale, this.points[i + 1] * pointScale);
+        if (this.points) {
+            X.moveTo(this.points[0] * pointScale, this.points[1] * pointScale);
+            for (let i = 2; i < this.points.length; i += 2) {
+                X.lineTo(this.points[i] * pointScale, this.points[i + 1] * pointScale);
+            }
+        } else {
+            X.rect(this.pointsMinX * pointScale, this.pointsMinY * pointScale, this.pointsWidth * pointScale, this.pointsHeight * pointScale);
         }
 
         if (this.fill) {
@@ -174,6 +178,7 @@ export class VNGraphic extends WorldElm {
             this.textureLoaded = false;
             this.texture.onload = () => {
                 this.textureLoaded = true;
+                this.updatePointLimits();
                 this.engine.ticker.requestTick();
             };
         } else {
@@ -187,6 +192,20 @@ export class VNGraphic extends WorldElm {
     }
 
     private updatePointLimits() {
+        if (!this.points) {
+            this.pointsMinX = 0;
+            this.pointsMinY = 0;
+            if (this.texture && this.textureLoaded) {
+                const scale = Math.max(this.texture.width, this.texture.height) / 100;
+                this.pointsWidth = this.texture.width / scale;
+                this.pointsHeight = this.texture.height / scale;
+            } else {
+                this.pointsWidth = 0;
+                this.pointsHeight = 0;
+            }
+            return;
+        }
+
         let pointsMaxX = this.pointsMinX = this.points[0];
         let pointsMaxY = this.pointsMinY = this.points[1];
 
