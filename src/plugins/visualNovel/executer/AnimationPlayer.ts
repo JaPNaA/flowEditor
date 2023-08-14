@@ -10,7 +10,6 @@ export class AnimationPlayer extends WorldElm {
 
     public addAnimation(graphic: VNGraphic, control: ControlAnimate) {
         this.animations.push(new Animation(graphic, control));
-        console.log("add", control);
         this.engine.ticker.requestTick();
     }
 
@@ -21,7 +20,6 @@ export class AnimationPlayer extends WorldElm {
         }
         for (let i = this.animations.length - 1; i >= 0; i--) {
             if (this.animations[i].done) {
-                console.log("done", this.animations[i]);
                 this.animations.splice(i, 1);
             }
         }
@@ -214,6 +212,5 @@ class ScaleAnimater implements Animater {
             graphic.scaleBase = this.to.base;
             graphic.scale = this.to.scale;
         }
-        console.log(this.from, this.to, graphic.scale);
     }
 }
