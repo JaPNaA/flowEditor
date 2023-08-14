@@ -50,6 +50,7 @@ class Animation {
     }[] = [];
     private realTime = 0;
     private adjustedTime = 0;
+    private loopedTimes = 0;
     private nextEventIndex = 0;
 
     constructor(private graphic: VNGraphic, control: ControlAnimate) {
@@ -62,12 +63,31 @@ class Animation {
 
     public step(deltaTime: number) {
         this.realTime += deltaTime;
-        if (this.realTime > this.length) {
+        if (this.length > 0) {
+            const loops = Math.floor(this.realTime / this.length);
+            this.adjustedTime = this.realTime % this.length;
+            if (loops > this.loopedTimes) {
+                this.loopedTimes = loops;
+                this.nextEventIndex = 0;
+                this.activeEvents.length = 0;
+            }
+            if (typeof this.loop === "number") {
+                if (loops >= this.loop) {
+                    this.done = true;
+                }
+            } else {
+                if (this.loop !== true && loops >= 1) {
+                    this.done = true;
+                }
+            }
+        } else {
             this.done = true;
-            this.realTime = this.length;
+        }
+        if (this.done) {
+            this.adjustedTime = this.length;
         }
         if (this.length > 0) {
-            this.adjustedTime = this.easing ? this.easing.at(this.realTime / this.length) * this.length : this.realTime;
+            this.adjustedTime = this.easing ? this.easing.at(this.adjustedTime / this.length) * this.length : this.adjustedTime;
         } else {
             this.adjustedTime = 0;
         }
