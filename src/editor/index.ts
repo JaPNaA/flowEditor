@@ -5,6 +5,7 @@ import VisualNovelPlugin from "../plugins/visualNovel/visualNovel";
 import { UILayout } from "./UILayout";
 import { Editor } from "./editor/Editor";
 import { EditorContainer } from "./editor/EditorContainer";
+import { EditorSaveData } from "./editor/EditorSaveData";
 import { InstructionGroupEditor } from "./editor/InstructionGroupEditor";
 import { UndoableAction } from "./editor/editing/actions";
 import { ExecuterContainer } from "./executer/ExecuterContainer";
@@ -38,7 +39,7 @@ export const appHooks = {
         return editorContainer.save();
     },
 
-    setEditorSaveData(data: any) {
+    setEditorSaveData(data: EditorSaveData | null) {
         editorContainer.preventSaveOnExit = true;
         editorContainer.setSaveData(data);
         location.reload();

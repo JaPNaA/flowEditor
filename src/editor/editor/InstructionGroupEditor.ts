@@ -1,4 +1,4 @@
-import { Editor, InstructionElmData } from "./Editor";
+import { Editor } from "./Editor";
 import { EditorCursorPositionAbsolute } from "./editing/EditorCursor";
 import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
@@ -9,6 +9,7 @@ import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions
 import { NewInstruction } from "./instruction/NewInstruction";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes";
 import { pluginHooks } from "../index";
+import { InstructionElmData } from "./EditorSaveData";
 
 export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public static defaultWidth = 720 + 24; // 24 is padding

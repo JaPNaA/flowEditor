@@ -14,6 +14,7 @@ import { Instruction } from "./instruction/instructionTypes";
 import { InstructionDeserializer } from "./toolchain/InstructionDeserializer";
 import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester";
 import { TextOpDialogue } from "../modals/TextOpDialogue";
+import { EditorSaveData, InstructionElmData } from "./EditorSaveData";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -630,18 +631,4 @@ class SelectRectangle extends WorldElm {
             this.rect.height = 0;
         }
     }
-}
-
-export interface EditorSaveData {
-    elms: InstructionElmData[];
-    startGroup?: number;
-}
-
-export interface InstructionElmData {
-    id: number;
-    instructions: any[],
-    branches: ControlItem[],
-    children: number[][];
-    x: number;
-    y: number;
 }

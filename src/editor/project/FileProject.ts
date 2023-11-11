@@ -1,7 +1,7 @@
 import { FlowData } from "../../FlowRunner";
 import { FSReadWrite } from "../../filesystem/FS";
 import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d";
-import { EditorSaveData } from "../editor/Editor";
+import { EditorSaveData } from "../editor/EditorSaveData";
 import { DetectedExternallyModifiedError, Project } from "./Project";
 
 export class FileProject implements Project {

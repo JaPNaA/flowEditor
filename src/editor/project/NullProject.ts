@@ -1,4 +1,4 @@
-import { EditorSaveData } from "../editor/Editor";
+import { EditorSaveData } from "../editor/EditorSaveData";
 import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { DetectedExternallyModifiedError, Project } from "./Project";
 import { FlowData } from "../../FlowRunner";

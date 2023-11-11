@@ -1,4 +1,4 @@
-import { EditorSaveData } from "../editor/Editor";
+import { EditorSaveData } from "../editor/EditorSaveData";
 import { FileStructureReadWrite } from "../../filesystem/FileStructure";
 
 export interface Project extends FileStructureReadWrite {
