@@ -1,9 +1,7 @@
 import { InstructionGroupEditor } from "./InstructionGroupEditor";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
-import { InstructionData, newInstructionData } from "./toolchain/flowToInstructionData";
 import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorCursor } from "./editing/EditorCursor";
-import { ControlItem } from "../../FlowRunner";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions";
 import { GridBackground } from "./ui/GridBackground";
 import { EditorGroupNavigator } from "./ui/EditorGroupNavigator";
@@ -15,6 +13,7 @@ import { InstructionDeserializer } from "./toolchain/InstructionDeserializer";
 import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester";
 import { TextOpDialogue } from "../modals/TextOpDialogue";
 import { EditorSaveData, InstructionElmData } from "./EditorSaveData";
+import { newInstructionData } from "./toolchain/flowToInstructionData";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -398,7 +397,7 @@ export class Editor extends WorldElmWithComponents {
             instructionData.instructions = elmData.instructions;
             instructionData.branches = [];
             for (const branch of elmData.branches) {
-                instructionData.branches.push({ instruction: branch });
+                instructionData.branches.push(branch);
             }
             instructionData.x = elmData.x;
             instructionData.y = elmData.y;

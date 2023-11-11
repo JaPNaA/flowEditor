@@ -2,7 +2,6 @@ import { Editor } from "./Editor";
 import { EditorCursorPositionAbsolute } from "./editing/EditorCursor";
 import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
-import { InstructionData } from "./toolchain/flowToInstructionData";
 import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { getAncestorWhich } from "../utils";
 import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions";
@@ -43,7 +42,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     private graphicRect = new RectangleM(0, 0, 0, 0);
     private graphicHitboxUpdateCallback!: () => void;
 
-    constructor(public readonly parentEditor: Editor, private data: InstructionData) {
+    constructor(public readonly parentEditor: Editor, private data: InstructionElmData) {
         super();
         this.rect.x = data.x;
         this.rect.y = data.y;
@@ -306,7 +305,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
         let index = 0;
         for (const branch of this.data.branches) {
-            const instruction = this.addInstruction(branch.instruction);
+            const instruction = this.addInstruction(branch);
             instruction.setBranchTargets(this.initBranchTargets[index++]);
         }
 
@@ -470,8 +469,10 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.updateHeight();
 
         const newGroup = new InstructionGroupEditor(this.parentEditor, {
+            id: -1,
             x: this.rect.x,
             y: this.rect.bottomY() + 64,
+            children: [],
             branches: [],
             instructions: []
         });

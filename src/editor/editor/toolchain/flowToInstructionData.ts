@@ -1,18 +1,7 @@
-import { ControlItem, FlowData, isControlItem } from "../../../FlowRunner";
+import { FlowData, isControlItem } from "../../../FlowRunner";
+import { InstructionElmData } from "../EditorSaveData";
 
-export interface InstructionData {
-    x: number;
-    y: number;
-    instructions: any[];
-    branches: BranchInstructionData[];
-}
-
-export interface BranchInstructionData {
-    instruction: ControlItem;
-    targets?: (InstructionData | undefined)[];
-}
-
-export function constructInstructionData(flowData: FlowData): InstructionData[] {
+export function constructInstructionData(flowData: FlowData): InstructionElmData[] {
     // find all to/froms of instructions
     const instructions: GraphInstructionNode[] = [];
 
@@ -46,10 +35,11 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
 
     // group instructions, separated by in/out-going
     let y = 24;
-    const groups: InstructionData[] = [];
-    const indexToGroupMap = new Map<number, InstructionData>();
-    const jumpChildrenParentMap = new Map<number, BranchInstructionData[]>();
-    let currGroup: InstructionData = newInstructionData();
+    const groups: InstructionElmData[] = [];
+    const indexToGroupMap = new Map<number, InstructionElmData>();
+    // A map from child instruction index to [branch index in instruction elm, instruction elm]
+    const jumpChildrenParentMap = new Map<number, [number, InstructionElmData][]>();
+    let currGroup: InstructionElmData = newInstructionData();
     currGroup.y = y;
     indexToGroupMap.set(0, currGroup);
 
@@ -69,6 +59,7 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
         const instruction = instructions[i];
 
         if (instruction.child === undefined && instruction.parents.length === 0 && currGroup.branches.length === 0) {
+            // normal instruction
             currGroup.instructions.push(instruction.instruction);
             lastInstructionWasGroupEnd = false;
             if (isControlItem(instruction.instruction) && instruction.instruction.ctrl === "end") {
@@ -77,17 +68,15 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
             }
         } else if (instruction.parents.length === 0 && isControlItem(instruction.instruction)) {
             // branch or jump
-            const branchInstructionData = {
-                instruction: instruction.instruction,
-                target: undefined
-            };
-            currGroup.branches.push(branchInstructionData);
+            const branchIndex = currGroup.children.length;
+            currGroup.branches.push(instruction.instruction);
+            currGroup.children.push([]);
 
             const existing = jumpChildrenParentMap.get(instruction.child!);
             if (existing) {
-                existing.push(branchInstructionData);
+                existing.push([branchIndex, currGroup]);
             } else {
-                jumpChildrenParentMap.set(instruction.child!, [branchInstructionData])
+                jumpChildrenParentMap.set(instruction.child!, [[branchIndex, currGroup]]);
             }
 
             lastInstructionWasGroupEnd = false;
@@ -96,30 +85,53 @@ export function constructInstructionData(flowData: FlowData): InstructionData[] 
                 endGroup(i + 1);
             }
         } else {
+            // start of new group
             endGroup(i);
 
             // add jump instruction so the destination is editable
             if (!lastInstructionWasGroupEnd) {
                 const lastGroup = groups[groups.length - 1];
 
-                lastGroup.branches.push({
-                    instruction: { ctrl: "jump", offset: 1 },
-                    targets: [currGroup]
-                });
+                lastGroup.branches.push({ ctrl: "jump", offset: 1 });
+                lastGroup.children.push([groups.length]);
             }
 
-            currGroup.instructions.push(instruction.instruction);
-            lastInstructionWasGroupEnd = false;
+            if (instruction.child === undefined) {
+                currGroup.instructions.push(instruction.instruction);
+                lastInstructionWasGroupEnd = false;
+            } else {
+                // case of jump right at start of group
+                const branchIndex = currGroup.children.length;
+                currGroup.branches.push(instruction.instruction);
+                currGroup.children.push([]);
+
+                const existing = jumpChildrenParentMap.get(instruction.child!);
+                if (existing) {
+                    existing.push([branchIndex, currGroup]);
+                } else {
+                    jumpChildrenParentMap.set(instruction.child!, [[branchIndex, currGroup]])
+                }
+                if (instruction.instruction.ctrl === "jump") {
+                    lastInstructionWasGroupEnd = true;
+                } else {
+                    lastInstructionWasGroupEnd = false;
+                }
+            }
         }
     }
 
     endGroup(i);
 
+    // set group ids
+    for (let i = 0; i < groups.length; i++) {
+        groups[i].id = i;
+    }
+
     // link groups
-    for (const [index, parents] of jumpChildrenParentMap) {
+    for (const [childInstructionIndex, parents] of jumpChildrenParentMap) {
         if (parents) {
-            for (const parent of parents) {
-                parent.targets = [indexToGroupMap.get(index)];
+            for (const [branchIndex, parent] of parents) {
+                parent.children[branchIndex] = [indexToGroupMap.get(childInstructionIndex)!.id];
             }
         }
     }
@@ -133,11 +145,13 @@ interface GraphInstructionNode {
     instruction: any;
 }
 
-export function newInstructionData(): InstructionData {
+export function newInstructionData(): InstructionElmData {
     return {
+        id: -1,
         branches: [],
         instructions: [],
+        children: [],
         x: 8,
         y: 0
-    }
+    };
 }
