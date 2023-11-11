@@ -388,40 +388,6 @@ export class Editor extends WorldElmWithComponents {
         });
     }
 
-    public setInstructions(instructionsData: InstructionData[]) {
-        this.undoLog.freeze();
-        const instructionToElmMap = new Map<InstructionData, InstructionGroupEditor>();
-        for (const instruction of instructionsData) {
-            const elm = new InstructionGroupEditor(this, instruction);
-            instructionToElmMap.set(instruction, elm);
-            this.addGroup(elm);
-        }
-
-        for (const [instruction, elm] of instructionToElmMap) {
-            for (const { targets } of instruction.branches) {
-                if (targets) {
-                    const resolved = [];
-                    for (const target of targets) {
-                        if (target) {
-                            resolved.push(instructionToElmMap.get(target)!);
-                        } else {
-                            resolved.push(null);
-                        }
-                    }
-                    elm.addBranchTargets(resolved);
-                } else {
-                    elm.addBranchTargets(null);
-                }
-            }
-            elm.setupConstruct();
-        }
-
-        this.markGroupAsStart(this._groupEditors[0]);
-
-        this.undoLog.thaw();
-        this.populateAutocomplete();
-    }
-
     public deserialize(data: EditorSaveData) {
         this.undoLog.freeze();
 
