@@ -37,6 +37,13 @@ export class TextBox extends WorldElmWithComponents {
         });
     }
 
+    /** Trigger update to rect to match with attached graphic */
+    public updateRect() {
+        if (this.attachedGraphic) {
+            this.elm.setRect(this.attachedGraphic.renderedBoundingBox);
+        }
+    }
+
     public setGraphic(graphic: VNGraphic) {
         this.attachedGraphic = graphic;
         // console.log(graphic.renderedY);

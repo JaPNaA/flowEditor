@@ -25,6 +25,7 @@ export class GraphicDisplayer extends WorldElmWithComponents {
         if (!graphic) { throw new Error("No graphic exists with id"); }
         const textBox = new TextBox();
         textBox.setGraphic(graphic);
+        graphic.attachedText = textBox;
         this.children.addChild(textBox);
         textBox.write("", text.text);
     }
@@ -186,6 +187,7 @@ export class VNGraphic extends WorldElm {
         }
 
         X.restore();
+        this.attachedText?.updateRect();
     }
 
     private async setTexture(src: string) {
