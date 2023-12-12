@@ -1,7 +1,7 @@
 import { Executer } from "../../../executer/Executer";
 import { FileStructureRead } from "../../../filesystem/FileStructure";
 import { EventBus, JaPNaAEngine2d } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { ControlAnimate, ControlGraphic, ControlSpeechBubbleSettings } from "../controls";
+import { ControlAnimate, ControlGraphic, ControlSpeechBubbleSettings, ControlText } from "../controls";
 import { AnimationPlayer } from "./AnimationPlayer";
 import { AudioPlayer } from "./AudioPlayer";
 import { Chooser } from "./Chooser";
@@ -80,6 +80,10 @@ export class VisualNovelGame {
 
     public graphic(graphic: ControlGraphic) {
         return this.graphicDisplayer.graphic(graphic);
+    }
+
+    public text(text: ControlText) {
+        return this.graphicDisplayer.text(text);
     }
 
     public setSpeechBubbleSettings(settings: ControlSpeechBubbleSettings) {
