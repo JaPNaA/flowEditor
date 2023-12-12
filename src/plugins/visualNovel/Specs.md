@@ -50,7 +50,7 @@ The `animate` instruction is the only way to modify positioning and transformati
 An example of using `animate` to make a graphic appear and 'jump':
 
 ```json
-{ "visualNovelCtrl": "shape", "src": "...", "id": 1 }
+{ "visualNovelCtrl": "graphic", "src": "...", "id": 1 }
 { "visualNovelCtrl": "animate", "length": 0.5, "id": 1, "events": [
     [0, {
         "key": "posAnchor",
@@ -65,6 +65,7 @@ An example of using `animate` to make a graphic appear and 'jump':
         "length": 0.25
     }]
 ] }
+{"visualNovelCtrl": "text", "id": 1, "text": "This is a test"}
 { "visualNovelCtrl": "show", "id": 1 }
 ```
 
