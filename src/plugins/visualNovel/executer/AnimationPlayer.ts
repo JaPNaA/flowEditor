@@ -149,6 +149,21 @@ class Animation {
                     )
                 });
                 break;
+            case "transformAnchor":
+                this.activeEvents.push({
+                    ...activeEventBase,
+                    animater: new TransformAnchorAnimater(
+                        event.from ?
+                            new Vec2M(event.from[0], event.from[1]).scale(0.01) :
+                            this.graphic.transformAnchor ?
+                                this.graphic.transformAnchor.clone() :
+                                this.graphic.positionAnchor ?
+                                    this.graphic.positionAnchor.clone() :
+                                    this.graphic.position.clone(),
+                        new Vec2M(event.to[0], event.to[1]).scale(0.01)
+                    )
+                });
+                break;
             case "scale":
                 this.activeEvents.push({
                     ...activeEventBase,
@@ -188,6 +203,17 @@ class PositionAnchorAnimater implements Animater {
             graphic.positionAnchor = this.from.clone();
         }
         graphic.positionAnchor.copy(this.from.clone().lerp(progress, this.to));
+    }
+}
+
+class TransformAnchorAnimater implements Animater {
+    constructor(private from: Vec2, private to: Vec2) { }
+
+    public setAt(graphic: VNGraphic, progress: number): void {
+        if (!graphic.transformAnchor) {
+            graphic.transformAnchor = this.from.clone();
+        }
+        graphic.transformAnchor.copy(this.from.clone().lerp(progress, this.to));
     }
 }
 

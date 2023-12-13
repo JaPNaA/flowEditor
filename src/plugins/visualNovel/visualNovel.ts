@@ -203,12 +203,16 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 events: [
                     [0, {
                         key: "pos",
-                        to: [50, 100]
+                        to: [50, 100],
                     }],
                     [0, {
-                        key: "posAnchor",
-                        to: [50, 100]
-                    }]
+                        key: "transformAnchor",
+                        to: [50, 50],
+                    }],
+                    [0, {
+                        key: "scale",
+                        to: { base: "fit", scale: 0.95 },
+                    }],
                 ]
             }
         ];

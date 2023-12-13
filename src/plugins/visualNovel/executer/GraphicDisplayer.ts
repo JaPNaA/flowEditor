@@ -61,7 +61,7 @@ export class VNGraphic extends WorldElm {
     public positionAnchor?: Vec2M;
 
     /* Transforms */
-    public transformAnchor?: Vec2;
+    public transformAnchor?: Vec2M;
     public scaleBase: "fit" | "cover";
     public scale: number; // 1: image fits or covers the screen (determined by scaleBase)
     public rotation: number; // 0 to 2pi
@@ -147,24 +147,32 @@ export class VNGraphic extends WorldElm {
                 // match width
                 scale = this.engine.sizer.width / this.pointsWidth;
             }
-            scale *= this.scale;
         } else {
             scale = 1;
         }
 
         // translate graphic
         const positionAnchor = this.positionAnchor || this.position;
-        const x = this.position.x * this.engine.sizer.width - (positionAnchor.x * this.pointsWidth + this.pointsMinX) * scale;
-        const y = this.position.y * this.engine.sizer.height - (positionAnchor.y * this.pointsHeight + this.pointsMinY) * scale;
+        const transformAnchor = this.transformAnchor || positionAnchor;
+        const xScreen = this.position.x * this.engine.sizer.width - (positionAnchor.x * this.pointsWidth + this.pointsMinX) * scale;
+        const yScreen = this.position.y * this.engine.sizer.height - (positionAnchor.y * this.pointsHeight + this.pointsMinY) * scale;
         X.save();
-        X.translate(x, y);
+        X.translate(xScreen, yScreen);
         X.scale(scale / pointScale, scale / pointScale);
+
+        // apply transformations
+        const xObjTransformAnchor = transformAnchor.x * this.pointsWidth;
+        const yObjTransformAnchor = transformAnchor.y * this.pointsHeight;
+        X.translate(xObjTransformAnchor, yObjTransformAnchor);
+        scale *= this.scale;
+        X.scale(this.scale, this.scale);
+        X.translate(-xObjTransformAnchor, -yObjTransformAnchor);
 
         // draw graphic
         X.beginPath();
 
-        this.renderedBoundingBox.x = x;
-        this.renderedBoundingBox.y = y;
+        this.renderedBoundingBox.x = xScreen - (scale - scale / this.scale) * xObjTransformAnchor;
+        this.renderedBoundingBox.y = yScreen - (scale - scale / this.scale) * yObjTransformAnchor;
         this.renderedBoundingBox.width = this.pointsWidth * scale;
         this.renderedBoundingBox.height = this.pointsHeight * scale;
         if (this.points) {
