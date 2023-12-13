@@ -10,7 +10,7 @@ import { GraphicDisplayer, VNGraphic } from "./GraphicDisplayer";
 type VNArrangement = undefined;
 
 export class VisualNovelGame {
-    public onContinue = new EventBus();
+    public onContinue = new EventBus<MouseEvent>();
     private engine: JaPNaAEngine2d;
 
     private graphicDisplayer = new GraphicDisplayer();
@@ -32,7 +32,7 @@ export class VisualNovelGame {
         this.engine.world.addElm(this.graphicDisplayer);
         this.engine.world.addElm(this.chooser);
         this.engine.world.addElm(this.animationPlayer);
-        // this.speechBubble.onNextRequested.subscribe(this.onContinue);
+        this.engine.mouse.onMousedown.subscribe(this.onContinue);
     }
 
     public setProject(project: FileStructureRead) {

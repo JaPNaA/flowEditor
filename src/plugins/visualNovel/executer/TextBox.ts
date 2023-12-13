@@ -3,8 +3,6 @@ import { Elm } from "../../../japnaaEngine2d/elements";
 import { VNGraphic } from "./GraphicDisplayer";
 
 export class TextBox extends WorldElmWithComponents {
-    public onNextRequested = new EventBus();
-
     public timePassed = 0;
     public charsShowing = 0;
 
@@ -28,13 +26,6 @@ export class TextBox extends WorldElmWithComponents {
     public _setEngine(engine: JaPNaAEngine2d): void {
         super._setEngine(engine);
         this.engine.htmlOverlay.elm.append(this.elm);
-        this.subs.subscribe(this.engine.mouse.onMousedown, () => {
-            if (this.isDone) {
-                this.onNextRequested.send();
-            } else {
-                this.showAllChars();
-            }
-        });
     }
 
     /** Trigger update to rect to match with attached graphic */

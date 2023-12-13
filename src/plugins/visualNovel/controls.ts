@@ -277,19 +277,10 @@ export interface ControlSpeechBubbleSettings {
      */
     revealSpeed?: number;
     /**
-     * How a say or say-add command can complete.
-     * - manual: the user must click to continue.
-     * - auto: finishes `autoAdvanceDelay` after all text is revealed.
-     *   The user can click to skip.
-     * - auto-only: only finishes `autoAdvanceDelay` after all text is revealed.
-     *   The user cannot click to skip.
+     * How much of the text must be revealed until moving onto the text instruction.
+     * Default: 1.
      */
-    advanceType?: "manual" | "auto" | "auto-only";
-    /**
-     * How long to wait after all text is revealed to progress the dialogue.
-     * Only applies for `advanceType` 'auto' and 'auto-only'
-     */
-    autoAdvanceDelay?: number;
+    block?: number;
     /**
      * CSS styles applying to the speech bubble.
      */
@@ -302,7 +293,16 @@ export interface ControlSpeechBubbleSettings {
 
 export interface ControlWait {
     visualNovelCtrl: "wait";
-    time: number;
+    /**
+     * The amount of time to wait. If `click` is true, a click can cancel the wait.
+     * Default: infinity.
+     */
+    time?: number;
+    /**
+     * Should be cancelable by click?
+     * Default: true
+     */
+    click?: boolean;
 }
 
 export interface ControlBackgroundMusic {

@@ -14,6 +14,7 @@ export class VisualNovelExecuter implements PluginExecuter {
         }));
     private game?: VisualNovelGame;
     private waitTimeout?: number;
+    private canClickCancelWait: boolean = true;
     private executer!: Executer;
 
     constructor() {
@@ -44,7 +45,11 @@ export class VisualNovelExecuter implements PluginExecuter {
         this.game.setProject(executer.files);
         this.game.getChooserChosenEventBus()
             .subscribe(choice => this.executer.input(choice));
-        this.game.onContinue.subscribe(() => this.executer.resume());
+        this.game.onContinue.subscribe(() => {
+            if (this.canClickCancelWait) {
+                this.executer.resume();
+            }
+        });
 
         return Promise.resolve();
     }
@@ -88,8 +93,15 @@ export class VisualNovelExecuter implements PluginExecuter {
                 this.game.setSpeechBubbleSettings(data);
                 return true;
             case "wait":
+                this.canClickCancelWait = data.click === undefined ? true : data.click;
                 this.executer.pause();
-                this.waitTimeout = window.setTimeout(() => this.executer.resume(), data.time);
+                if (data.time !== undefined) {
+                    this.waitTimeout = window.setTimeout(() => this.executer.resume(), data.time);
+                } else {
+                    if (!this.canClickCancelWait) {
+                        this.executer.log.logSecondary("Warning: uncancelable infinite wait");
+                    }
+                }
                 return true;
             // case "bgm":
             //     this.game.setBackgroundMusic(replaceVariables(data.src, this.getVariable));
