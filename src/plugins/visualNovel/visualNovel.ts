@@ -488,8 +488,15 @@ class BackgroundMacroLine extends InstructionLine implements OneLineInstruction 
         }
         return [graphic, {
             visualNovelCtrl: "animate", id: 2, length: 0, events: [[0,
-                { key: "scale", to: { base: "cover" } }]
-            ]
+                { key: "scale", to: { base: "cover" } }
+            ], [0,
+                {
+                    key: "pos", to: [
+                        data.x === undefined ? 50 : data.x,
+                        data.y === undefined ? 50 : data.y
+                    ]
+                }
+            ]]
         }];
     }
 
