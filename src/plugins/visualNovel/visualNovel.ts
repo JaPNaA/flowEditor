@@ -52,7 +52,7 @@ export default class VisualNovelPlugin implements EditorPlugin {
         instructionName: "background",
         description: "Set the background",
         shortcutKey: "KeyH",
-        create: () => new BackgroundInstruction({
+        create: () => new BackgroundMacro({
             visualNovelCtrl: "background",
             color: "000"
         }),
@@ -147,7 +147,7 @@ export default class VisualNovelPlugin implements EditorPlugin {
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
-                return new BackgroundInstruction(data);
+                return new BackgroundMacro(data);
             case "wait":
                 return new VNContentInstrOneLine(new WaitInstruction(data.time));
             case "bgm":
@@ -367,9 +367,9 @@ interface ControlMacroBackground {
     y?: number;
 }
 
-class BackgroundInstruction extends VNContentInstrOneLine<BackgroundInstructionLine> {
+class BackgroundMacro extends VNContentInstrOneLine<BackgroundMacroLine> {
     constructor(data: ControlMacroBackground) {
-        super(new BackgroundInstructionLine(data));
+        super(new BackgroundMacroLine(data));
 
         this.contextSet = {
             backgroundColor: data.color && "#" + data.color,
@@ -378,7 +378,7 @@ class BackgroundInstruction extends VNContentInstrOneLine<BackgroundInstructionL
     }
 }
 
-class BackgroundInstructionLine extends InstructionLine implements OneLineInstruction {
+class BackgroundMacroLine extends InstructionLine implements OneLineInstruction {
     private backgroundEditable: Editable;
     public isBranch: boolean = false;
 
@@ -399,7 +399,7 @@ class BackgroundInstructionLine extends InstructionLine implements OneLineInstru
         this.backgroundEditable.autoCompleteType = autocompleteTypeBackground;
         this.backgroundEditable.onChange.subscribe(value => {
             const serialized = this.parseBackgroundString(value);
-            (this.parentInstruction as BackgroundInstruction).contextSet = {
+            (this.parentInstruction as BackgroundMacro).contextSet = {
                 backgroundColor: serialized.color && "#" + serialized.color,
                 backgroundSrc: serialized.src
             };
