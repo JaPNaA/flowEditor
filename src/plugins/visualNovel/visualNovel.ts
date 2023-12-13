@@ -8,7 +8,7 @@ import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../../editor/EditorPlugin";
 import { VisualNovelAnalyser } from "./analyser";
-import { ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
+import { ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
 import { VisualNovelExecuter } from "./executer";
 import { VisualNovelRenderer } from "./renderer";
 
@@ -49,14 +49,14 @@ export default class VisualNovelPlugin implements EditorPlugin {
     //     shortcutKey: "KeyB",
     //     create: () => new ChoiceBranchMacro(["a", "b"]),
     // }, {
-    //     instructionName: "background",
-    //     description: "Set the background",
-    //     shortcutKey: "KeyH",
-    //     create: () => new BackgroundInstruction({
-    //         visualNovelCtrl: "background",
-    //         color: "000"
-    //     }),
-    // }, {
+        instructionName: "background",
+        description: "Set the background",
+        shortcutKey: "KeyH",
+        create: () => new BackgroundInstruction({
+            visualNovelCtrl: "background",
+            color: "000"
+        }),
+    }, {
         instructionName: "set text reveal speed",
         description: "Sets the speed of revealing text in a `say` or `display` command",
         create: () => new VNContentInstrOneLine(new SetTextRevealSpeedInstruction(50)),
@@ -146,8 +146,8 @@ export default class VisualNovelPlugin implements EditorPlugin {
             //     return new VNContentInstrOneLine(new ChooseInstruction(data));
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
-            // case "background":
-            //     return new BackgroundInstruction(data);
+            case "background":
+                return new BackgroundInstruction(data);
             case "wait":
                 return new VNContentInstrOneLine(new WaitInstruction(data.time));
             case "bgm":
@@ -337,74 +337,125 @@ class SetSpeechBubblePositionInstruction extends InstructionLine implements OneL
     }
 }
 
-// class BackgroundInstruction extends VNContentInstrOneLine<BackgroundInstructionLine> {
-//     constructor(data: ControlBackground) {
-//         super(new BackgroundInstructionLine(data));
+interface ControlMacroBackground {
+    visualNovelCtrl: "background";
+    /**
+     * Specify background color with #.
+     * Will be ignored by executer.
+     * @deprecated
+     */
+    background?: string;
+    /**
+     * URL or path of an image to use for the background.
+     */
+    src?: string;
+    /**
+     * The background color of the background.
+     * Usually not seen unless the background image is transparent or doesn't
+     * cover the entire screen.
+     * Default: #fff
+     */
+    color?: string;
+    /**
+     * How zoomed-in is the background? Default: 1.
+     * Values 1 and over are guaranteed to cover the entire screen.
+     */
+    zoom?: number;
+    /** 0 to 100 -- x position of the zoom center? Default: 50 */
+    x?: number;
+    /** 0 to 100 -- y position of is the zoom center? Default: 50 */
+    y?: number;
+}
 
-//         this.contextSet = {
-//             backgroundColor: data.color && "#" + data.color,
-//             backgroundSrc: data.src
-//         };
-//     }
-// }
+class BackgroundInstruction extends VNContentInstrOneLine<BackgroundInstructionLine> {
+    constructor(data: ControlMacroBackground) {
+        super(new BackgroundInstructionLine(data));
 
-// class BackgroundInstructionLine extends InstructionLine implements OneLineInstruction {
-//     private backgroundEditable: Editable;
-//     public isBranch: boolean = false;
+        this.contextSet = {
+            backgroundColor: data.color && "#" + data.color,
+            backgroundSrc: data.src
+        };
+    }
+}
 
-//     constructor(data: ControlBackground) {
-//         super();
+class BackgroundInstructionLine extends InstructionLine implements OneLineInstruction {
+    private backgroundEditable: Editable;
+    public isBranch: boolean = false;
 
-//         this.setAreas(
-//             "Set background: ",
-//             this.backgroundEditable = this.createEditable(
-//                 data.background || [
-//                     data.src,
-//                     data.color && "#" + data.color,
-//                     data.zoom,
-//                     data.x || data.y ? `${data.x || 0},${data.y || 0}` : undefined
-//                 ].filter(x => x !== undefined).join(" ")
-//             )
-//         );
-//         this.backgroundEditable.autoCompleteType = autocompleteTypeBackground;
-//         this.backgroundEditable.onChange.subscribe(value => {
-//             const serialized = this.parseBackgroundString(value);
-//             (this.parentInstruction as BackgroundInstruction).contextSet = {
-//                 backgroundColor: serialized.color && "#" + serialized.color,
-//                 backgroundSrc: serialized.src
-//             };
-//         });
-//         this.elm.class("secondary");
-//     }
+    constructor(data: ControlMacroBackground) {
+        super();
 
-//     public serialize(): ControlBackground {
-//         return this.parseBackgroundString(this.backgroundEditable.getValue());
-//     }
+        this.setAreas(
+            "Set background: ",
+            this.backgroundEditable = this.createEditable(
+                data.background || [
+                    data.src,
+                    data.color && "#" + data.color,
+                    data.zoom,
+                    data.x || data.y ? `${data.x || 0},${data.y || 0}` : undefined
+                ].filter(x => x !== undefined).join(" ")
+            )
+        );
+        this.backgroundEditable.autoCompleteType = autocompleteTypeBackground;
+        this.backgroundEditable.onChange.subscribe(value => {
+            const serialized = this.parseBackgroundString(value);
+            (this.parentInstruction as BackgroundInstruction).contextSet = {
+                backgroundColor: serialized.color && "#" + serialized.color,
+                backgroundSrc: serialized.src
+            };
+        });
+        this.elm.class("secondary");
+    }
 
-//     private parseBackgroundString(backgroundStr: string): ControlBackground {
-//         const parts = backgroundStr.trim().split(" ");
-//         const data: ControlBackground = { visualNovelCtrl: "background" };
+    public serialize(): ControlMacroBackground {
+        return this.parseBackgroundString(this.backgroundEditable.getValue());
+    }
 
-//         for (const part of parts) {
-//             if (part.startsWith("#")) { // color: #fff
-//                 const hex = part.slice(1);
-//                 if ([3, 4, 6, 8].includes(hex.length)) {
-//                     data.color = hex;
-//                 }
-//             } else if (part.match(/^-?\d+(\.\d*)?,-?\d+(\.\d*)?$/)) { // vec2: 0,2.5
-//                 const [x, y] = part.split(",").map(x => parseFloat(x));
-//                 data.x = x;
-//                 data.y = y;
-//             } else if (part.match(/^-?\d+(\.\d*)?$/)) { // number: 3.2
-//                 data.zoom = parseFloat(part);
-//             } else {
-//                 data.src = part;
-//             }
-//         }
+    public export(): VisualNovelControlItem[] {
+        const graphic: ControlGraphic = { visualNovelCtrl: "graphic", id: 2 };
+        const data = this.serialize();
+        if (data.src) {
+            graphic.src = data.src;
+            if (data.color) {
+                graphic.fill = data.color;
+            } else {
+                graphic.fill = "fff";
+            }
+        } else if (data.color) {
+            graphic.fill = data.color;
+            graphic.points = [100, 100];
+        }
+        return [graphic, {
+            visualNovelCtrl: "animate", id: 2, length: 0, events: [[0,
+                { key: "scale", to: { base: "cover" } }]
+            ]
+        }];
+    }
 
-//         return data;
-//     }
-// }
+    private parseBackgroundString(backgroundStr: string): ControlMacroBackground {
+        const parts = backgroundStr.trim().split(" ");
+        const data: ControlMacroBackground = { visualNovelCtrl: "background" };
+
+        for (const part of parts) {
+            if (part.startsWith("#")) { // color: #fff
+                const hex = part.slice(1);
+                if ([3, 4, 6, 8].includes(hex.length)) {
+                    data.color = hex;
+                }
+            } else if (part.match(/^-?\d+(\.\d*)?,-?\d+(\.\d*)?$/)) { // vec2: 0,2.5
+                const [x, y] = part.split(",").map(x => parseFloat(x));
+                data.x = x;
+                data.y = y;
+            } else if (part.match(/^-?\d+(\.\d*)?$/)) { // number: 3.2
+                data.zoom = parseFloat(part);
+            } else {
+                data.src = part;
+            }
+        }
+
+        return data;
+    }
+}
 
 // class ShowInstruction extends InstructionLine implements OneLineInstruction {
 //     private editable: Editable;
