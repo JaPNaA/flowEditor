@@ -5,7 +5,7 @@ import { EditorCursor } from "./editing/EditorCursor";
 import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions";
 import { GridBackground } from "./ui/GridBackground";
 import { EditorGroupNavigator } from "./ui/EditorGroupNavigator";
-import { appHooks } from "../index";
+import { appHooks, pluginHooks } from "../index";
 import { SmoothCamera } from "./ui/SmoothCamera";
 import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprintRegistery";
 import { Instruction } from "./instruction/instructionTypes";
@@ -496,7 +496,7 @@ export class Editor extends WorldElmWithComponents {
     public compile() {
         const startIndicies = new Map<InstructionGroupEditor, number>();
 
-        const compiled: any[] = [];
+        const compiled: any[] = pluginHooks.getFlowHeader();
         const groupInstructions: Instruction[][] = [];
         let index = 0;
 

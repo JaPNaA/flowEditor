@@ -164,6 +164,55 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 return;
         }
     }
+
+    getFlowHeader(): VisualNovelControlItem[] {
+        return [
+            // parent of all non-ui
+            {
+                visualNovelCtrl: "graphic",
+                id: 3
+            },
+            // parent of non-background
+            {
+                visualNovelCtrl: "graphic",
+                id: 1,
+                parent: 3
+            },
+            // parent of background graphic
+            {
+                visualNovelCtrl: "graphic",
+                id: 2,
+                parent: 3
+            },
+            // parent of ui graphics
+            {
+                visualNovelCtrl: "graphic",
+                id: 4,
+            },
+            // temporary: default speech box
+            {
+                visualNovelCtrl: "graphic",
+                id: 5,
+                parent: 4,
+                points: [100, 20]
+            },
+            {
+                visualNovelCtrl: "animate",
+                id: 5,
+                length: 0,
+                events: [
+                    [0, {
+                        key: "pos",
+                        to: [50, 100]
+                    }],
+                    [0, {
+                        key: "posAnchor",
+                        to: [50, 100]
+                    }]
+                ]
+            }
+        ];
+    }
 }
 
 export interface VNInstructionContext {
@@ -201,7 +250,15 @@ class SayInstruction extends InstructionLine implements OneLineInstruction {
     }
 
     public export(): VisualNovelControlItem[] {
-        return [this.serialize(), { visualNovelCtrl: "wait" }];
+        return [
+            // temporary, until the say control is properly implemented
+            {
+                visualNovelCtrl: "text",
+                id: 5,
+                text: this.characterEditable.getValue() + ":\n" + this.textEditable.getValue()
+            },
+            { visualNovelCtrl: "wait" }
+        ];
     }
 }
 

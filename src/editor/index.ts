@@ -97,6 +97,10 @@ export const pluginHooks = {
 
     setEngine(engine: JaPNaAEngine2d) {
         visualNovelPlugin.setEngine(engine);
+    },
+
+    getFlowHeader() {
+        return visualNovelPlugin.getFlowHeader();
     }
 };
 

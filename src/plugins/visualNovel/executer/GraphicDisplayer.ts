@@ -23,11 +23,15 @@ export class GraphicDisplayer extends WorldElmWithComponents {
     public text(text: ControlText) {
         const graphic = this.graphics[text.id];
         if (!graphic) { throw new Error("No graphic exists with id"); }
-        const textBox = new TextBox();
-        textBox.setGraphic(graphic);
-        graphic.attachedText = textBox;
-        this.children.addChild(textBox);
-        textBox.write("", text.text);
+        if (graphic.attachedText) {
+            graphic.attachedText.write("", text.text);
+        } else {
+            const textBox = new TextBox();
+            textBox.setGraphic(graphic);
+            graphic.attachedText = textBox;
+            this.children.addChild(textBox);
+            textBox.write("", text.text);
+        }
     }
 
     public getGraphic(id: number) {

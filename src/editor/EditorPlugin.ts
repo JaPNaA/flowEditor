@@ -15,6 +15,8 @@ export interface EditorPlugin {
     parse(data: any): Instruction | undefined;
     setProject?(project: Project): void;
     setEngine?(project: JaPNaAEngine2d): void;
+    /** Get instructions to append to the start of the flow */
+    getFlowHeader?(): any[];
     executer?: PluginExecuter;
     renderer?: PluginRenderer;
     analyser?: PluginAnalyser;
