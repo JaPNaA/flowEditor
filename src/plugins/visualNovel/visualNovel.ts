@@ -199,6 +199,10 @@ class SayInstruction extends InstructionLine implements OneLineInstruction {
     public serialize(): ControlSay {
         return { visualNovelCtrl: "say", char: this.characterEditable.getValue(), text: this.textEditable.getValue() };
     }
+
+    public export(): VisualNovelControlItem[] {
+        return [this.serialize(), { visualNovelCtrl: "wait" }];
+    }
 }
 
 class SayAddInstruction extends InstructionLine implements OneLineInstruction {
@@ -217,6 +221,10 @@ class SayAddInstruction extends InstructionLine implements OneLineInstruction {
 
     public serialize(): ControlSayAdd {
         return { visualNovelCtrl: "say-add", text: this.textEditable.getValue() };
+    }
+
+    public export(): VisualNovelControlItem[] {
+        return [this.serialize(), { visualNovelCtrl: "wait" }];
     }
 }
 
@@ -238,8 +246,11 @@ class DisplayMacro extends InstructionLine implements OneLineInstruction {
         return { visualNovelCtrl: "display", text: this.textEditable.getValue() };
     }
 
-    public export(): ControlSay[] {
-        return [{ visualNovelCtrl: "say", char: "", text: this.textEditable.getValue() }];
+    public export(): VisualNovelControlItem[] {
+        return [
+            { visualNovelCtrl: "say", char: "", text: this.textEditable.getValue() },
+            { visualNovelCtrl: "wait" }
+        ];
     }
 }
 
