@@ -3,12 +3,12 @@ import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEdit
 import { globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete";
 import { Editable } from "../../editor/editor/editing/Editable";
 import { InstructionBlueprintMin } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
-import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes";
+import { BranchInstructionLine, Instruction, InstructionComposite, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes";
 import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../../editor/EditorPlugin";
 import { VisualNovelAnalyser } from "./analyser";
-import { ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
+import { ControlAnimate, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
 import { VisualNovelExecuter } from "./executer";
 import { VisualNovelRenderer } from "./renderer";
 
@@ -31,24 +31,24 @@ export default class VisualNovelPlugin implements EditorPlugin {
         shortcutKey: "KeyA",
         create: () => new VNContentInstrOneLine(new SayAddInstruction("")),
     }, {
-    //     instructionName: "show",
-    //     description: "Show an image in the foreground",
-    //     shortcutKey: "KeyK",
-    //     create: () => new VNContentInstrOneLine(new ShowInstruction({
-    //         visualNovelCtrl: "show",
-    //         src: ""
-    //     })),
-    // }, {
+        //     instructionName: "show",
+        //     description: "Show an image in the foreground",
+        //     shortcutKey: "KeyK",
+        //     create: () => new VNContentInstrOneLine(new ShowInstruction({
+        //         visualNovelCtrl: "show",
+        //         src: ""
+        //     })),
+        // }, {
         instructionName: "display",
         description: "Display text indicating narration",
         shortcutKey: "KeyT",
         create: () => new VNContentInstrOneLine(new DisplayMacro("")),
     }, {
-    //     instructionName: "choose branch",
-    //     description: "Macro. Display buttons that allow the player to choose which instructions to execute",
-    //     shortcutKey: "KeyB",
-    //     create: () => new ChoiceBranchMacro(["a", "b"]),
-    // }, {
+        //     instructionName: "choose branch",
+        //     description: "Macro. Display buttons that allow the player to choose which instructions to execute",
+        //     shortcutKey: "KeyB",
+        //     create: () => new ChoiceBranchMacro(["a", "b"]),
+        // }, {
         instructionName: "background",
         description: "Set the background",
         shortcutKey: "KeyH",
@@ -65,15 +65,15 @@ export default class VisualNovelPlugin implements EditorPlugin {
         description: "Sets the position of the speech bubble",
         create: () => new VNContentInstrOneLine(new SetSpeechBubblePositionInstruction(50, 100))
     }, {
-    //     instructionName: "choose",
-    //     description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
-    //     shortcutKey: "KeyC",
-    //     create: () => new VNContentInstrOneLine(new ChooseInstruction({
-    //         visualNovelCtrl: "choose",
-    //         variable: "choice",
-    //         options: ['a', 'b']
-    //     })),
-    // }, {
+        //     instructionName: "choose",
+        //     description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
+        //     shortcutKey: "KeyC",
+        //     create: () => new VNContentInstrOneLine(new ChooseInstruction({
+        //         visualNovelCtrl: "choose",
+        //         variable: "choice",
+        //         options: ['a', 'b']
+        //     })),
+        // }, {
         instructionName: "wait",
         description: "Do nothing for a specified amount of time",
         shortcutKey: "KeyW",
@@ -115,6 +115,13 @@ export default class VisualNovelPlugin implements EditorPlugin {
             v: "text",
             str: ""
         }))
+    }, {
+        instructionName: "create graphic",
+        description: "Create an image or shape that can be displayed",
+        create: () => new CreateGraphicInstruction({
+            visualNovelCtrl: "graphic",
+            id: 0
+        })
     }];
     executer = new VisualNovelExecuter();
     renderer = new VisualNovelRenderer();
@@ -866,5 +873,141 @@ class SetVariableStringInstruction extends InstructionLine implements OneLineIns
 
     serialize(): ControlSetVariableString {
         return { visualNovelCtrl: "strset", str: this.stringEditable.getValue(), v: this.variableEditable.getValue() };
+    }
+}
+
+class CreateGraphicInstruction extends InstructionComposite {
+    protected openingLine: InstructionLine;
+
+    instructionBlueprints: InstructionBlueprintMin[] = [{
+        instructionName: "source",
+        description: "Path to an image to use as the graphic's texture",
+        shortcutKey: "KeyS",
+        create: () => new InstructionOneLine(new CreateGraphicSourceInstruction("path")),
+    }, {
+        instructionName: "clip",
+        description: "The shape of the graphic specified in points. Crops out (clips) the instruction texture",
+        shortcutKey: "KeyC",
+        create: () => new InstructionOneLine(new CreateGraphicSourceInstruction("path")),
+    }, {
+        instructionName: "fill color",
+        description: "Fill or background color of the graphic",
+        shortcutKey: "KeyF",
+        create: () => new InstructionOneLine(new CreateGraphicSourceInstruction("path")),
+    }, {
+        instructionName: "outline",
+        description: "Outline or stroke of the shape specified by clip",
+        shortcutKey: "KeyO",
+        create: () => new InstructionOneLine(new CreateGraphicSourceInstruction("path"))
+    }, {
+        instructionName: "parent graphic",
+        description: "Parent graphic. If the parent graphic moves, this graphic will follow",
+        shortcutKey: "KeyP",
+        create: () => new InstructionOneLine(new CreateGraphicSourceInstruction("path"))
+    }];
+
+    constructor(graphicControl: ControlGraphic) {
+        super();
+
+        this.addLine(this.openingLine = new CreateGraphicLineOpening());
+    }
+    public export(): any[] {
+        throw new Error("Method not implemented.");
+    }
+    public serialize() {
+        throw new Error("Method not implemented.");
+    }
+    public removeLine(line: InstructionLine): boolean {
+        throw new Error("Method not implemented.");
+    }
+    protected createNewInstruction(): Instruction {
+        return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
+    }
+}
+
+
+class CreateGraphicLineOpening extends InstructionLine {
+    constructor() {
+        super();
+        this.setAreas("Create Graphic", this.createEditable(""));
+        this.elm.class("control");
+    }
+}
+
+abstract class CreateGraphicSubInstruction<T extends keyof ControlGraphic> extends InstructionLine implements OneLineInstruction {
+    isBranch: boolean = false;
+
+    abstract serialize(): [T, ControlGraphic[T]];
+}
+
+class CreateGraphicSourceInstruction extends CreateGraphicSubInstruction<"src"> {
+    isBranch: boolean = false;
+    private editable: Editable;
+
+    constructor(src: string) {
+        super();
+        this.setAreas(
+            "  source: ", this.editable = this.createEditable(src)
+        );
+    }
+
+    serialize(): ["src", string] {
+        return ["src", this.editable.getValue()];
+    }
+}
+
+class AnimateInstruction extends InstructionComposite {
+    protected openingLine: InstructionLine;
+
+    constructor(animateControl: ControlAnimate) {
+        super();
+
+        // todo
+        this.addLine(this.openingLine = new AnimateLineOpening());
+    }
+    public export(): any[] {
+        throw new Error("Method not implemented.");
+    }
+    public serialize() {
+        throw new Error("Method not implemented.");
+    }
+    public removeLine(line: InstructionLine): boolean {
+        throw new Error("Method not implemented.");
+    }
+    protected createNewInstruction(): Instruction {
+        return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
+    }
+}
+
+/*
+Example:
+
+Animate
+  0s: posAnchor to (0, 0) from (50, 50) for 1s
+  1s: posAnchor to (50, 50) for 1s
+  2s: scale to 0.5 fit for 1s
+*/
+class AnimateLineOpening extends InstructionLine {
+    constructor() {
+        super();
+        this.setAreas("Animate", this.createEditable(""));
+        this.elm.class("control");
+    }
+}
+
+class AnimatePosEventLine extends InstructionLine {
+    constructor() {
+        super();
+        this.setAreas(
+            this.createEditable(0),
+            "s: pos to",
+            "(", this.createEditable(50),
+            ", ",
+            this.createEditable(50),
+            ") for ",
+            this.createEditable(1),
+            "s"
+        );
+        this.elm.class("control");
     }
 }

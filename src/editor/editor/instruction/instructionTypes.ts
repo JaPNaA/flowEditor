@@ -260,6 +260,53 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
     }
 }
 
+export abstract class InstructionComposite extends Instruction {
+    public childInstructions: Instruction[] = [];
+    protected abstract openingLine: InstructionLine;
+
+    public insertLine(index: number): boolean {
+        // todo: support multiline instructions
+        // todo: repeated code from ChoiceBranchMacro
+        const subIndex = index - this.openingLine.getCurrentLine();
+        if (subIndex < 1) { return false; }
+        if (subIndex > this.childInstructions.length) { return false; }
+
+        // todo: repeated code from InstructionGroupEditor, no support for undoing
+        const previousLine = this.lines[index - 1];
+        if (previousLine) {
+            if (previousLine.parentInstruction.insertLine(index)) {
+                return false;
+            }
+            const newInstruction = this.createNewInstruction();
+            this.childInstructions.splice(subIndex, 0, newInstruction);
+            this.lines.splice(subIndex, 0, newInstruction.getLines()[0]);
+            this.parentGroup._insertInstructionLine(index, newInstruction.getLines()[0]);
+            return true;
+        } else {
+            const newInstruction = this.createNewInstruction();
+            this.childInstructions.splice(subIndex, 0, newInstruction);
+            this.lines.splice(subIndex, 0, newInstruction.getLines()[0]);
+            this.parentGroup._insertInstructionLine(index, newInstruction.getLines()[0]);
+            return true;
+        }
+    }
+
+    // private insertInstruction(instruction: Instruction, index: number) {
+    //     const previousInstruction = this.childInstructions[index - 1];
+    //     this.childInstructions.splice(index, 0, instruction);
+    //     if (previousInstruction) {
+    //         const previousLines = previousInstruction.getLines();
+    //         this.lines.splice(previousLines[0].getCurrentLine(), 0, ...instruction.getLines());
+    //     } else {
+    //         for (const line of instruction.getLines()) {
+    //             this.lines.push(line);
+    //         }
+    //     }
+    // }
+
+    protected abstract createNewInstruction(): Instruction;
+}
+
 export abstract class BranchInstructionLine extends InstructionLine {
     public branchTarget: InstructionGroupEditor | null = null;
     public branchOffset: number = 0;
