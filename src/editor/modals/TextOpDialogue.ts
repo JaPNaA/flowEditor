@@ -29,18 +29,16 @@ export class TextOpDialogue extends Component {
         this.undoLog = undoLog;
 
         for (const group of groups) {
-            for (const instruction of group.getInstructions()) {
-                for (const line of instruction.getLines()) {
-                    for (const editable of line.getEditables()) {
-                        // editables with autocomplete usually aren't sentences
-                        if (editable.autoCompleteType) { continue; }
-                        const value = editable.getValue();
-                        const existing = valueEditableMap.get(value);
-                        if (existing) {
-                            existing.push(editable);
-                        } else {
-                            valueEditableMap.set(value, [editable]);
-                        }
+            for (const line of group.block.lineIter()) {
+                for (const editable of line.getEditables()) {
+                    // editables with autocomplete usually aren't sentences
+                    if (editable.autoCompleteType) { continue; }
+                    const value = editable.getValue();
+                    const existing = valueEditableMap.get(value);
+                    if (existing) {
+                        existing.push(editable);
+                    } else {
+                        valueEditableMap.set(value, [editable]);
                     }
                 }
             }

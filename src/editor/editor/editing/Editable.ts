@@ -33,7 +33,7 @@ export class Editable extends Elm<"span"> {
 
     public setValue(value: string) {
         this.onChange.send(value);
-        this.parentLine.parentInstruction.parentGroup.parentEditor.undoLog.perform(
+        this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.undoLog.perform(
             new EditableEditAction(this, value)
         );
     }
@@ -65,7 +65,7 @@ export class Editable extends Elm<"span"> {
     }
 
     public update() {
-        const cursor = this.parentLine.parentInstruction.parentGroup.parentEditor.cursor;
+        const cursor = this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor;
         if (
             cursor.activeEditable === this
         ) {

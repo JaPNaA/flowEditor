@@ -4,6 +4,7 @@ import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/Textar
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint } from "./InstructionBlueprintRegistery";
+import { SingleInstructionBlock } from "./InstructionBlock";
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     constructor() {
         super(new NewInstructionLine());
@@ -54,7 +55,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             if (!this.isEmpty) { return; }
             if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) { return; }
 
-            const blueprint = this.parentInstruction.parentGroup.parentEditor.blueprintRegistery
+            const blueprint = this.parentInstruction.block.getGroupEditor().parentEditor.blueprintRegistery
                 .getBlueprintByShortcut(event.code);
             if (blueprint) {
                 const instruction = blueprint.create();
@@ -70,15 +71,16 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 
     public splitGroupHere() {
-        this.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
-        const index = this.parentInstruction.getIndex();
+        const group = this.parentInstruction.block.getGroupEditor();
+        group.parentEditor.undoLog.startGroup();
+        const index = (this.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex();
         this.parentInstruction.removeLine(this);
-        const newGroup = this.parentInstruction.parentGroup.splitAtInstruction(index);
-        if (newGroup.getInstructions().length === 0) {
+        const newGroup = group.splitAtInstruction(index);
+        if (newGroup.block.getInstructions().length === 0) {
             newGroup.requestNewLine(0);
         }
-        this.parentInstruction.parentGroup.parentEditor.cursor.update();
-        this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
+        group.parentEditor.cursor.update();
+        group.parentEditor.undoLog.endGroup();
     }
 
     public serialize() {
@@ -91,7 +93,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 
     public changeView(instruction: Instruction) {
         // set all instruction's editables to placeholder if undefined
-        for (const line of instruction.getLines()) {
+        for (const line of instruction.block.lineIter()) {
             for (const editable of line.getEditables()) {
                 if (editable.placeholder === undefined) {
                     editable.placeholder = true;
@@ -99,12 +101,13 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             }
         }
 
-        this.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
+        const group = this.parentInstruction.block.getGroupEditor();
+            group.parentEditor.undoLog.startGroup();
         const currentLine = this.getCurrentLine();
-        const currentInstructionIndex = this.parentInstruction.getIndex();
-        const position = this.parentInstruction.parentGroup.parentEditor.cursor.getPosition();
-        this.parentInstruction.parentGroup.requestRemoveLine(currentLine);
-        this.parentInstruction.parentGroup.insertInstruction(
+        const currentInstructionIndex = (this.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex();
+        const position = group.parentEditor.cursor.getPosition();
+        group.requestRemoveLine(currentLine);
+        group.insertInstruction(
             instruction, currentInstructionIndex
         );
 
@@ -113,20 +116,21 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         }
 
         if (position) {
-            this.parentInstruction.parentGroup.parentEditor.cursor.setPosition({
+            group.parentEditor.cursor.setPosition({
                 ...position,
-                char: instruction.getLines()[0].preferredStartingCharOffset
+                char: instruction.block.getLine(0).preferredStartingCharOffset
             });
         }
 
-        this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
+        group.parentEditor.undoLog.endGroup();
     }
 
     private splitAfterIfNeeded(thisIndex: number, thisIsAlwaysJump: boolean) {
-        const nextInstruction = this.parentInstruction.parentGroup.getInstructions()[thisIndex + 1];
+        const group = this.parentInstruction.block.getGroupEditor();
+        const nextInstruction = group.block.getInstructions()[thisIndex + 1];
 
         if (nextInstruction && (thisIsAlwaysJump || !nextInstruction.isBranch())) {
-            this.parentInstruction.parentGroup.splitAtInstruction(thisIndex + 1);
+            group.splitAtInstruction(thisIndex + 1);
         }
     }
 }
@@ -149,7 +153,7 @@ export class NewInstructionEditable extends Editable {
 
     public update() {
         super.update();
-        const cursor = this.parentLine.parentInstruction.parentGroup.parentEditor.cursor;
+        const cursor = this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor;
         if (cursor.activeEditable === this) {
             if (!this.isActive) {
                 cursor.onKeydownIntercept.subscribe(this.intercepter);
@@ -162,7 +166,7 @@ export class NewInstructionEditable extends Editable {
 
     public deactivate() {
         if (!this.isActive) { return; }
-        const cursor = this.parentLine.parentInstruction.parentGroup.parentEditor.cursor;
+        const cursor = this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor;
         cursor.onKeydownIntercept.unsubscribe(this.intercepter);
         this.isActive = false;
     }

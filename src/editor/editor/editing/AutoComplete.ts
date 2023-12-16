@@ -1,6 +1,7 @@
 import { JaPNaAEngine2d, Vec2M } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { looseStartsWith } from "../../utils";
+import { SingleInstructionBlock } from "../instruction/InstructionBlock";
 import { Editable } from "./Editable";
 import { EditorCursor } from "./EditorCursor";
 
@@ -171,9 +172,9 @@ export class AutoComplete extends Component {
     private defaultSuggester(editable: Editable, type: symbol): AutoCompleteSuggestion[] | null {
         const value = editable.placeholder ? "" : editable.getValue();
         const map = this.defaultHandlerPreviousValues.get(type);
-        const lastUsed = editable.parentLine.parentInstruction.parentGroup.getInstructions()[
-            editable.parentLine.parentInstruction.getIndex() - 1
-        ]?.getLines()[0]?.getEditables().find(editable => editable.autoCompleteType === type)?.getValue();
+        const lastUsed = editable.parentLine.parentInstruction.block.parent?.getInstructions()[
+            (editable.parentLine.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex() - 1
+        ]?.block.getLine(0).getEditables().find(editable => editable.autoCompleteType === type)?.getValue();
         if (!map) { return null; }
 
         const suggestions: [AutoCompleteSuggestion, number][] = [];

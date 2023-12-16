@@ -1,6 +1,7 @@
 import { Editable } from "../editing/Editable";
 import { InstructionLine, OneLineInstruction, InstructionOneLine } from "./instructionTypes";
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture";
+import { SingleInstructionBlock } from "./InstructionBlock";
 
 export class JSONInstruction extends InstructionOneLine<JSONLine> {
     constructor(data: any) {
@@ -57,11 +58,12 @@ class JSONLineEditable extends Editable {
         const lines = this.getValue()
             .slice(1, -1)
             .split("\n");
-        this.parentLine.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
+        const parentGroup = this.parentLine.parentInstruction.block.getGroupEditor();
+
+        parentGroup.parentEditor.undoLog.startGroup();
         this.setValue(JSON.stringify(lines[0]));
 
-        const parentGroup = this.parentLine.parentInstruction.parentGroup;
-        const currentPosition = this.parentLine.parentInstruction.getIndex();
+        const currentPosition = (this.parentLine.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex();
         let i;
         for (i = 1; i < lines.length; i++) {
             parentGroup.insertInstruction(
@@ -79,6 +81,6 @@ class JSONLineEditable extends Editable {
             editable: 0,
             char: lines[i - 1].length + 1 // +1 for left quote only
         });
-        this.parentLine.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
+        parentGroup.parentEditor.undoLog.endGroup();
     }
 }

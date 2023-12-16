@@ -5,10 +5,11 @@ import { Editable } from "../editing/Editable";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { TextareaUserInputCaptureAreas } from "../editing/TextareaUserInputCapture";
 import { BranchTargetChangeAction } from "../editing/actions";
+import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
 
 export abstract class Instruction {
-    public parentGroup!: InstructionGroupEditor;
-    protected lines: InstructionLine[] = [];
+    /** Block containing the instruction's lines. Only to be used by InstructionBlock and this class. */
+    public abstract block: InstructionBlock;
 
     /** Return a list of flow control items that perform this instruction */
     public abstract export(): any[];
@@ -26,20 +27,8 @@ export abstract class Instruction {
      */
     public abstract insertLine(index: number): boolean;
 
-    public getIndex() {
-        return this.parentGroup.getInstructions().indexOf(this);
-    }
-
-    public getLines(): ReadonlyArray<InstructionLine> {
-        return this.lines;
-    }
-
-    public _setParent(group: InstructionGroupEditor) {
-        this.parentGroup = group;
-    }
-
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
-        return this.parentGroup.parentEditor.requestSelectInstructionGroup();
+        return this.block.getGroupEditor().parentEditor.requestSelectInstructionGroup();
     }
 
     /** Is the instruction a branch? */
@@ -63,11 +52,6 @@ export abstract class Instruction {
 
     public setBranchOffsets(_offsets: (number | null)[]) {
         return;
-    }
-
-    protected addLine(line: InstructionLine) {
-        this.lines.push(line);
-        line._setParent(this);
     }
 }
 
@@ -173,7 +157,8 @@ export abstract class InstructionLine extends Component {
     }
 
     public getCurrentLine() {
-        return this.parentInstruction.parentGroup.getLines().indexOf(this);
+        // can assume is SingleInstructionBlock since this line is a child of the block
+        return (this.parentInstruction.block as SingleInstructionBlock).locateLineIndex(this);
     }
 }
 
@@ -193,12 +178,14 @@ export interface OneLineInstruction extends InstructionLine {
  * in one class.
  */
 export class InstructionOneLine<T extends OneLineInstruction> extends Instruction {
+    public block: SingleInstructionBlock = new SingleInstructionBlock(this);
+
     protected line: T;
 
     constructor(line: T) {
         super();
         this.line = line;
-        this.addLine(line);
+        this.block._insertLines(0, [line]);
     }
 
     public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
@@ -239,7 +226,8 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
 
     public removeLine(line: InstructionLine): boolean {
         if (this.line !== line) { throw new Error("Not a line in this instruction"); }
-        this.parentGroup.removeInstruction(this.getIndex());
+        if (!this.block.parent) { throw new Error("Cannot remove instruction from no parent"); }
+        this.block.parent._removeInstruction(this.block.locateInstructionIndex());
         return true;
     }
 
@@ -260,33 +248,42 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
     }
 }
 
+class CompositeInstructionBlockWithOpeningLine extends CompositeInstructionBlock {
+    constructor(public openingLine: InstructionLine) { super(); }
+
+    public getLine(index: number): InstructionLine {
+        if (index == 0) { return this.openingLine; }
+        return super.getLine(index - 1);
+    }
+
+    public *lineIter(): Generator<InstructionLine, any, unknown> {
+        yield this.openingLine;
+        yield* super.lineIter();
+    }
+}
+
 export abstract class InstructionComposite extends Instruction {
+    public block: CompositeInstructionBlockWithOpeningLine;
     public childInstructions: Instruction[] = [];
-    protected abstract openingLine: InstructionLine;
+
+    constructor(protected openingLine: InstructionLine) {
+        super();
+        this.block = new CompositeInstructionBlockWithOpeningLine(this.openingLine);
+    }
 
     public insertLine(index: number): boolean {
-        // todo: support multiline instructions
-        // todo: repeated code from ChoiceBranchMacro
-        const subIndex = index - this.openingLine.getCurrentLine();
-        if (subIndex < 1) { return false; }
-        if (subIndex > this.childInstructions.length) { return false; }
-
         // todo: repeated code from InstructionGroupEditor, no support for undoing
-        const previousLine = this.lines[index - 1];
+        const previousLine = this.block.getLine(index - 1);
         if (previousLine) {
             if (previousLine.parentInstruction.insertLine(index)) {
                 return false;
             }
             const newInstruction = this.createNewInstruction();
-            this.childInstructions.splice(subIndex, 0, newInstruction);
-            this.lines.splice(subIndex, 0, newInstruction.getLines()[0]);
-            this.parentGroup._insertInstructionLine(index, newInstruction.getLines()[0]);
+            this.block._insertInstruction(index, newInstruction);
             return true;
         } else {
             const newInstruction = this.createNewInstruction();
-            this.childInstructions.splice(subIndex, 0, newInstruction);
-            this.lines.splice(subIndex, 0, newInstruction.getLines()[0]);
-            this.parentGroup._insertInstructionLine(index, newInstruction.getLines()[0]);
+            this.block._insertInstruction(0, newInstruction);
             return true;
         }
     }
@@ -319,7 +316,7 @@ export abstract class BranchInstructionLine extends InstructionLine {
             .class("hanging")
             .append(this.branchConnectElm =
                 new Elm().class("branchConnect").on("click", () => {
-                    this.parentInstruction.parentGroup.parentEditor.unsetEditMode();
+                    this.parentInstruction.block.getGroupEditor().unsetEditMode();
                     appHooks.focusEditor();
                     this.requestUserToSetBranchTarget();
                 }));
@@ -354,10 +351,11 @@ export abstract class BranchInstructionLine extends InstructionLine {
     }
 
     public setBranchTarget(target: InstructionGroupEditor | null) {
-        this.parentInstruction.parentGroup.parentEditor.undoLog.startGroup();
-        this.parentInstruction.parentGroup.parentEditor.undoLog.perform(
+        const editor = this.parentInstruction.block.getGroupEditor().parentEditor;
+        editor.undoLog.startGroup();
+        editor.undoLog.perform(
             new BranchTargetChangeAction(target, this)
         );
-        this.parentInstruction.parentGroup.parentEditor.undoLog.endGroup();
+        editor.undoLog.endGroup();
     }
 }

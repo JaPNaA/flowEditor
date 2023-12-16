@@ -12,7 +12,7 @@ import { Instruction } from "./instruction/instructionTypes";
 import { InstructionDeserializer } from "./toolchain/InstructionDeserializer";
 import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester";
 import { TextOpDialogue } from "../modals/TextOpDialogue";
-import { EditorSaveData, InstructionElmData } from "./EditorSaveData";
+import { EditorSaveData } from "./EditorSaveData";
 import { newInstructionData } from "./toolchain/flowToInstructionData";
 
 export class Editor extends WorldElmWithComponents {
@@ -442,12 +442,10 @@ export class Editor extends WorldElmWithComponents {
         // wait for render()
         setTimeout(() => {
             for (const group of this._groupEditors) {
-                for (const instruction of group._instructions) {
-                    for (const line of instruction.getLines()) {
-                        for (const editable of line.getEditables()) {
-                            if (editable.autoCompleteType) {
-                                this.cursor.autocomplete.enteredValue(editable);
-                            }
+                for (const line of group.block.lineIter()) {
+                    for (const editable of line.getEditables()) {
+                        if (editable.autoCompleteType) {
+                            this.cursor.autocomplete.enteredValue(editable);
                         }
                     }
                 }
@@ -511,7 +509,7 @@ export class Editor extends WorldElmWithComponents {
 
         for (const group of groupEditors) {
             startIndicies.set(group, index);
-            const instructions = group.getInstructions();
+            const instructions = group.block.getInstructions();
             groupInstructions.push(instructions);
             for (const instruction of instructions) {
                 index += instruction.export().length;

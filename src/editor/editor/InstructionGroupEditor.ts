@@ -9,6 +9,7 @@ import { NewInstruction } from "./instruction/NewInstruction";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes";
 import { pluginHooks } from "../index";
 import { InstructionElmData } from "./EditorSaveData";
+import { CompositeInstructionBlock, SingleInstructionBlock } from "./instruction/InstructionBlock";
 
 export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public static defaultWidth = 720 + 24; // 24 is padding
@@ -18,13 +19,12 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public graphicHitbox: Hitbox<QuadtreeElmChild>;
 
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _instructions: Instruction[] = [];
-    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _lines: InstructionLine[] = [];
+    public block = new InstructionGroupEditorBlock(this);
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _childGroups: InstructionGroupEditor[] = [];
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _parentGroups: InstructionGroupEditor[] = [];
+
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
@@ -42,13 +42,13 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     private graphicRect = new RectangleM(0, 0, 0, 0);
     private graphicHitboxUpdateCallback!: () => void;
 
-    constructor(public readonly parentEditor: Editor, private data: InstructionElmData) {
+    constructor(public readonly parentEditor: Editor, private initData: InstructionElmData) {
         super();
-        this.rect.x = data.x;
-        this.rect.y = data.y;
+        this.rect.x = initData.x;
+        this.rect.y = initData.y;
         this.rect.width = InstructionGroupEditor.defaultWidth;
         // initial height: #instructions * font size * line height + padding
-        this.rect.height = (data.instructions.length + data.branches.length) * 16 * 1.55 + 16;
+        this.rect.height = (initData.instructions.length + initData.branches.length) * 16 * 1.55 + 16;
 
         this.graphicRect.copy(this.rect);
         this.graphicHitbox = new Hitbox(this.graphicRect, this);
@@ -114,7 +114,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         } else {
             if (targetLine > 0) {
                 this.requestRemoveLine(targetLine);
-                const previousLine = this._lines[targetLine - 1];
+                const previousLine = this.block.getLine(targetLine - 1);
                 this.parentEditor.cursor.setPosition({
                     group: this,
                     line: targetLine - 1,
@@ -122,10 +122,10 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
                     char: previousLine.getLastEditableCharacterIndex()
                 });
             } else {
-                const removedLine = this._lines[targetLine];
+                const removedLine = this.block.getLine(targetLine);
                 this.parentEditor.undoLog.startGroup();
                 this.requestRemoveLine(targetLine);
-                if (this._lines.length <= 0) {
+                if (this.block.numLines <= 0) {
                     if (removedLine.parentInstruction instanceof NewInstruction) {
                         this.parentEditor.removeGroup(this);
                         this.parentEditor.unsetEditMode();
@@ -155,8 +155,8 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             }
         }
         if (change[0] === "down") {
-            if (pos.line + 1 >= this._lines.length) {
-                return { group: this, line: this._lines.length - 1, editable: change[1], char: change[2] };
+            if (pos.line + 1 >= this.block.numLines) {
+                return { group: this, line: this.block.numLines - 1, editable: change[1], char: change[2] };
             } else {
                 return { group: this, line: pos.line + 1, editable: change[1], char: change[2] };
             }
@@ -165,7 +165,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             return { group: this, line: 0, editable: 0, char: 0 };
         }
         if (change[0] === "bottom") {
-            return { group: this, line: this._lines.length - 1, editable: change[1], char: change[2] };
+            return { group: this, line: this.block.numLines - 1, editable: change[1], char: change[2] };
         }
 
         // pos[0] === 'same'
@@ -177,7 +177,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         if (instructionLine) {
             const instructionLineElm = this._htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
             if (instructionLineElm) {
-                const index = this._lines.indexOf(instructionLineElm);
+                const index = instructionLineElm.getCurrentLine();
                 const newEditable = instructionLineElm.getEditableIndexFromSelection(selection);
                 if (newEditable >= 0) {
                     const characterOffset = instructionLineElm.getEditableFromIndex(newEditable).getCharacterOffset(selection);
@@ -195,11 +195,11 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public getContextForPosition(position: EditorCursorPositionAbsolute): TextareaUserInputCaptureContext {
         return {
             above: position.line - 1 >= 0 ?
-                this._lines[position.line - 1].getAreas() : [],
+                this.block.getLine(position.line - 1).getAreas() : [],
             current: position.line >= 0 ?
-                this._lines[position.line].getAreas() : [],
-            below: position.line + 1 < this._lines.length ?
-                this._lines[position.line + 1].getAreas() : []
+                this.block.getLine(position.line).getAreas() : [],
+            below: position.line + 1 < this.block.numLines ?
+                this.block.getLine(position.line + 1).getAreas() : []
         };
     }
 
@@ -225,7 +225,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         // loop backwards since we're removing our parents
         for (let i = this._parentGroups.length - 1; i >= 0; i--) {
             const parent = this._parentGroups[i];
-            for (const instruction of parent._instructions) {
+            for (const instruction of parent.block.getInstructions()) {
                 if (!instruction.isBranch()) { continue; }
                 const targets = instruction.getBranchTargets();
                 const newTargets = [];
@@ -248,7 +248,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         const instructions = [];
         const branches = [];
 
-        for (const instruction of this._instructions) {
+        for (const instruction of this.block.getInstructions()) {
             if (instruction.isBranch()) {
                 branches.push(instruction.serialize());
                 const branchTargets = instruction.getBranchTargets();
@@ -276,14 +276,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         };
     }
 
-    public getInstructions() {
-        return this._instructions;
-    }
-
-    public getLines() {
-        return this._lines;
-    }
-
     public addBranchTargets(targets: (InstructionGroupEditor | null)[] | null) {
         this.initBranchTargets.push(targets);
     }
@@ -299,12 +291,12 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
         this.parentEditor.undoLog.startGroup();
 
-        for (const instruction of this.data.instructions) {
+        for (const instruction of this.initData.instructions) {
             this.addInstruction(instruction);
         }
 
         let index = 0;
-        for (const branch of this.data.branches) {
+        for (const branch of this.initData.branches) {
             const instruction = this.addInstruction(branch);
             instruction.setBranchTargets(this.initBranchTargets[index++]);
         }
@@ -379,7 +371,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
 
         let index = -1;
-        for (const instruction of this._lines) {
+        for (const instruction of this.block.lineIter()) {
             if (!(instruction instanceof BranchInstructionLine)) { continue; }
             const target = instruction.getBranchTarget();
             if (!target) { continue; }
@@ -455,13 +447,14 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
      */
     public splitAtInstruction(instructionIndex: number) {
         const movingInstructions = [];
-        const numMoving = this._instructions.length - instructionIndex;
+        const instructions = this.block.getInstructions();
+        const numMoving = instructions.length - instructionIndex;
 
         this.parentEditor.undoLog.startGroup();
 
         for (let i = 0; i < numMoving; i++) {
-            const instruction = this._instructions[this._instructions.length - 1];
-            this.removeInstruction(this._instructions.length - 1);
+            const instruction = instructions[instructions.length - 1];
+            this.removeInstruction(instructions.length - 1);
             movingInstructions.push(instruction);
         }
         movingInstructions.reverse();
@@ -483,7 +476,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
 
         // add link from this to new group
-        const lastInstruction = this._instructions[this._instructions.length - 1];
+        const lastInstruction = instructions[instructions.length - 1];
         if (lastInstruction && lastInstruction.isAlwaysJump()) {
             const targets = lastInstruction.getBranchTargets();
             const newTargets = [];
@@ -503,7 +496,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             }
         } else {
             const jump = this.instructionFromData({ ctrl: 'jump', offset: 0 });
-            this.insertInstruction(jump, this._instructions.length);
+            this.insertInstruction(jump, instructions.length);
             jump.setBranchTargets([newGroup]);
         }
 
@@ -515,14 +508,14 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     }
 
     public requestNewLine(lineIndex: number) {
-        const previousLine = this._lines[lineIndex - 1];
+        const previousLine = this.block.getLine(lineIndex - 1);
         if (previousLine) {
             if (previousLine.parentInstruction.insertLine(lineIndex)) {
                 return;
             }
             const instructionLine = this.instructionFromData({ ctrl: 'nop' });
             return this.insertInstruction(instructionLine,
-                previousLine.parentInstruction.getIndex() + 1
+                (previousLine.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex() + 1
             );
         } else {
             const instructionLine = this.instructionFromData({ ctrl: 'nop' });
@@ -533,14 +526,14 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public insertInstruction(instruction: Instruction, instructionIndex: number) {
         this.parentEditor.undoLog.startGroup();
         this.parentEditor.undoLog.perform(
-            new AddInstructionAction(instruction, instructionIndex, this)
+            new AddInstructionAction(instruction, instructionIndex, this.block, this)
         );
         this.parentEditor.undoLog.endGroup();
     }
 
     /** Asks the instruction corresponding to the specified line to remove the line */
     public requestRemoveLine(lineIndex: number) {
-        const line = this._lines[lineIndex];
+        const line = this.block.getLine(lineIndex);
         if (!line) { return; }
         return line.parentInstruction.removeLine(line);
     }
@@ -549,36 +542,30 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public removeInstruction(instructionIndex: number) {
         this.parentEditor.undoLog.startGroup();
         this.parentEditor.undoLog.perform(
-            new RemoveInstructionAction(instructionIndex, this)
+            new RemoveInstructionAction(instructionIndex, this.block, this)
         )
         this.parentEditor.undoLog.endGroup();
     }
 
     /**
-     * Inserts an instruction line without consulting surrounding lines.
+     * Inserts an instruction line in the DOM.
      * DO NOT USE OUTSIDE `Instruction` and subclasses.
      */
     public _insertInstructionLine(lineIndex: number, line: InstructionLine) {
-        if (lineIndex >= this._lines.length) {
+        if (lineIndex >= this.block.numLines) {
             this.elm.append(line);
         } else {
-            this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), this._lines[lineIndex].elm.getHTMLElement());
+            this.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), this.block.getLine(lineIndex).elm.getHTMLElement());
         }
-
-        this._lines.splice(lineIndex, 0, line);
     }
 
     /**
-     * Removes an instruction line without consulting the original instruction.
+     * Removes an instruction line in the DOM.
      * DO NOT USE OUTSIDE `Instruction` and subclasses.
      */
-    public _removeInstructionLine(lineIndex: number) {
-        const lines = this._lines.splice(lineIndex, 1);
-        if (lines.length < 0) { throw new Error("Invalid position"); }
-        for (const line of lines) {
-            this._htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
-            line.elm.remove();
-        }
+    public _removeInstructionLine(line: InstructionLine) {
+        this._htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
+        line.elm.remove();
     }
 
     private updateAfterMoveNoParentPropagation() {
@@ -622,20 +609,30 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
     private addInstruction(data: any) {
         const instruction = this.instructionFromData(data);
-        const lines = instruction.getLines();
-        instruction._setParent(this);
+        const lines = instruction.block.lineIter();
 
         for (const line of lines) {
             line.appendTo(this.elm);
-            this._lines.push(line);
             this._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
         }
 
-        this._instructions.push(instruction);
+        this.block._insertInstruction(this.block.children.length, instruction);
         return instruction;
     }
 
     private instructionFromData(data: any): Instruction {
         return this.parentEditor.deserializer.deserialize(data);
+    }
+}
+
+class InstructionGroupEditorBlock extends CompositeInstructionBlock {
+    constructor(private editor: InstructionGroupEditor) { super(); }
+
+    public getGroupEditor(): InstructionGroupEditor {
+        return this.editor;
+    }
+
+    public hasGroupEditor(): boolean {
+        return true;
     }
 }

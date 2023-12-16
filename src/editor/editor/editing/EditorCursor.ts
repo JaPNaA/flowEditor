@@ -170,7 +170,7 @@ export class EditorCursor extends Elm<"span"> {
 
                     this.activeEditable.placeholder = false;
                     this.allowAutocomplete = false;
-                    const currLine = this.positionStart.group.getLines()[this.positionStart.line];
+                    const currLine = this.positionStart.group.block.getLine(this.positionStart.line);
                     if (this.positionStart.editable >= currLine.getLastEditableIndex()) {
                         // end of current editable
                         this.setPosition({
@@ -284,7 +284,9 @@ export class EditorCursor extends Elm<"span"> {
         const editable = this.getEditableFromPosition(positionStart);
         if (!editable) { return; }
         this.activeEditable = editable;
-        lastActiveEditable?.update();
+        if (lastActiveEditable?.parentLine.parentInstruction.block.hasGroupEditor()) {
+            lastActiveEditable?.update();
+        }
         editable.update();
         if (this.allowAutocomplete) {
             this.autocomplete.updatePosition(this);
@@ -295,7 +297,7 @@ export class EditorCursor extends Elm<"span"> {
     }
 
     private getEditableFromPosition(position: Readonly<EditorCursorPositionAbsolute>) {
-        const line = position.group.getLines()[position.line];
+        const line = position.group.block.getLine(position.line);
         if (!line) { return; }
         return line.getEditableFromIndex(position.editable);
     }
@@ -314,12 +316,12 @@ export class EditorCursor extends Elm<"span"> {
     private clampPosition() {
         if (!this.positionStart) { throw new Error("No position to clamp"); }
 
-        const lines = this.positionStart.group.getLines();
-        if (this.positionStart.line >= lines.length) {
-            const lastLine = lines[lines.length - 1];
+        const block = this.positionStart.group.block;
+        if (this.positionStart.line >= block.numLines) {
+            const lastLine = block.getLine(block.numLines - 1);
             this.positionStart = this.positionEnd = {
                 group: this.positionStart.group,
-                line: lines.length - 1,
+                line: block.numLines - 1,
                 editable: lastLine.getLastEditableIndex(),
                 char: lastLine.getLastEditableCharacterIndex()
             };
@@ -331,7 +333,7 @@ export class EditorCursor extends Elm<"span"> {
                 char: 0
             };
         } else {
-            const editable = this.positionStart.group.getLines()[this.positionStart.line]
+            const editable = this.positionStart.group.block.getLine(this.positionStart.line)
                 .getEditableFromIndex(this.positionStart.editable);
             const maxCharOffset = editable.getValue().length;
             if (this.positionStart.char > maxCharOffset) { // clamp offset

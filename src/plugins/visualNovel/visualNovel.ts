@@ -11,6 +11,7 @@ import { VisualNovelAnalyser } from "./analyser";
 import { ControlAnimate, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
 import { VisualNovelExecuter } from "./executer";
 import { VisualNovelRenderer } from "./renderer";
+import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "../../editor/editor/instruction/InstructionBlock";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
@@ -707,16 +708,17 @@ class SFXVolumeInstruction extends InstructionLine implements OneLineInstruction
 // }
 
 class ChoiceBranchMacro extends Instruction {
+    public block: SingleInstructionBlock = new SingleInstructionBlock(this);
     private choiceLines: ChoiceBranchMacroLineOption[] = [];
     private openingLine: ChoiceBranchMacroLineOpening;
     private branchOffsets: (number | null)[] = [];
 
     constructor(choices: string[]) {
         super();
-        this.addLine(this.openingLine = new ChoiceBranchMacroLineOpening());
+        this.block._appendLines(this.openingLine = new ChoiceBranchMacroLineOpening());
         for (const choice of choices) {
             const line = new ChoiceBranchMacroLineOption(choice);
-            this.addLine(line);
+            this.block._appendLines(line);
             this.choiceLines.push(line);
         }
     }
@@ -765,9 +767,10 @@ class ChoiceBranchMacro extends Instruction {
             const index = this.choiceLines.indexOf(line);
             if (index < 0) { throw new Error("Line not in instruction"); }
             this.choiceLines.splice(index, 1);
-            this.parentGroup._removeInstructionLine(line.getCurrentLine());
+            this.block._removeLines(index + 1, 1);
+            this.block.getGroupEditor()._removeInstructionLine(line);
         } else {
-            this.parentGroup.removeInstruction(this.getIndex());
+            this.block.parent?._removeInstruction(this.block.locateInstructionIndex());
         }
         return true;
     }
@@ -779,7 +782,8 @@ class ChoiceBranchMacro extends Instruction {
         const newLine = new ChoiceBranchMacroLineOption("");
         newLine._setParent(this);
         this.choiceLines.splice(choiceNumber, 0, newLine);
-        this.parentGroup._insertInstructionLine(index, newLine);
+        this.block._insertLines(index + 1, [newLine]);
+        this.block.getGroupEditor()._insertInstructionLine(index, newLine);
         return true;
     }
 
@@ -877,8 +881,6 @@ class SetVariableStringInstruction extends InstructionLine implements OneLineIns
 }
 
 class CreateGraphicInstruction extends InstructionComposite {
-    protected openingLine: InstructionLine;
-
     instructionBlueprints: InstructionBlueprintMin[] = [{
         instructionName: "source",
         description: "Path to an image to use as the graphic's texture",
@@ -907,10 +909,9 @@ class CreateGraphicInstruction extends InstructionComposite {
     }];
 
     constructor(graphicControl: ControlGraphic) {
-        super();
-
-        this.addLine(this.openingLine = new CreateGraphicLineOpening());
+        super(new CreateGraphicLineOpening());
     }
+
     public export(): any[] {
         throw new Error("Method not implemented.");
     }
@@ -957,13 +958,8 @@ class CreateGraphicSourceInstruction extends CreateGraphicSubInstruction<"src"> 
 }
 
 class AnimateInstruction extends InstructionComposite {
-    protected openingLine: InstructionLine;
-
     constructor(animateControl: ControlAnimate) {
-        super();
-
-        // todo
-        this.addLine(this.openingLine = new AnimateLineOpening());
+        super(new AnimateLineOpening());
     }
     public export(): any[] {
         throw new Error("Method not implemented.");
