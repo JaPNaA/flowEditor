@@ -4,7 +4,7 @@ import { getAncestorWhich } from "../../utils";
 import { Editable } from "../editing/Editable";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { TextareaUserInputCaptureAreas } from "../editing/TextareaUserInputCapture";
-import { BranchTargetChangeAction, RemoveInstructionAction } from "../editing/actions";
+import { AddInstructionAction, BranchTargetChangeAction, RemoveInstructionAction } from "../editing/actions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
 
 export abstract class Instruction {
@@ -250,16 +250,32 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
 }
 
 class CompositeInstructionBlockWithOpeningLine extends CompositeInstructionBlock {
-    constructor(public openingLine: InstructionLine) { super(); }
+    constructor(public openingLine: InstructionLine, public instruction: Instruction) {
+        super();
+        this.numLines++;
+    }
 
     public getLine(index: number): InstructionLine {
         if (index == 0) { return this.openingLine; }
         return super.getLine(index - 1);
     }
 
+    public getLineLocation(index: number): number {
+        if (index <= 0) { return 0; }
+        return super.getLineLocation(index - 1);
+    }
+
     public *lineIter(): Generator<InstructionLine, any, unknown> {
         yield this.openingLine;
         yield* super.lineIter();
+    }
+
+    public _insertInstruction(index: number, instruction: Instruction): void {
+        return super._insertInstruction(index - 1, instruction);
+    }
+
+    public _removeInstruction(index: number): void {
+        return super._removeInstruction(index - 1);
     }
 }
 
@@ -269,24 +285,18 @@ export abstract class InstructionComposite extends Instruction {
 
     constructor(protected openingLine: InstructionLine) {
         super();
-        this.block = new CompositeInstructionBlockWithOpeningLine(this.openingLine);
+        openingLine.parentInstruction = this;
+        this.block = new CompositeInstructionBlockWithOpeningLine(this.openingLine, this);
     }
 
     public insertLine(index: number): boolean {
-        // todo: repeated code from InstructionGroupEditor, no support for undoing
-        const previousLine = this.block.getLine(index - 1);
-        if (previousLine) {
-            if (previousLine.parentInstruction.insertLine(index)) {
-                return false;
-            }
-            const newInstruction = this.createNewInstruction();
-            this.block._insertInstruction(index, newInstruction);
-            return true;
-        } else {
-            const newInstruction = this.createNewInstruction();
-            this.block._insertInstruction(0, newInstruction);
-            return true;
-        }
+        console.log("Composite insert", index);
+        const newInstruction = this.createNewInstruction();
+        const group = this.block.getGroupEditor();
+        group.parentEditor.undoLog.perform(
+            new AddInstructionAction(newInstruction, index, this.block, group)
+        );
+        return true;
     }
 
     // private insertInstruction(instruction: Instruction, index: number) {

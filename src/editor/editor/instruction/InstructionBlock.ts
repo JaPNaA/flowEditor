@@ -15,6 +15,7 @@ export interface InstructionBlock {
     getGroupEditor(): InstructionGroupEditor;
     hasGroupEditor(): boolean;
     getLine(index: number): InstructionLine;
+    getLineLocation(index: number): number;
     lineIter(): Generator<InstructionLine>;
 }
 
@@ -28,6 +29,10 @@ export class SingleInstructionBlock implements InstructionBlock {
 
     public getLine(index: number): InstructionLine {
         return this.lines[index];
+    }
+
+    public getLineLocation(index: number): number {
+        return index;
     }
 
     public *lineIter(): Generator<InstructionLine, any, unknown> {
@@ -113,6 +118,18 @@ export class CompositeInstructionBlock implements InstructionBlock {
         for (const child of this.children) {
             if (index < curr + child.block.numLines) {
                 return child.block.getLine(index - curr);
+            }
+            curr += child.block.numLines;
+        }
+
+        throw new Error("Line not found");
+    }
+
+    public getLineLocation(index: number): number {
+        let curr = 0;
+        for (const child of this.children) {
+            if (index < curr + child.block.numLines) {
+                return child.block.getLineLocation(index - curr);
             }
             curr += child.block.numLines;
         }

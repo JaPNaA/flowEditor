@@ -950,6 +950,7 @@ class CreateGraphicSourceInstruction extends CreateGraphicSubInstruction<"src"> 
         this.setAreas(
             "  source: ", this.editable = this.createEditable(src)
         );
+        this.elm.class("control");
     }
 
     serialize(): ["src", string] {

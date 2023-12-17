@@ -139,7 +139,13 @@ export class AddInstructionAction implements UndoableAction {
 
     public perform(): void {
         const newBlock = this.instruction.block;
-        const nextInstruction = this.block.getInstructions()[this.index];
+        let currBlock = this.block;
+        let nextInstruction = currBlock.getInstructions()[this.index];
+        while (nextInstruction === undefined && currBlock.parent) {
+            const index = currBlock.parent.children.findIndex(x => x.block == currBlock);
+            nextInstruction = currBlock.parent.children[index + 1];
+            currBlock = currBlock.parent;
+        }
 
         // insert into html
         if (nextInstruction) {

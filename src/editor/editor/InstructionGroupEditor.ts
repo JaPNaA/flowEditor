@@ -510,8 +510,9 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public requestNewLine(lineIndex: number) {
         if (lineIndex > 0) {
             const previousLine = this.block.getLine(lineIndex - 1);
+            console.log("previous line", previousLine);
             if (previousLine) {
-                if (previousLine.parentInstruction.insertLine(lineIndex)) {
+                if (previousLine.parentInstruction.insertLine(this.block.getLineLocation(lineIndex - 1) + 1)) {
                     return;
                 }
                 const instructionLine = this.instructionFromData({ ctrl: 'nop' });
