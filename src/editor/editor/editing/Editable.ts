@@ -66,20 +66,22 @@ export class Editable extends Elm<"span"> {
     }
 
     public update() {
-        const cursor = this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor;
-        if (
-            cursor.activeEditable === this
-        ) {
-            const { start, end } = cursor.getPositions();
-            const before = this._value.slice(0, start!.char);
-            const selected = this._value.slice(start!.char, end!.char);
-            const after = this._value.slice(end!.char);
+        const block = this.parentLine.parentInstruction.block;
+        if (block.hasGroupEditor()) {
+            const cursor = block.getGroupEditor().parentEditor.cursor;
+            if (cursor.activeEditable === this) {
+                const { start, end } = cursor.getPositions();
+                const before = this._value.slice(0, start!.char);
+                const selected = this._value.slice(start!.char, end!.char);
+                const after = this._value.slice(end!.char);
 
-            cursor.setSelectedText(selected);
+                cursor.setSelectedText(selected);
 
-            this.replaceContents(before, cursor, after);
-        } else {
-            this.replaceContents(this._value);
+                this.replaceContents(before, cursor, after);
+                return;
+            }
         }
+
+        this.replaceContents(this._value);
     }
 }

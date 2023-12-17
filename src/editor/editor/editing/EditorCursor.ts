@@ -284,9 +284,7 @@ export class EditorCursor extends Elm<"span"> {
         const editable = this.getEditableFromPosition(positionStart);
         if (!editable) { return; }
         this.activeEditable = editable;
-        if (lastActiveEditable?.parentLine.parentInstruction.block.hasGroupEditor()) {
-            lastActiveEditable?.update();
-        }
+        lastActiveEditable?.update();
         editable.update();
         if (this.allowAutocomplete) {
             this.autocomplete.updatePosition(this);

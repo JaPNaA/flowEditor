@@ -6,6 +6,8 @@ import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocomplet
 import { InstructionBlueprint } from "./InstructionBlueprintRegistery";
 import { SingleInstructionBlock } from "./InstructionBlock";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { EditorCursor } from "../editing/EditorCursor";
+
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     constructor() {
         super(new NewInstructionLine());
@@ -139,6 +141,7 @@ export class NewInstructionEditable extends Editable {
     public onCheckInput = new EventBus<UserInputEvent>();
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
     private isActive = false;
+    private previousCursor?: EditorCursor;
 
     constructor(parentLine: NewInstructionLine) {
         super("", parentLine);
@@ -153,21 +156,25 @@ export class NewInstructionEditable extends Editable {
 
     public update() {
         super.update();
-        const cursor = this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor;
-        if (cursor.activeEditable === this) {
-            if (!this.isActive) {
-                cursor.onKeydownIntercept.subscribe(this.intercepter);
+        const block = this.parentLine.parentInstruction.block;
+        if (block.hasGroupEditor()) {
+            const cursor = block.getGroupEditor().parentEditor.cursor;
+            if (cursor.activeEditable === this) {
+                if (!this.isActive) {
+                    cursor.onKeydownIntercept.subscribe(this.intercepter);
+                }
+                this.isActive = true;
+                this.previousCursor = cursor;
+                return;
             }
-            this.isActive = true;
-        } else {
-            this.deactivate();
         }
+
+        this.deactivate();
     }
 
     public deactivate() {
         if (!this.isActive) { return; }
-        const cursor = this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor;
-        cursor.onKeydownIntercept.unsubscribe(this.intercepter);
+        this.previousCursor!.onKeydownIntercept.unsubscribe(this.intercepter);
         this.isActive = false;
     }
 
