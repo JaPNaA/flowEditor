@@ -117,14 +117,12 @@ export class EditorCursor extends Elm<"span"> {
 
             const editable = this.getEditableFromPosition(this.positionStart);
             if (!editable) { return; }
-            this.autocomplete.removedValue(editable);
         };
 
         this.inputCapture.afterInputHandler = () => {
             if (!this.positionStart) { return; }
             const editable = this.getEditableFromPosition(this.positionStart);
             if (!editable) { return; }
-            this.autocomplete.enteredValue(editable);
         };
 
         this.inputCapture.lineDeleteHandler = lineOp => {
@@ -164,9 +162,7 @@ export class EditorCursor extends Elm<"span"> {
                     const text = this.autocomplete.acceptSuggestion();
                     this.autocomplete.clearSuggestions();
                     if (!text) { break; }
-                    this.autocomplete.removedValue(this.activeEditable);
                     this.activeEditable.setValue(text);
-                    this.autocomplete.enteredValue(this.activeEditable);
 
                     this.activeEditable.placeholder = false;
                     this.allowAutocomplete = false;

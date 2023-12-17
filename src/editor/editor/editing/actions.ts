@@ -243,9 +243,16 @@ export class EditableEditAction implements UndoableAction {
     constructor(public editable: Editable, public newValue: string) { }
 
     public perform(): void {
+        const autocomplete = this.editable.parentLine.parentInstruction.block.hasGroupEditor() ?
+            this.editable.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor.autocomplete : undefined;
+
+        if (autocomplete) { autocomplete.removedValue(this.editable); }
         this.previousValue = this.editable._value;
         this.editable._value = this.newValue;
         this.editable.placeholder = false;
+        if (autocomplete) { autocomplete.enteredValue(this.editable); }
+
+        this.editable.parentLine.parentInstruction.block.getGroupEditor()
         this.editable.update();
     }
 
