@@ -508,19 +508,21 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     }
 
     public requestNewLine(lineIndex: number) {
-        const previousLine = this.block.getLine(lineIndex - 1);
-        if (previousLine) {
-            if (previousLine.parentInstruction.insertLine(lineIndex)) {
-                return;
+        if (lineIndex > 0) {
+            const previousLine = this.block.getLine(lineIndex - 1);
+            if (previousLine) {
+                if (previousLine.parentInstruction.insertLine(lineIndex)) {
+                    return;
+                }
+                const instructionLine = this.instructionFromData({ ctrl: 'nop' });
+                return this.insertInstruction(instructionLine,
+                    (previousLine.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex() + 1
+                );
             }
-            const instructionLine = this.instructionFromData({ ctrl: 'nop' });
-            return this.insertInstruction(instructionLine,
-                (previousLine.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex() + 1
-            );
-        } else {
-            const instructionLine = this.instructionFromData({ ctrl: 'nop' });
-            return this.insertInstruction(instructionLine, 0);
         }
+
+        const instructionLine = this.instructionFromData({ ctrl: 'nop' });
+        return this.insertInstruction(instructionLine, 0);
     }
 
     public insertInstruction(instruction: Instruction, instructionIndex: number) {

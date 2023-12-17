@@ -32,6 +32,7 @@ export class Editable extends Elm<"span"> {
     }
 
     public setValue(value: string) {
+        if (!this.parentLine.parentInstruction.block.hasGroupEditor()) { return; }
         this.onChange.send(value);
         this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.undoLog.perform(
             new EditableEditAction(this, value)

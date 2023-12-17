@@ -5,6 +5,7 @@ import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint } from "./InstructionBlueprintRegistery";
 import { SingleInstructionBlock } from "./InstructionBlock";
+import { InstructionGroupEditor } from "../InstructionGroupEditor";
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     constructor() {
         super(new NewInstructionLine());
@@ -102,7 +103,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         }
 
         const group = this.parentInstruction.block.getGroupEditor();
-            group.parentEditor.undoLog.startGroup();
+        group.parentEditor.undoLog.startGroup();
         const currentLine = this.getCurrentLine();
         const currentInstructionIndex = (this.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex();
         const position = group.parentEditor.cursor.getPosition();
@@ -112,7 +113,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         );
 
         if (instruction.isBranch()) {
-            this.splitAfterIfNeeded(currentLine, instruction.isAlwaysJump());
+            this.splitAfterIfNeeded(group, currentLine, instruction.isAlwaysJump());
         }
 
         if (position) {
@@ -125,8 +126,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         group.parentEditor.undoLog.endGroup();
     }
 
-    private splitAfterIfNeeded(thisIndex: number, thisIsAlwaysJump: boolean) {
-        const group = this.parentInstruction.block.getGroupEditor();
+    private splitAfterIfNeeded(group: InstructionGroupEditor, thisIndex: number, thisIsAlwaysJump: boolean) {
         const nextInstruction = group.block.getInstructions()[thisIndex + 1];
 
         if (nextInstruction && (thisIsAlwaysJump || !nextInstruction.isBranch())) {

@@ -138,7 +138,7 @@ export class AddInstructionAction implements UndoableAction {
     constructor(public instruction: Instruction, public index: number, public block: CompositeInstructionBlock, public group: InstructionGroupEditor) { }
 
     public perform(): void {
-        const newLines = this.instruction.block.lineIter();
+        const newBlock = this.instruction.block;
         const nextInstruction = this.block.getInstructions()[this.index];
 
         // insert into html
@@ -146,20 +146,20 @@ export class AddInstructionAction implements UndoableAction {
             const nextLine = nextInstruction.block.getLine(0);
             const nextLineElm = nextLine.elm.getHTMLElement();
 
-            for (const line of newLines) {
+            for (const line of newBlock.lineIter()) {
                 this.group.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
             }
 
             this.block._insertInstruction(this.index, this.instruction);
         } else {
-            for (const line of newLines) {
+            for (const line of newBlock.lineIter()) {
                 this.group.elm.append(line);
             }
 
             this.block._insertInstruction(this.index, this.instruction);
         }
 
-        for (const line of newLines) {
+        for (const line of newBlock.lineIter()) {
             this.group._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
             for (const editable of line.getEditables()) {
                 this.group.parentEditor.cursor.autocomplete.enteredValue(editable);

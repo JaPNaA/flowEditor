@@ -4,7 +4,7 @@ import { getAncestorWhich } from "../../utils";
 import { Editable } from "../editing/Editable";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { TextareaUserInputCaptureAreas } from "../editing/TextareaUserInputCapture";
-import { BranchTargetChangeAction } from "../editing/actions";
+import { BranchTargetChangeAction, RemoveInstructionAction } from "../editing/actions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
 
 export abstract class Instruction {
@@ -227,7 +227,8 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
     public removeLine(line: InstructionLine): boolean {
         if (this.line !== line) { throw new Error("Not a line in this instruction"); }
         if (!this.block.parent) { throw new Error("Cannot remove instruction from no parent"); }
-        this.block.parent._removeInstruction(this.block.locateInstructionIndex());
+        const group = this.block.getGroupEditor();
+        group.parentEditor.undoLog.perform(new RemoveInstructionAction(this.block.locateInstructionIndex(), this.block.parent!, group));
         return true;
     }
 
