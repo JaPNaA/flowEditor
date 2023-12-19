@@ -65,14 +65,14 @@ class JSONLineEditable extends Editable {
         group.parentEditor.undoLog.startGroup();
         this.setValue(JSON.stringify(lines[0]));
 
-        const currentPosition = group.block.locateInstruction(this.parentLine.parentBlock.instruction!);
+        const currentPosition = group.block.children.indexOf(this.parentLine.parentBlock);
         let i;
         for (i = 1; i < lines.length; i++) {
-            group.insertInstruction(
+            group.block.insertBlock(
+                currentPosition + i,
                 new InstructionOneLine(
                     new JSONLine(lines[i])
-                ),
-                currentPosition + i
+                ).block
             );
         }
 

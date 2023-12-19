@@ -172,11 +172,11 @@ export class AutoComplete extends Component {
     private getLastUsed(currEditable: Editable, type: symbol): string | undefined {
         const instructionParent = currEditable.parentLine.parentBlock.parent;
         if (!instructionParent) { return; }
-        const currInstructionIndex = instructionParent.locateInstruction(currEditable.parentLine.parentBlock.instruction!);
+        const currInstructionIndex = instructionParent.children.indexOf(currEditable.parentLine.parentBlock);
         if (currInstructionIndex > 0) {
-            instructionParent.getInstruction(
+            instructionParent.children[
                 currInstructionIndex - 1
-            )?.block.getLine(0).getEditables().find(editable => editable.autoCompleteType === type)?.getValue()
+            ]?.getLine(0).getEditables().find(editable => editable.autoCompleteType === type)?.getValue()
         }
     }
 

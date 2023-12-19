@@ -4,7 +4,6 @@ import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/Textar
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint } from "./InstructionBlueprintRegistery";
-import { SingleInstructionBlock } from "./InstructionBlock";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { EditorCursor } from "../editing/EditorCursor";
 
@@ -74,7 +73,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         if (!groupBlock) { throw new Error("No editor attached"); }
         const group = groupBlock.editor;
         group.parentEditor.undoLog.startGroup();
-        const index = group.block.locateInstruction(this.parentBlock.instruction!);
+        const index = group.block.children.indexOf(this.parentBlock);
         this.parentBlock.parent?._removeBlock(this.parentBlock);
         const newGroup = group.splitAtInstruction(index);
         if (newGroup.block.numInstructions === 0) {
@@ -105,17 +104,17 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         const groupBlock = this.parentBlock.getGroupEditor();
         if (!groupBlock) { throw new Error("Editor not attached"); }
         const group = groupBlock.editor;
+        const parentBlock = this.parentBlock.parent;
+        if (!parentBlock) { throw new Error("No parent block"); }
 
         group.parentEditor.undoLog.startGroup();
-        const currentLine = group.block.locateLine(this);
-        const currentInstructionIndex = groupBlock.locateInstruction(this.parentBlock.instruction!);
+        const currentLine = parentBlock.locateLine(this);
+        const currentInstructionIndex = parentBlock.children.indexOf(this.parentBlock);
         const position = group.parentEditor.cursor.getPosition();
-        group.requestRemoveLine(currentLine);
-        group.insertInstruction(
-            instruction, currentInstructionIndex
-        );
+        parentBlock.removeBlock(currentLine);
+        parentBlock.insertBlock(currentInstructionIndex, instruction.block);
 
-        if (instruction.isBranch()) {
+        if (instruction.isBranch() && parentBlock == groupBlock) {
             this.splitAfterIfNeeded(group, currentLine, instruction.isAlwaysJump());
         }
 
@@ -130,9 +129,9 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 
     private splitAfterIfNeeded(group: InstructionGroupEditor, thisIndex: number, thisIsAlwaysJump: boolean) {
-        const nextInstruction = group.block.getInstruction(thisIndex + 1);
+        const nextInstruction = group.block.children[thisIndex + 1];
 
-        if (nextInstruction && (thisIsAlwaysJump || !nextInstruction.isBranch())) {
+        if (nextInstruction.instruction && (thisIsAlwaysJump || !nextInstruction.instruction.isBranch())) {
             group.splitAtInstruction(thisIndex + 1);
         }
     }

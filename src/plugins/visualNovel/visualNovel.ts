@@ -715,10 +715,10 @@ class ChoiceBranchMacro extends Instruction {
 
     constructor(choices: string[]) {
         super();
-        this.block._appendLines(this.openingLine = new ChoiceBranchMacroLineOpening());
+        this.block._appendLine(this.openingLine = new ChoiceBranchMacroLineOpening());
         for (const choice of choices) {
             const line = new ChoiceBranchMacroLineOption(choice);
-            this.block._appendLines(line);
+            this.block._appendLine(line);
             this.choiceLines.push(line);
         }
     }
@@ -770,8 +770,7 @@ class ChoiceBranchMacro extends Instruction {
             const index = this.choiceLines.indexOf(line);
             if (index < 0) { throw new Error("Line not in instruction"); }
             this.choiceLines.splice(index, 1);
-            this.block._removeLines(index + 1, 1);
-            group.editor._removeInstructionLine(line);
+            this.block._removeLine(index + 1);
         } else if (this.block.parent) {
             this.block.parent._removeBlock(this.block);
         }
@@ -788,7 +787,7 @@ class ChoiceBranchMacro extends Instruction {
         const newLine = new ChoiceBranchMacroLineOption("");
         newLine._setParent(this.block);
         this.choiceLines.splice(choiceNumber, 0, newLine);
-        this.block._insertLines(index + 1, [newLine]);
+        this.block._insertLine(index + 1, newLine);
         group.editor._insertInstructionLine(index, newLine);
         return true;
     }

@@ -4,7 +4,7 @@ import { Editor } from "../Editor";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { BranchInstructionLine, Instruction } from "../instruction/instructionTypes";
 import { Editable } from "./Editable";
-import { CompositeInstructionBlock } from "../instruction/InstructionBlock";
+import { CompositeInstructionBlock, InstructionBlock } from "../instruction/InstructionBlock";
 
 export class UndoLog {
     private currLogGroup: UndoableAction[] = [];
@@ -135,70 +135,75 @@ export class MarkGroupAsStartAction implements UndoableAction {
 }
 
 export class AddInstructionAction implements UndoableAction {
-    constructor(public instruction: Instruction, public relativeIndex: number, public block: CompositeInstructionBlock, public group: InstructionGroupEditor) { }
+    constructor(public block: InstructionBlock, public relativeIndex: number, public parentBlock: CompositeInstructionBlock) { }
 
     public perform(): void {
-        const newBlock = this.instruction.block;
-        const nextInstruction = this.group.block.getInstruction(
-            this.group.block.locateInstruction(this.block.getInstruction(this.relativeIndex))
-        );
+        const group = this.block.getGroupEditor();
+        const newBlock = this.block;
+        if (group) {
+            const nextInstruction = group.children[
+                group.children.indexOf(this.parentBlock.children[this.relativeIndex])
+            ];
 
-        // insert into html
-        if (nextInstruction) {
-            const nextLine = nextInstruction.block.getLine(0);
-            const nextLineElm = nextLine.elm.getHTMLElement();
+            // insert into html
+            if (nextInstruction) {
+                const nextLine = nextInstruction.getLine(0);
+                const nextLineElm = nextLine.elm.getHTMLElement();
+
+                for (const line of newBlock.lineIter()) {
+                    group.editor.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
+                }
+            } else {
+                for (const line of newBlock.lineIter()) {
+                    group.editor.elm.append(line);
+                }
+            }
 
             for (const line of newBlock.lineIter()) {
-                this.group.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
+                group.editor._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
+                for (const editable of line.getEditables()) {
+                    group.editor.parentEditor.cursor.autocomplete.enteredValue(editable);
+                }
             }
 
-            this.block._insertInstruction(this.relativeIndex, this.instruction);
-        } else {
-            for (const line of newBlock.lineIter()) {
-                this.group.elm.append(line);
-            }
-
-            this.block._insertInstruction(this.relativeIndex, this.instruction);
+            group.editor.updateHeight();
         }
 
-        for (const line of newBlock.lineIter()) {
-            this.group._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
-            for (const editable of line.getEditables()) {
-                this.group.parentEditor.cursor.autocomplete.enteredValue(editable);
-            }
-        }
-
-        this.group.updateHeight();
+        this.parentBlock._insertBlock(this.relativeIndex, this.block);
     }
 
     public inverse(): RemoveInstructionAction {
-        return new RemoveInstructionAction(this.relativeIndex, this.block, this.group);
+        return new RemoveInstructionAction(this.relativeIndex, this.parentBlock);
     }
 }
 
 export class RemoveInstructionAction implements UndoableAction {
-    public removedInstruction?: Instruction;
+    public removedInstruction?: InstructionBlock;
 
-    constructor(public relativeIndex: number, public block: CompositeInstructionBlock, public group: InstructionGroupEditor) { }
+    constructor(public relativeIndex: number, public block: CompositeInstructionBlock) { }
 
     public perform(): void {
-        const instruction = this.block.getInstruction(this.relativeIndex);
+        const instruction = this.block.children[this.relativeIndex];
         this.removedInstruction = instruction;
 
         this.block._removeBlock(this.relativeIndex);
-        for (const line of instruction.block.lineIter()) {
-            this.group._removeInstructionLine(line);
-            for (const editable of line.getEditables()) {
-                this.group.parentEditor.cursor.autocomplete.removedValue(editable);
-            }
-        }
 
-        this.group.updateHeight();
+        const group = this.block.getGroupEditor();
+
+        if (group) {
+            for (const line of instruction.lineIter()) {
+                group.editor._removeInstructionLine(line);
+                for (const editable of line.getEditables()) {
+                    group.editor.parentEditor.cursor.autocomplete.removedValue(editable);
+                }
+            }
+            group.editor.updateHeight();
+        }
     }
 
     public inverse(): AddInstructionAction {
         if (!this.removedInstruction) { throw new InverseBeforePerformError(); }
-        return new AddInstructionAction(this.removedInstruction, this.relativeIndex, this.block, this.group);
+        return new AddInstructionAction(this.removedInstruction, this.relativeIndex, this.block);
     }
 }
 

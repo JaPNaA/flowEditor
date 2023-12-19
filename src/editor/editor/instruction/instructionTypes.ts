@@ -184,7 +184,7 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
     constructor(line: T) {
         super();
         this.line = line;
-        this.block._insertLines(0, [line]);
+        this.block._insertLine(0, line);
     }
 
     public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
@@ -226,8 +226,7 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
     public removeLine(line: InstructionLine): boolean {
         if (this.line !== line) { throw new Error("Not a line in this instruction"); }
         if (!this.block.parent) { throw new Error("Cannot remove instruction from no parent"); }
-        const group = this.block.getGroupEditor();
-        group?.editor.parentEditor.undoLog.perform(new RemoveInstructionAction(0, this.block.parent!, group.editor));
+        this.block.parent.removeBlock(this.block);
         return true;
     }
 
@@ -269,9 +268,7 @@ export abstract class InstructionComposite extends Instruction {
         const newInstruction = this.createNewInstruction();
         const group = this.block.getGroupEditor();
         if (!group) { throw new Error("No group editor"); }
-        group.editor.parentEditor.undoLog.perform(
-            new AddInstructionAction(newInstruction, index, this.block, group.editor)
-        );
+        this.block.insertBlock(index, newInstruction.block);
         return true;
     }
 

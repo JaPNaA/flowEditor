@@ -510,9 +510,11 @@ export class Editor extends WorldElmWithComponents {
         for (const group of groupEditors) {
             startIndicies.set(group, index);
             const instructions = [];
-            for (const instruction of group.block.instructionIter()) {
-                instructions.push(instruction);
-                index += instruction.export().length;
+            for (const block of group.block.children) {
+                if (block.instruction) {
+                    instructions.push(block.instruction);
+                    index += block.instruction.export().length;
+                }
             }
             groupInstructions.push(instructions);
         }
