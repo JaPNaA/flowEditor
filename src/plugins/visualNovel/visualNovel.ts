@@ -468,7 +468,7 @@ class BackgroundMacroLine extends InstructionLine implements OneLineInstruction 
         this.backgroundEditable.autoCompleteType = autocompleteTypeBackground;
         this.backgroundEditable.onChange.subscribe(value => {
             const serialized = this.parseBackgroundString(value);
-            (this.parentInstruction as BackgroundMacro).contextSet = {
+            (this.parentBlock.instruction as BackgroundMacro).contextSet = {
                 backgroundColor: serialized.color && "#" + serialized.color,
                 backgroundSrc: serialized.src
             };
@@ -763,27 +763,33 @@ class ChoiceBranchMacro extends Instruction {
     }
 
     public removeLine(line: InstructionLine): boolean {
+        const group = this.block.getGroupEditor();
+        if (!group) { return false; }
+
         if (line instanceof ChoiceBranchMacroLineOption) {
             const index = this.choiceLines.indexOf(line);
             if (index < 0) { throw new Error("Line not in instruction"); }
             this.choiceLines.splice(index, 1);
             this.block._removeLines(index + 1, 1);
-            this.block.getGroupEditor()._removeInstructionLine(line);
-        } else {
-            this.block.parent?._removeInstruction(this.block.locateInstructionIndex());
+            group.editor._removeInstructionLine(line);
+        } else if (this.block.parent) {
+            this.block.parent._removeBlock(this.block);
         }
         return true;
     }
 
     public insertLine(index: number): boolean {
-        const choiceNumber = index - this.openingLine.getCurrentLine() - 1;
+        const group = this.block.getGroupEditor();
+        if (!group) { return false; }
+
+        const choiceNumber = index - group.locateLine(this.openingLine) - 1;
         if (choiceNumber < 0) { return false; }
         if (choiceNumber > this.choiceLines.length) { return false; }
         const newLine = new ChoiceBranchMacroLineOption("");
-        newLine._setParent(this);
+        newLine._setParent(this.block);
         this.choiceLines.splice(choiceNumber, 0, newLine);
         this.block._insertLines(index + 1, [newLine]);
-        this.block.getGroupEditor()._insertInstructionLine(index, newLine);
+        group.editor._insertInstructionLine(index, newLine);
         return true;
     }
 

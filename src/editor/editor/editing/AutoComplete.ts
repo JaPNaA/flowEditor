@@ -169,12 +169,21 @@ export class AutoComplete extends Component {
         }
     }
 
+    private getLastUsed(currEditable: Editable, type: symbol): string | undefined {
+        const instructionParent = currEditable.parentLine.parentBlock.parent;
+        if (!instructionParent) { return; }
+        const currInstructionIndex = instructionParent.locateInstruction(currEditable.parentLine.parentBlock.instruction!);
+        if (currInstructionIndex > 0) {
+            instructionParent.getInstruction(
+                currInstructionIndex - 1
+            )?.block.getLine(0).getEditables().find(editable => editable.autoCompleteType === type)?.getValue()
+        }
+    }
+
     private defaultSuggester(editable: Editable, type: symbol): AutoCompleteSuggestion[] | null {
         const value = editable.placeholder ? "" : editable.getValue();
         const map = this.defaultHandlerPreviousValues.get(type);
-        const lastUsed = editable.parentLine.parentInstruction.block.parent?.getInstructions()[
-            (editable.parentLine.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex() - 1
-        ]?.block.getLine(0).getEditables().find(editable => editable.autoCompleteType === type)?.getValue();
+        const lastUsed = this.getLastUsed(editable, type);
         if (!map) { return null; }
 
         const suggestions: [AutoCompleteSuggestion, number][] = [];

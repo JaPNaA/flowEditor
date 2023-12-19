@@ -135,17 +135,13 @@ export class MarkGroupAsStartAction implements UndoableAction {
 }
 
 export class AddInstructionAction implements UndoableAction {
-    constructor(public instruction: Instruction, public index: number, public block: CompositeInstructionBlock, public group: InstructionGroupEditor) { }
+    constructor(public instruction: Instruction, public relativeIndex: number, public block: CompositeInstructionBlock, public group: InstructionGroupEditor) { }
 
     public perform(): void {
         const newBlock = this.instruction.block;
-        let currBlock = this.block;
-        let nextInstruction = currBlock.getInstructions()[this.index];
-        while (nextInstruction === undefined && currBlock.parent) {
-            const index = currBlock.parent.children.findIndex(x => x.block == currBlock);
-            nextInstruction = currBlock.parent.children[index + 1];
-            currBlock = currBlock.parent;
-        }
+        const nextInstruction = this.group.block.getInstruction(
+            this.group.block.locateInstruction(this.block.getInstruction(this.relativeIndex))
+        );
 
         // insert into html
         if (nextInstruction) {
@@ -156,13 +152,13 @@ export class AddInstructionAction implements UndoableAction {
                 this.group.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
             }
 
-            this.block._insertInstruction(this.index, this.instruction);
+            this.block._insertInstruction(this.relativeIndex, this.instruction);
         } else {
             for (const line of newBlock.lineIter()) {
                 this.group.elm.append(line);
             }
 
-            this.block._insertInstruction(this.index, this.instruction);
+            this.block._insertInstruction(this.relativeIndex, this.instruction);
         }
 
         for (const line of newBlock.lineIter()) {
@@ -176,20 +172,20 @@ export class AddInstructionAction implements UndoableAction {
     }
 
     public inverse(): RemoveInstructionAction {
-        return new RemoveInstructionAction(this.index, this.block, this.group);
+        return new RemoveInstructionAction(this.relativeIndex, this.block, this.group);
     }
 }
 
 export class RemoveInstructionAction implements UndoableAction {
     public removedInstruction?: Instruction;
 
-    constructor(public index: number, public block: CompositeInstructionBlock, public group: InstructionGroupEditor) { }
+    constructor(public relativeIndex: number, public block: CompositeInstructionBlock, public group: InstructionGroupEditor) { }
 
     public perform(): void {
-        const instruction = this.block.getInstructions()[this.index];
+        const instruction = this.block.getInstruction(this.relativeIndex);
         this.removedInstruction = instruction;
 
-        this.block._removeInstruction(this.index);
+        this.block._removeBlock(this.relativeIndex);
         for (const line of instruction.block.lineIter()) {
             this.group._removeInstructionLine(line);
             for (const editable of line.getEditables()) {
@@ -202,7 +198,7 @@ export class RemoveInstructionAction implements UndoableAction {
 
     public inverse(): AddInstructionAction {
         if (!this.removedInstruction) { throw new InverseBeforePerformError(); }
-        return new AddInstructionAction(this.removedInstruction, this.index, this.block, this.group);
+        return new AddInstructionAction(this.removedInstruction, this.relativeIndex, this.block, this.group);
     }
 }
 
@@ -212,15 +208,18 @@ export class BranchTargetChangeAction implements UndoableAction {
 
     public perform(): void {
         this.previousBranchTarget = this.branchLine.branchTarget;
+        const groupBlock = this.branchLine.parentBlock.getGroupEditor();
+        if (!groupBlock) { throw new Error("No group editor"); }
+        const group = groupBlock.editor;
 
         // remove parent/child relation
         if (this.previousBranchTarget) {
             removeElmFromArray(
                 this.previousBranchTarget,
-                this.branchLine.parentInstruction.block.getGroupEditor()._childGroups
+                group._childGroups
             );
             removeElmFromArray(
-                this.branchLine.parentInstruction.block.getGroupEditor(),
+                group,
                 this.previousBranchTarget._parentGroups
             );
         }
@@ -231,12 +230,12 @@ export class BranchTargetChangeAction implements UndoableAction {
 
         // update parent/child relations
         if (this.branchTarget) {
-            this.branchTarget._parentGroups.push(this.branchLine.parentInstruction.block.getGroupEditor());
-            this.branchLine.parentInstruction.block.getGroupEditor()._childGroups.push(this.branchTarget);
+            this.branchTarget._parentGroups.push(group);
+            group._childGroups.push(this.branchTarget);
         }
 
         // update render hitboxes
-        this.branchLine.parentInstruction.block.getGroupEditor().updateAfterMove();
+        group.updateAfterMove();
     }
 
     public inverse(): UndoableAction {
@@ -249,8 +248,7 @@ export class EditableEditAction implements UndoableAction {
     constructor(public editable: Editable, public newValue: string) { }
 
     public perform(): void {
-        const autocomplete = this.editable.parentLine.parentInstruction.block.hasGroupEditor() ?
-            this.editable.parentLine.parentInstruction.block.getGroupEditor().parentEditor.cursor.autocomplete : undefined;
+        const autocomplete = this.editable.parentLine.parentBlock.getGroupEditor()?.editor.parentEditor.cursor.autocomplete;
 
         if (autocomplete) { autocomplete.removedValue(this.editable); }
         this.previousValue = this.editable._value;
@@ -258,7 +256,7 @@ export class EditableEditAction implements UndoableAction {
         this.editable.placeholder = false;
         if (autocomplete) { autocomplete.enteredValue(this.editable); }
 
-        this.editable.parentLine.parentInstruction.block.getGroupEditor()
+        this.editable.parentLine.parentBlock.getGroupEditor()
         this.editable.update();
     }
 

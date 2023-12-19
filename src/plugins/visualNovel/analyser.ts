@@ -16,7 +16,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
         let context: Context | undefined = undefined;
 
         for (const group of editor.getGroups()) {
-            for (const instruction of group.block.getInstructions()) {
+            for (const instruction of group.block.instructionIter()) {
                 if (instruction instanceof VNContentInstrOneLine) {
                     if (instruction.contextSet) {
                         context = instruction.contextSet;
@@ -40,7 +40,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
 
         for (const [group, context] of this.groupStartContexts) {
             let fallsOver = true;
-            for (const instruction of group.block.getInstructions()) {
+            for (const instruction of group.block.instructionIter()) {
                 if (instruction instanceof VNContentInstrOneLine) {
                     if (instruction.contextSet) {
                         fallsOver = false;
@@ -79,10 +79,11 @@ export class VisualNovelAnalyser implements PluginAnalyser {
         this.visitedGroupsSet.clear();
 
         if (action instanceof EditableEditAction) {
-            const instruction = action.editable.parentLine.parentInstruction;
-            if (instruction instanceof VNContentInstrOneLine && instruction.contextSet) {
+            const instruction = action.editable.parentLine.parentBlock;
+            const group = instruction.getGroupEditor()?.editor;
+            if (group && instruction instanceof VNContentInstrOneLine && instruction.contextSet) {
                 instruction.context = instruction.contextSet;
-                this.propagateContext(instruction.block.getGroupEditor(), instruction.block.locateInstructionIndex() + 1, instruction.contextSet);
+                this.propagateContext(group, group.block.locateInstruction(instruction) + 1, instruction.contextSet);
             }
         } else if (action instanceof AddInstructionAction) {
             const addedInstruction = action.instruction;
@@ -91,13 +92,12 @@ export class VisualNovelAnalyser implements PluginAnalyser {
             if (addedInstruction.contextSet) {
                 const newContext = addedInstruction.contextSet;
                 addedInstruction.context = addedInstruction.contextSet;
-                this.propagateContext(action.group, action.index + 1, newContext);
+                this.propagateContext(action.group, action.relativeIndex + 1, newContext);
             } else {
                 // update non-context-setting instruction context
-                const instructions = action.group.block.getInstructions();
                 let lastContext;
-                for (let i = action.index - 1; i >= 0; i--) {
-                    const instruction = instructions[i];
+                for (let i = action.relativeIndex - 1; i >= 0; i--) {
+                    const instruction = action.group.block.getInstruction(i);
                     if (instruction instanceof VNContentInstrOneLine) {
                         if (instruction.context) {
                             lastContext = instruction.context;
@@ -115,8 +115,8 @@ export class VisualNovelAnalyser implements PluginAnalyser {
             if (action.removedInstruction instanceof VNContentInstrOneLine && action.removedInstruction.contextSet) {
                 this.propagateContext(
                     action.group,
-                    action.index,
-                    this.getContextAt(action.group, action.index - 1)
+                    action.relativeIndex,
+                    this.getContextAt(action.group, action.relativeIndex - 1)
                 );
             }
         } else if (action instanceof BranchTargetChangeAction) {
@@ -154,13 +154,12 @@ export class VisualNovelAnalyser implements PluginAnalyser {
     }
 
     private getGroupEnd(group: InstructionGroupEditor) {
-        return this.getContextAt(group, group.block.getInstructions().length - 1);
+        return this.getContextAt(group, group.block.numInstructions - 1);
     }
 
     private getContextAt(group: InstructionGroupEditor, index: number) {
-        const instructions = group.block.getInstructions();
         for (let i = index; i >= 0; i--) {
-            const instruction = instructions[i];
+            const instruction = group.block.getInstruction(i);
             if (instruction instanceof VNContentInstrOneLine) {
                 if (instruction.context) {
                     return instruction.context;
@@ -171,9 +170,8 @@ export class VisualNovelAnalyser implements PluginAnalyser {
     }
 
     private propagateContext(group: InstructionGroupEditor, startIndex: number, context: Context | undefined) {
-        const instructions = group.block.getInstructions();
-        for (let i = startIndex; i < instructions.length; i++) {
-            const instruction = instructions[i];
+        for (let i = startIndex; i < group.block.numInstructions; i++) {
+            const instruction = group.block.getInstruction(i);
             if (instruction instanceof VNContentInstrOneLine) {
                 if (
                     instruction.contextSet || // is setter -- stop propagation

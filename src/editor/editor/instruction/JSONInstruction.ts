@@ -58,15 +58,17 @@ class JSONLineEditable extends Editable {
         const lines = this.getValue()
             .slice(1, -1)
             .split("\n");
-        const parentGroup = this.parentLine.parentInstruction.block.getGroupEditor();
+        const groupBlock = this.parentLine.parentBlock.getGroupEditor();
+        if (!groupBlock) { return; }
+        const group = groupBlock.editor;
 
-        parentGroup.parentEditor.undoLog.startGroup();
+        group.parentEditor.undoLog.startGroup();
         this.setValue(JSON.stringify(lines[0]));
 
-        const currentPosition = (this.parentLine.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex();
+        const currentPosition = group.block.locateInstruction(this.parentLine.parentBlock.instruction!);
         let i;
         for (i = 1; i < lines.length; i++) {
-            parentGroup.insertInstruction(
+            group.insertInstruction(
                 new InstructionOneLine(
                     new JSONLine(lines[i])
                 ),
@@ -75,12 +77,12 @@ class JSONLineEditable extends Editable {
         }
 
         this.replaceContents(this.getValue());
-        parentGroup.parentEditor.cursor.setPosition({
-            group: parentGroup,
-            line: this.parentLine.getCurrentLine() + i - 1,
+        group.parentEditor.cursor.setPosition({
+            group: group,
+            line: group.block.locateLine(this.parentLine) + i - 1,
             editable: 0,
             char: lines[i - 1].length + 1 // +1 for left quote only
         });
-        parentGroup.parentEditor.undoLog.endGroup();
+        group.parentEditor.undoLog.endGroup();
     }
 }

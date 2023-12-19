@@ -28,7 +28,11 @@ export abstract class Instruction {
     public abstract insertLine(index: number): boolean;
 
     public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
-        return this.block.getGroupEditor().parentEditor.requestSelectInstructionGroup();
+        const group = this.block.getGroupEditor();
+        if (group) {
+            return group.editor.parentEditor.requestSelectInstructionGroup();
+        }
+        return Promise.resolve(null);
     }
 
     /** Is the instruction a branch? */
@@ -57,7 +61,7 @@ export abstract class Instruction {
 
 export abstract class InstructionLine extends Component {
     public preferredStartingCharOffset = 0;
-    public parentInstruction!: Instruction;
+    public parentBlock!: InstructionBlock;
 
     private areas: TextareaUserInputCaptureAreas = [];
     private spanToEditable = new Map<HTMLSpanElement, Editable>();
@@ -67,8 +71,8 @@ export abstract class InstructionLine extends Component {
         super("instructionLine");
     }
 
-    public _setParent(instruction: Instruction) {
-        this.parentInstruction = instruction;
+    public _setParent(instruction: InstructionBlock) {
+        this.parentBlock = instruction;
     }
 
     public getEditableIndexFromSelection(selection: Selection): number {
@@ -155,11 +159,6 @@ export abstract class InstructionLine extends Component {
     public getLastEditableCharacterIndex() {
         return this.editables[this.editables.length - 1].getValue().length;
     }
-
-    public getCurrentLine() {
-        // can assume is SingleInstructionBlock since this line is a child of the block
-        return (this.parentInstruction.block as SingleInstructionBlock).locateLineIndex(this);
-    }
 }
 
 export interface OneLineInstruction extends InstructionLine {
@@ -228,7 +227,7 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
         if (this.line !== line) { throw new Error("Not a line in this instruction"); }
         if (!this.block.parent) { throw new Error("Cannot remove instruction from no parent"); }
         const group = this.block.getGroupEditor();
-        group.parentEditor.undoLog.perform(new RemoveInstructionAction(this.block.locateInstructionIndex(), this.block.parent!, group));
+        group?.editor.parentEditor.undoLog.perform(new RemoveInstructionAction(0, this.block.parent!, group.editor));
         return true;
     }
 
@@ -252,30 +251,6 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
 class CompositeInstructionBlockWithOpeningLine extends CompositeInstructionBlock {
     constructor(public openingLine: InstructionLine, public instruction: Instruction) {
         super();
-        this.numLines++;
-    }
-
-    public getLine(index: number): InstructionLine {
-        if (index == 0) { return this.openingLine; }
-        return super.getLine(index - 1);
-    }
-
-    public getLineLocation(index: number): number {
-        if (index <= 0) { return 0; }
-        return super.getLineLocation(index - 1);
-    }
-
-    public *lineIter(): Generator<InstructionLine, any, unknown> {
-        yield this.openingLine;
-        yield* super.lineIter();
-    }
-
-    public _insertInstruction(index: number, instruction: Instruction): void {
-        return super._insertInstruction(index - 1, instruction);
-    }
-
-    public _removeInstruction(index: number): void {
-        return super._removeInstruction(index - 1);
     }
 }
 
@@ -285,16 +260,17 @@ export abstract class InstructionComposite extends Instruction {
 
     constructor(protected openingLine: InstructionLine) {
         super();
-        openingLine.parentInstruction = this;
         this.block = new CompositeInstructionBlockWithOpeningLine(this.openingLine, this);
+        openingLine.parentBlock = this.block;
     }
 
     public insertLine(index: number): boolean {
         console.log("Composite insert", index);
         const newInstruction = this.createNewInstruction();
         const group = this.block.getGroupEditor();
-        group.parentEditor.undoLog.perform(
-            new AddInstructionAction(newInstruction, index, this.block, group)
+        if (!group) { throw new Error("No group editor"); }
+        group.editor.parentEditor.undoLog.perform(
+            new AddInstructionAction(newInstruction, index, this.block, group.editor)
         );
         return true;
     }
@@ -327,7 +303,7 @@ export abstract class BranchInstructionLine extends InstructionLine {
             .class("hanging")
             .append(this.branchConnectElm =
                 new Elm().class("branchConnect").on("click", () => {
-                    this.parentInstruction.block.getGroupEditor().unsetEditMode();
+                    this.parentBlock.getGroupEditor()?.editor.unsetEditMode();
                     appHooks.focusEditor();
                     this.requestUserToSetBranchTarget();
                 }));
@@ -335,7 +311,7 @@ export abstract class BranchInstructionLine extends InstructionLine {
 
     public requestUserToSetBranchTarget() {
         this.branchConnectElm.class("active");
-        this.parentInstruction.requestSelectInstructionGroup()
+        this.parentBlock.instruction!.requestSelectInstructionGroup()
             .then(editor => {
                 this.branchConnectElm.removeClass("active");
                 if (editor) {
@@ -362,7 +338,8 @@ export abstract class BranchInstructionLine extends InstructionLine {
     }
 
     public setBranchTarget(target: InstructionGroupEditor | null) {
-        const editor = this.parentInstruction.block.getGroupEditor().parentEditor;
+        const editor = this.parentBlock.getGroupEditor()?.editor.parentEditor;
+        if (!editor) { throw new Error("No editor attached"); }
         editor.undoLog.startGroup();
         editor.undoLog.perform(
             new BranchTargetChangeAction(target, this)

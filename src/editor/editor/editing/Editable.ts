@@ -32,9 +32,11 @@ export class Editable extends Elm<"span"> {
     }
 
     public setValue(value: string) {
-        if (!this.parentLine.parentInstruction.block.hasGroupEditor()) { return; }
+        const groupBlock = this.parentLine.parentBlock.getGroupEditor();
+        if (!groupBlock) { return; }
+        const group = groupBlock.editor;
         this.onChange.send(value);
-        this.parentLine.parentInstruction.block.getGroupEditor().parentEditor.undoLog.perform(
+        group.parentEditor.undoLog.perform(
             new EditableEditAction(this, value)
         );
     }
@@ -66,9 +68,9 @@ export class Editable extends Elm<"span"> {
     }
 
     public update() {
-        const block = this.parentLine.parentInstruction.block;
-        if (block.hasGroupEditor()) {
-            const cursor = block.getGroupEditor().parentEditor.cursor;
+        const group = this.parentLine.parentBlock.getGroupEditor();
+        if (group) {
+            const cursor = group.editor.parentEditor.cursor;
             if (cursor.activeEditable === this) {
                 const { start, end } = cursor.getPositions();
                 const before = this._value.slice(0, start!.char);

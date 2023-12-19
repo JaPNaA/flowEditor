@@ -26,7 +26,7 @@ export class VisualNovelRenderer implements PluginRenderer {
         let endY = 0;
         let lastContext: VNInstructionContext | undefined;
 
-        for (const instruction of group.block.getInstructions()) {
+        for (const instruction of group.block.instructionIter()) {
             const elm = instruction.block.getLine(0).elm.getHTMLElement();
             if (instruction instanceof VNContentInstrOneLine) {
                 if (lastContext) {

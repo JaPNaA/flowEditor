@@ -58,7 +58,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             if (!this.isEmpty) { return; }
             if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) { return; }
 
-            const blueprint = this.parentInstruction.block.getGroupEditor().parentEditor.blueprintRegistery
+            const blueprint = this.parentBlock.getGroupEditor()?.editor.parentEditor.blueprintRegistery
                 .getBlueprintByShortcut(event.code);
             if (blueprint) {
                 const instruction = blueprint.create();
@@ -69,17 +69,15 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.editable.parentLine = this;
     }
 
-    public _setParent(instruction: Instruction): void {
-        super._setParent(instruction);
-    }
-
     public splitGroupHere() {
-        const group = this.parentInstruction.block.getGroupEditor();
+        const groupBlock = this.parentBlock.getGroupEditor();
+        if (!groupBlock) { throw new Error("No editor attached"); }
+        const group = groupBlock.editor;
         group.parentEditor.undoLog.startGroup();
-        const index = (this.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex();
-        this.parentInstruction.removeLine(this);
+        const index = group.block.locateInstruction(this.parentBlock.instruction!);
+        this.parentBlock.parent?._removeBlock(this.parentBlock);
         const newGroup = group.splitAtInstruction(index);
-        if (newGroup.block.getInstructions().length === 0) {
+        if (newGroup.block.numInstructions === 0) {
             newGroup.requestNewLine(0);
         }
         group.parentEditor.cursor.update();
@@ -104,10 +102,13 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             }
         }
 
-        const group = this.parentInstruction.block.getGroupEditor();
+        const groupBlock = this.parentBlock.getGroupEditor();
+        if (!groupBlock) { throw new Error("Editor not attached"); }
+        const group = groupBlock.editor;
+
         group.parentEditor.undoLog.startGroup();
-        const currentLine = this.getCurrentLine();
-        const currentInstructionIndex = (this.parentInstruction.block as SingleInstructionBlock).locateInstructionIndex();
+        const currentLine = group.block.locateLine(this);
+        const currentInstructionIndex = groupBlock.locateInstruction(this.parentBlock.instruction!);
         const position = group.parentEditor.cursor.getPosition();
         group.requestRemoveLine(currentLine);
         group.insertInstruction(
@@ -129,7 +130,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 
     private splitAfterIfNeeded(group: InstructionGroupEditor, thisIndex: number, thisIsAlwaysJump: boolean) {
-        const nextInstruction = group.block.getInstructions()[thisIndex + 1];
+        const nextInstruction = group.block.getInstruction(thisIndex + 1);
 
         if (nextInstruction && (thisIsAlwaysJump || !nextInstruction.isBranch())) {
             group.splitAtInstruction(thisIndex + 1);
@@ -156,9 +157,9 @@ export class NewInstructionEditable extends Editable {
 
     public update() {
         super.update();
-        const block = this.parentLine.parentInstruction.block;
-        if (block.hasGroupEditor()) {
-            const cursor = block.getGroupEditor().parentEditor.cursor;
+        const group = this.parentLine.parentBlock.getGroupEditor();
+        if (group) {
+            const cursor = group.editor.parentEditor.cursor;
             if (cursor.activeEditable === this) {
                 if (!this.isActive) {
                     cursor.onKeydownIntercept.subscribe(this.intercepter);
