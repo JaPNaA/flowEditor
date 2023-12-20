@@ -537,7 +537,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public requestRemoveLine(lineIndex: number) {
         const line = this.block.getLine(lineIndex);
         if (!line) { return; }
-        return line.parentBlock.instruction?.removeLine(line);
+        return line.parentBlock.parentInstruction()?.removeLine(line);
     }
 
     /**

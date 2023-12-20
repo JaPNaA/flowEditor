@@ -272,18 +272,13 @@ export abstract class InstructionComposite extends Instruction {
         return true;
     }
 
-    // private insertInstruction(instruction: Instruction, index: number) {
-    //     const previousInstruction = this.childInstructions[index - 1];
-    //     this.childInstructions.splice(index, 0, instruction);
-    //     if (previousInstruction) {
-    //         const previousLines = previousInstruction.getLines();
-    //         this.lines.splice(previousLines[0].getCurrentLine(), 0, ...instruction.getLines());
-    //     } else {
-    //         for (const line of instruction.getLines()) {
-    //             this.lines.push(line);
-    //         }
-    //     }
-    // }
+    public removeLine(line: InstructionLine): boolean {
+        if (line == this.openingLine) {
+            this.block.parent?.removeBlock(this.block);
+            return true;
+        }
+        return false;
+    }
 
     protected abstract createNewInstruction(): Instruction;
 }

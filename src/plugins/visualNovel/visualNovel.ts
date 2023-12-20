@@ -929,8 +929,6 @@ class CreateGraphicInstruction extends InstructionComposite {
 
         this.graphicId = graphicControl.id;
 
-        console.log(graphicControl);
-
         let isEmpty = true;
         if (graphicControl.src) {
             this.block._appendBlock(new InstructionOneLine(
@@ -965,7 +963,6 @@ class CreateGraphicInstruction extends InstructionComposite {
     public serialize(): ControlGraphic {
         const graphic: ControlGraphic = { visualNovelCtrl: "graphic", id: this.graphicId };
         for (const block of this.block.children) {
-            console.log(block);
             const instruction = block.instruction;
             if (instruction) {
                 const items = instruction.serialize();
@@ -976,10 +973,6 @@ class CreateGraphicInstruction extends InstructionComposite {
             }
         }
         return graphic;
-    }
-
-    public removeLine(line: InstructionLine): boolean {
-        throw new Error("Method not implemented.");
     }
 
     protected createNewInstruction(): Instruction {
