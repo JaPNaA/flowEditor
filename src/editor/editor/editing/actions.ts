@@ -138,28 +138,26 @@ export class AddInstructionAction implements UndoableAction {
     constructor(public block: InstructionBlock, public relativeIndex: number, public parentBlock: CompositeInstructionBlock) { }
 
     public perform(): void {
-        const group = this.block.getGroupEditor();
-        const newBlock = this.block;
+        const group = this.parentBlock.getGroupEditor();
+        this.parentBlock._insertBlock(this.relativeIndex, this.block);
+
         if (group) {
-            const nextInstruction = group.children[
-                group.children.indexOf(this.parentBlock.children[this.relativeIndex])
-            ];
+            const nextLineIndex = group.locateLine(this.block.getLine(this.block.numLines - 1)) + 1;
 
             // insert into html
-            if (nextInstruction) {
-                const nextLine = nextInstruction.getLine(0);
-                const nextLineElm = nextLine.elm.getHTMLElement();
+            if (nextLineIndex < group.numLines) {
+                const nextLineElm = group.getLine(nextLineIndex).elm.getHTMLElement();
 
-                for (const line of newBlock.lineIter()) {
+                for (const line of this.block.lineIter()) {
                     group.editor.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
                 }
             } else {
-                for (const line of newBlock.lineIter()) {
+                for (const line of this.block.lineIter()) {
                     group.editor.elm.append(line);
                 }
             }
 
-            for (const line of newBlock.lineIter()) {
+            for (const line of this.block.lineIter()) {
                 group.editor._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
                 for (const editable of line.getEditables()) {
                     group.editor.parentEditor.cursor.autocomplete.enteredValue(editable);
@@ -169,7 +167,6 @@ export class AddInstructionAction implements UndoableAction {
             group.editor.updateHeight();
         }
 
-        this.parentBlock._insertBlock(this.relativeIndex, this.block);
     }
 
     public inverse(): RemoveInstructionAction {

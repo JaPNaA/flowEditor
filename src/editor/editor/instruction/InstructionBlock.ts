@@ -32,6 +32,9 @@ export interface InstructionBlock {
     /** Returns the index of a line inside this block. */
     locateLine(line: InstructionLine): number;
 
+    /** Traverse parents to find a parent with an associated instruction */
+    parentInstruction(): Instruction | undefined;
+
     /** Iterator through all lines. */
     lineIter(): Generator<InstructionLine>;
 }
@@ -70,6 +73,11 @@ export class SingleInstructionBlock implements InstructionBlock {
     public getGroupEditor(): InstructionGroupEditorBlock | undefined {
         if (!this.parent) { return; }
         return this.parent.getGroupEditor();
+    }
+
+    public parentInstruction(): Instruction | undefined {
+        if (this.instruction) { return this.instruction; }
+        return this.parent?.parentInstruction();
     }
 
     /** Insert a line. Only to be used by the owning Instruction class. */
@@ -136,7 +144,6 @@ export class CompositeInstructionBlock implements InstructionBlock {
         let curr: InstructionBlock | undefined = line.parentBlock;
         let index = curr.locateLine(line);
         while (curr.parent && curr !== this) {
-            if (!curr.instruction) { throw new Error("Not an instruction"); }
             const parentIndex = curr.parent.children.indexOf(curr);
             for (let i = 0; i < parentIndex; i++) {
                 index += curr.parent.children[i].numLines;
@@ -156,6 +163,11 @@ export class CompositeInstructionBlock implements InstructionBlock {
     public getGroupEditor(): InstructionGroupEditorBlock | undefined {
         if (!this.parent) { return; }
         return this.parent.getGroupEditor();
+    }
+
+    public parentInstruction(): Instruction | undefined {
+        if (this.instruction) { return this.instruction; }
+        return this.parent?.parentInstruction();
     }
 
     /** Performs an UndoableAction to insert a block */

@@ -250,6 +250,9 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
 class CompositeInstructionBlockWithOpeningLine extends CompositeInstructionBlock {
     constructor(public openingLine: InstructionLine, public instruction: Instruction) {
         super();
+        const openingBlock = new SingleInstructionBlock();
+        openingBlock._appendLine(openingLine);
+        this._appendBlock(openingBlock);
     }
 }
 
@@ -260,14 +263,11 @@ export abstract class InstructionComposite extends Instruction {
     constructor(protected openingLine: InstructionLine) {
         super();
         this.block = new CompositeInstructionBlockWithOpeningLine(this.openingLine, this);
-        openingLine.parentBlock = this.block;
     }
 
     public insertLine(index: number): boolean {
         console.log("Composite insert", index);
         const newInstruction = this.createNewInstruction();
-        const group = this.block.getGroupEditor();
-        if (!group) { throw new Error("No group editor"); }
         this.block.insertBlock(index, newInstruction.block);
         return true;
     }
