@@ -4,7 +4,7 @@ import { getAncestorWhich } from "../../utils";
 import { Editable } from "../editing/Editable";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { TextareaUserInputCaptureAreas } from "../editing/TextareaUserInputCapture";
-import { AddInstructionAction, BranchTargetChangeAction, RemoveInstructionAction } from "../editing/actions";
+import { BranchTargetChangeAction } from "../editing/actions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
 
 export abstract class Instruction {

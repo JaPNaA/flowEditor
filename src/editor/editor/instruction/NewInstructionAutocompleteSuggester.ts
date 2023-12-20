@@ -2,7 +2,7 @@ import { looseStartsWith } from "../../utils";
 import { Editable } from "../editing/Editable";
 import { AutoCompleteSuggester } from "../editing/AutoComplete";
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
-import { NewInstructionEditable } from "./NewInstruction";
+import { NewInstruction, NewInstructionEditable } from "./NewInstruction";
 
 export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggester {
     public static symbol = Symbol();
@@ -17,7 +17,10 @@ export class NewInstructionAutocompleteSuggester implements AutoCompleteSuggeste
         const value = editable.getValue();
         if (!value) { return null; } // don't show suggestions when empty
 
-        const instructions = this.blueprintRegistery.getAllBlueprints();
+        const registery = (editable.parentLine.parentBlock.instruction as NewInstruction).getBlueprintRegistery();
+        if (!registery) { return null; }
+
+        const instructions = registery.getAllBlueprints();
         const suggestions: [number, InstructionBlueprint][] = [];
 
         for (const instruction of instructions) {

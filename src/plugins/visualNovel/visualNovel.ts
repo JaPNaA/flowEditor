@@ -2,7 +2,7 @@ import { ControlItem } from "../../FlowRunner";
 import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEditor";
 import { globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete";
 import { Editable } from "../../editor/editor/editing/Editable";
-import { InstructionBlueprintMin } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
+import { InstructionBlueprintMin, InstructionBlueprintRegistery } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
 import { BranchInstructionLine, Instruction, InstructionComposite, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes";
 import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
@@ -11,7 +11,8 @@ import { VisualNovelAnalyser } from "./analyser";
 import { ControlAnimate, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
 import { VisualNovelExecuter } from "./executer";
 import { VisualNovelRenderer } from "./renderer";
-import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "../../editor/editor/instruction/InstructionBlock";
+import { SingleInstructionBlock } from "../../editor/editor/instruction/InstructionBlock";
+import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
@@ -886,7 +887,9 @@ class SetVariableStringInstruction extends InstructionLine implements OneLineIns
 }
 
 class CreateGraphicInstruction extends InstructionComposite {
-    instructionBlueprints: InstructionBlueprintMin[] = [{
+    private static instructionRegistery = new InstructionBlueprintRegistery();
+
+    private static instructionBlueprints: InstructionBlueprintMin[] = [{
         instructionName: "source",
         description: "Path to an image to use as the graphic's texture",
         shortcutKey: "KeyS",
@@ -913,8 +916,13 @@ class CreateGraphicInstruction extends InstructionComposite {
         create: () => new InstructionOneLine(new CreateGraphicSourceInstruction("path"))
     }];
 
+    static {
+        this.instructionRegistery.registerBlueprints(this.instructionBlueprints, "graphic");
+    }
+
     constructor(graphicControl: ControlGraphic) {
         super(new CreateGraphicLineOpening());
+        this.block._appendBlock(this.createNewInstruction().block);
     }
 
     public export(): any[] {
@@ -927,7 +935,9 @@ class CreateGraphicInstruction extends InstructionComposite {
         throw new Error("Method not implemented.");
     }
     protected createNewInstruction(): Instruction {
-        return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
+        // return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
+        const instruction = new NewInstruction(CreateGraphicInstruction.instructionRegistery);
+        return instruction;
     }
 }
 

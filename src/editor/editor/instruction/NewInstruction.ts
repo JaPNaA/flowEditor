@@ -3,13 +3,20 @@ import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } 
 import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture";
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
-import { InstructionBlueprint } from "./InstructionBlueprintRegistery";
+import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { EditorCursor } from "../editing/EditorCursor";
 
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
-    constructor() {
+    public getBlueprintRegistery: () => InstructionBlueprintRegistery | undefined;
+
+    constructor(blueprintRegistery?: InstructionBlueprintRegistery) {
         super(new NewInstructionLine());
+        if (blueprintRegistery) {
+            this.getBlueprintRegistery = () => blueprintRegistery;
+        } else {
+            this.getBlueprintRegistery = () => this.block.getGroupEditor()?.editor.parentEditor.blueprintRegistery;
+        }
     }
 
     public insertLine(_lineIndex: number): boolean {
@@ -57,8 +64,8 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             if (!this.isEmpty) { return; }
             if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) { return; }
 
-            const blueprint = this.parentBlock.getGroupEditor()?.editor.parentEditor.blueprintRegistery
-                .getBlueprintByShortcut(event.code);
+            const blueprint = (this.parentBlock.instruction as NewInstruction)
+                .getBlueprintRegistery()?.getBlueprintByShortcut(event.code);
             if (blueprint) {
                 const instruction = blueprint.create();
                 this.changeView(instruction);

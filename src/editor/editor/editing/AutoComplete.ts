@@ -1,7 +1,6 @@
 import { JaPNaAEngine2d, Vec2M } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { looseStartsWith } from "../../utils";
-import { SingleInstructionBlock } from "../instruction/InstructionBlock";
 import { Editable } from "./Editable";
 import { EditorCursor } from "./EditorCursor";
 
