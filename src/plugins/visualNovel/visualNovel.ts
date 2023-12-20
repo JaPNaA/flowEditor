@@ -121,8 +121,8 @@ export default class VisualNovelPlugin implements EditorPlugin {
         instructionName: "create graphic",
         description: "Create an image or shape that can be displayed",
         create: () => new CreateGraphicInstruction({
-            visualNovelCtrl: "graphic",
-            id: 0
+            params: [],
+            name: "unnamed graphic"
         })
     }];
     executer = new VisualNovelExecuter();
@@ -888,7 +888,7 @@ class SetVariableStringInstruction extends InstructionLine implements OneLineIns
     }
 }
 
-class CreateGraphicInstruction extends InstructionComposite {
+class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpening> {
     private static instructionRegistery = new InstructionBlueprintRegistery();
 
     private static instructionBlueprints: InstructionBlueprintMin[] = [{
@@ -910,7 +910,7 @@ class CreateGraphicInstruction extends InstructionComposite {
         instructionName: "outline",
         description: "Outline or stroke of the shape specified by clip",
         shortcutKey: "KeyO",
-        create: () => new InstructionOneLine(new CreateGraphicOutlineInstruction("000", 1))
+        create: () => new InstructionOneLine(new CreateGraphicOutlineInstruction("#000 1"))
     }, {
         instructionName: "parent graphic",
         description: "Parent graphic. If the parent graphic moves, this graphic will follow",
@@ -922,57 +922,54 @@ class CreateGraphicInstruction extends InstructionComposite {
         this.instructionRegistery.registerBlueprints(this.instructionBlueprints, "graphic");
     }
 
-    private graphicId;
+    public graphicId = 0;
 
-    constructor(graphicControl: ControlGraphic) {
-        super(new CreateGraphicLineOpening());
+    constructor(data: any) {
+        super(new CreateGraphicLineOpening(data.name || "unnamed graphic"));
 
-        this.graphicId = graphicControl.id;
-
-        let isEmpty = true;
-        if (graphicControl.src) {
-            this.block._appendBlock(new InstructionOneLine(
-                new CreateGraphicSourceInstruction(graphicControl.src)).block);
-            isEmpty = false;
-        }
-        if (graphicControl.points) {
-            this.block._appendBlock(new InstructionOneLine(
-                new CreateGraphicClipInstruction(graphicControl.points)).block);
-            isEmpty = false;
-        }
-        if (graphicControl.fill) {
-            this.block._appendBlock(new InstructionOneLine(
-                new CreateGraphicFillInstruction(graphicControl.fill)).block);
-            isEmpty = false;
-        }
-        if (graphicControl.stroke || graphicControl.strokeWidth) {
-            this.block._appendBlock(new InstructionOneLine(
-                new CreateGraphicOutlineInstruction(graphicControl.stroke, graphicControl.strokeWidth)).block);
-            isEmpty = false;
-        }
-
-        if (isEmpty) {
-            this.block._appendBlock(this.createNewInstruction().block);
+        for (const [key, val] of data.params) {
+            let line: CreateGraphicSubInstruction;
+            switch (key) {
+                case "src":
+                    line = new CreateGraphicSourceInstruction(val);
+                    break;
+                case "points":
+                    line = new CreateGraphicClipInstruction(val);
+                    break;
+                case "fill":
+                    line = new CreateGraphicFillInstruction(val);
+                    break;
+                case "stroke":
+                    line = new CreateGraphicOutlineInstruction(val);
+                    break;
+                default:
+                    continue;
+            }
+            this.block._appendBlock(new InstructionOneLine(line).block);
         }
     }
 
     public export(): ControlGraphic[] {
-        return [this.serialize()];
-    }
-
-    public serialize(): ControlGraphic {
         const graphic: ControlGraphic = { visualNovelCtrl: "graphic", id: this.graphicId };
         for (const block of this.block.children) {
             const instruction = block.instruction;
             if (instruction) {
-                const items = instruction.serialize();
+                const items = instruction.export();
                 for (const [key, val] of items) {
                     // @ts-ignore
                     graphic[key] = val;
                 }
             }
         }
-        return graphic;
+        return [graphic];
+    }
+
+    public serialize(): any {
+        return {
+            visualNovelCtrl: "graphic",
+            name: this.openingLine.editable.getValue(),
+            params: this.block.children.map(x => x.instruction?.serialize()).filter(x => x)
+        };
     }
 
     protected createNewInstruction(): Instruction {
@@ -984,9 +981,11 @@ class CreateGraphicInstruction extends InstructionComposite {
 
 
 class CreateGraphicLineOpening extends InstructionLine {
-    constructor() {
+    public editable: Editable;
+
+    constructor(name: string) {
         super();
-        this.setAreas("Create Graphic", this.createEditable(""));
+        this.setAreas("Create Graphic: ", this.editable = this.createEditable(name));
         this.elm.class("control");
     }
 }
@@ -994,7 +993,10 @@ class CreateGraphicLineOpening extends InstructionLine {
 abstract class CreateGraphicSubInstruction extends InstructionLine implements OneLineInstruction {
     isBranch: boolean = false;
 
-    abstract serialize(): [keyof ControlGraphic, any][];
+    public abstract serialize(): [keyof ControlGraphic, any];
+    public export(): [keyof ControlGraphic, any][] {
+        return [this.serialize()];
+    }
 }
 
 class CreateGraphicSourceInstruction extends CreateGraphicSubInstruction {
@@ -1009,8 +1011,8 @@ class CreateGraphicSourceInstruction extends CreateGraphicSubInstruction {
         this.elm.class("control");
     }
 
-    serialize(): ["src", string][] {
-        return [["src", this.editable.getValue()]];
+    public serialize(): ["src", string] {
+        return ["src", this.editable.getValue()];
     }
 }
 
@@ -1034,9 +1036,9 @@ class CreateGraphicClipInstruction extends CreateGraphicSubInstruction {
         this.elm.class("control");
     }
 
-    serialize(): ["points", number[]][] {
+    public serialize(): ["points", number[]] {
         const vals = this.editable.getValue().split(/[^\d.]+/).map(str => parseFloat(str)).filter(x => !isNaN(x));
-        return [["points", vals]];
+        return ["points", vals];
     }
 }
 
@@ -1052,12 +1054,12 @@ class CreateGraphicFillInstruction extends CreateGraphicSubInstruction {
         this.elm.class("control");
     }
 
-    serialize(): ["fill", string][] {
+    public serialize(): ["fill", string] {
         let val = this.editable.getValue();
         if (val.startsWith("#")) {
             val = val.slice(1);
         }
-        return [["fill", val]];
+        return ["fill", val];
     }
 }
 
@@ -1065,16 +1067,15 @@ class CreateGraphicOutlineInstruction extends CreateGraphicSubInstruction {
     isBranch: boolean = false;
     private editable: Editable;
 
-    constructor(stroke?: string, strokeWidth?: number) {
+    constructor(val: string) {
         super();
         this.setAreas(
-            "  outline: ", this.editable = this.createEditable(
-                stroke ? ("#" + stroke + (strokeWidth ? " " + strokeWidth : "")) : "transparent")
+            "  outline: ", this.editable = this.createEditable(val)
         );
         this.elm.class("control");
     }
 
-    serialize(): ["stroke" | "strokeWidth", any][] {
+    public export(): ["stroke" | "strokeWidth", any][] {
         const str = this.editable.getValue();
         const parts = str.split(/\s+/);
         const output: ["stroke" | "strokeWidth", any][] = [];
@@ -1090,25 +1091,29 @@ class CreateGraphicOutlineInstruction extends CreateGraphicSubInstruction {
         }
         return output;
     }
+
+    public serialize(): ["stroke", any] {
+        return ["stroke", this.editable.getValue()];
+    }
 }
 
-class AnimateInstruction extends InstructionComposite {
-    constructor(animateControl: ControlAnimate) {
-        super(new AnimateLineOpening());
-    }
-    public export(): any[] {
-        throw new Error("Method not implemented.");
-    }
-    public serialize() {
-        throw new Error("Method not implemented.");
-    }
-    public removeLine(line: InstructionLine): boolean {
-        throw new Error("Method not implemented.");
-    }
-    protected createNewInstruction(): Instruction {
-        return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
-    }
-}
+// class AnimateInstruction extends InstructionComposite {
+//     constructor(animateControl: ControlAnimate) {
+//         super(new AnimateLineOpening());
+//     }
+//     public export(): any[] {
+//         throw new Error("Method not implemented.");
+//     }
+//     public serialize() {
+//         throw new Error("Method not implemented.");
+//     }
+//     public removeLine(line: InstructionLine): boolean {
+//         throw new Error("Method not implemented.");
+//     }
+//     protected createNewInstruction(): Instruction {
+//         return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
+//     }
+// }
 
 /*
 Example:

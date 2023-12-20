@@ -247,8 +247,8 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
     }
 }
 
-class CompositeInstructionBlockWithOpeningLine extends CompositeInstructionBlock {
-    constructor(public openingLine: InstructionLine, public instruction: Instruction) {
+class CompositeInstructionBlockWithOpeningLine<T extends InstructionLine> extends CompositeInstructionBlock {
+    constructor(public openingLine: T, public instruction: Instruction) {
         super();
         const openingBlock = new SingleInstructionBlock();
         openingBlock._appendLine(openingLine);
@@ -256,11 +256,11 @@ class CompositeInstructionBlockWithOpeningLine extends CompositeInstructionBlock
     }
 }
 
-export abstract class InstructionComposite extends Instruction {
-    public block: CompositeInstructionBlockWithOpeningLine;
+export abstract class InstructionComposite<T extends InstructionLine> extends Instruction {
+    public block: CompositeInstructionBlockWithOpeningLine<T>;
     public childInstructions: Instruction[] = [];
 
-    constructor(protected openingLine: InstructionLine) {
+    constructor(protected openingLine: T) {
         super();
         this.block = new CompositeInstructionBlockWithOpeningLine(this.openingLine, this);
     }
