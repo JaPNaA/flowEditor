@@ -76,7 +76,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         const index = group.block.children.indexOf(this.parentBlock);
         this.parentBlock.parent?._removeBlock(this.parentBlock);
         const newGroup = group.splitAtInstruction(index);
-        if (newGroup.block.numInstructions === 0) {
+        if (newGroup.block.children.length === 0) {
             newGroup.requestNewLine(0);
         }
         group.parentEditor.cursor.update();

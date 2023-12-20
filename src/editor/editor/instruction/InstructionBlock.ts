@@ -19,8 +19,6 @@ export interface InstructionBlock {
     children?: InstructionBlock[];
     /** Total number of lines in this block */
     numLines: number;
-    /** Total number of instructions in this block */
-    numInstructions: number;
     /** The instruction associated with the block */
     instruction?: Instruction;
 
@@ -44,7 +42,6 @@ export class SingleInstructionBlock implements InstructionBlock {
     public parent?: CompositeInstructionBlock | undefined;
     private lines: InstructionLine[] = [];
     public numLines: number = 0;
-    public numInstructions: number = 1;
 
     constructor(public instruction?: Instruction) { }
 
@@ -124,7 +121,6 @@ export class CompositeInstructionBlock implements InstructionBlock {
     public parent?: CompositeInstructionBlock | undefined;
     public children: InstructionBlock[] = [];
     public numLines: number = 0;
-    public numInstructions: number = 0;
 
     constructor(public instruction?: Instruction | undefined) { }
 

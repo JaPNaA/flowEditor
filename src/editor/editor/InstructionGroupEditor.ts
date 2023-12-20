@@ -450,13 +450,13 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
      */
     public splitAtInstruction(instructionIndex: number) {
         const movingInstructions = [];
-        const numMoving = this.block.numInstructions - instructionIndex;
+        const numMoving = this.block.children.length - instructionIndex;
 
         this.parentEditor.undoLog.startGroup();
 
         for (let i = 0; i < numMoving; i++) {
-            const instruction = this.block.children[this.block.numInstructions - 1];
-            this.block.removeBlock(this.block.numInstructions - 1);
+            const instruction = this.block.children[this.block.children.length - 1];
+            this.block.removeBlock(this.block.children.length - 1);
             movingInstructions.push(instruction);
         }
         movingInstructions.reverse();
@@ -478,7 +478,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
 
         // add link from this to new group
-        const lastInstruction = this.block.children[this.block.numInstructions - 1].instruction;
+        const lastInstruction = this.block.children[this.block.children.length - 1].instruction;
         if (lastInstruction && lastInstruction.isAlwaysJump()) {
             const targets = lastInstruction.getBranchTargets();
             const newTargets = [];

@@ -164,7 +164,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
     }
 
     private getGroupEnd(group: InstructionGroupEditor) {
-        return this.getContextAt(group, group.block.numInstructions - 1);
+        return this.getContextAt(group, group.block.children.length - 1);
     }
 
     private getContextAt(group: InstructionGroupEditor, index: number) {
@@ -180,7 +180,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
     }
 
     private propagateContext(group: InstructionGroupEditor, startIndex: number, context: Context | undefined) {
-        for (let i = startIndex; i < group.block.numInstructions; i++) {
+        for (let i = startIndex; i < group.block.children.length; i++) {
             const instruction = group.block.children[i];
             if (instruction instanceof VNContentInstrOneLine) {
                 if (
