@@ -4,33 +4,15 @@ import { BezierEasingCurve } from "./BezierEasingCurve";
 import { VNGraphic } from "./GraphicDisplayer";
 
 export class AnimationPlayer extends WorldElm {
-    private animations: Animation[] = [];
-
     constructor() { super(); }
 
     public addAnimation(graphic: VNGraphic, control: ControlAnimate) {
-        this.animations.push(new Animation(graphic, control));
+        graphic.animations.push(new VNAnimation(graphic, control));
         this.engine.ticker.requestTick();
-    }
-
-    public tick() {
-        const milliseconds = this.engine.ticker.timeElapsed;
-        for (const animation of this.animations) {
-            animation.step(milliseconds);
-        }
-        for (let i = this.animations.length - 1; i >= 0; i--) {
-            if (this.animations[i].done) {
-                this.animations.splice(i, 1);
-            }
-        }
-
-        if (this.animations.length > 0) {
-            this.engine.ticker.requestTick();
-        }
     }
 }
 
-class Animation {
+export class VNAnimation {
     public done = false;
 
     private length: number;

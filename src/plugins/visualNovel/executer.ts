@@ -82,13 +82,13 @@ export class VisualNovelExecuter implements PluginExecuter {
             case "text":
                 this.game.text(data);
                 return true;
-            // case "choose":
-            //     if (data.options) {
-            //         this.game.showChoices(data.options.map(v => visualNovelMdToHTML(v, this.getVariable)));
-            //     } else {
-            //         this.game.hideChoices();
-            //     }
-            //     return true;
+            case "choose":
+                if (data.options) {
+                    this.game.setChoices(data.options);
+                } else {
+                    this.game.unsetChoices();
+                }
+                return true;
             case "speechBubbleSettings":
                 this.game.setSpeechBubbleSettings(data);
                 return true;

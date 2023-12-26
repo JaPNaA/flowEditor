@@ -67,15 +67,15 @@ export default class VisualNovelPlugin implements EditorPlugin {
         description: "Sets the position of the speech bubble",
         create: () => new VNContentInstrOneLine(new SetSpeechBubblePositionInstruction(50, 100))
     }, {
-        //     instructionName: "choose",
-        //     description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
-        //     shortcutKey: "KeyC",
-        //     create: () => new VNContentInstrOneLine(new ChooseInstruction({
-        //         visualNovelCtrl: "choose",
-        //         variable: "choice",
-        //         options: ['a', 'b']
-        //     })),
-        // }, {
+        instructionName: "choose",
+        description: "Displays buttons that allow the player to make a choice. The choice is stored in a variable",
+        shortcutKey: "KeyC",
+        create: () => new VNContentInstrOneLine(new ChooseInstruction({
+            visualNovelCtrl: "choose",
+            variable: "choice",
+            options: ['a', 'b']
+        })),
+    }, {
         instructionName: "wait",
         description: "Do nothing for a specified amount of time",
         shortcutKey: "KeyW",
@@ -153,8 +153,8 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 return new CreateGraphicInstruction(data);
             // case "show":
             //     return new VNContentInstrOneLine(new ShowInstruction(data));
-            // case "choose":
-            //     return new VNContentInstrOneLine(new ChooseInstruction(data));
+            case "choose":
+                return new VNContentInstrOneLine(new ChooseInstruction(data));
             case "choiceBranch":
                 return new ChoiceBranchMacro(data.choices);
             case "background":
@@ -669,46 +669,78 @@ class SFXVolumeInstruction extends InstructionLine implements OneLineInstruction
     }
 }
 
-// class ChooseInstruction extends InstructionLine implements OneLineInstruction {
-//     private variableSpan: Editable;
-//     private choicesSpan: Editable;
-//     public isBranch: boolean = false;
+class ChooseInstruction extends InstructionLine implements OneLineInstruction {
+    private variableSpan: Editable;
+    private choicesSpan: Editable;
+    public isBranch: boolean = false;
 
-//     constructor(data: any) {
-//         super();
+    constructor(data: any) {
+        super();
 
-//         this.setAreas(
-//             this.variableSpan = this.createEditable(data.variable),
-//             ' <- choose from [',
-//             this.choicesSpan = this.createEditable(data.options.join(", ")),
-//             ']'
-//         );
-//         this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
-//         this.elm.class("control");
-//     }
+        this.setAreas(
+            this.variableSpan = this.createEditable(data.variable),
+            ' <- choose from [',
+            this.choicesSpan = this.createEditable(data.options.join(", ")),
+            ']'
+        );
+        this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
+        this.elm.class("control");
+    }
 
-//     public serialize(): any {
-//         return {
-//             visualNovelCtrl: "choose",
-//             options: this.choicesSpan.getValue().split(",").map(e => e.trim()),
-//             variable: this.variableSpan.getValue()
-//         };
-//     }
+    public serialize(): any {
+        return {
+            visualNovelCtrl: "choose",
+            options: this.choicesSpan.getValue().split(",").map(e => e.trim()),
+            variable: this.variableSpan.getValue()
+        };
+    }
 
-//     public export(): (VisualNovelControlItem | ControlItem)[] {
-//         const options = this.choicesSpan.getValue().split(",").map(e => e.trim());
-//         return [{ // show options
-//             visualNovelCtrl: "choose",
-//             options: options
-//         }, { // get input
-//             ctrl: "input",
-//             options: options,
-//             variable: this.variableSpan.getValue()
-//         }, { // hide options
-//             visualNovelCtrl: "choose"
-//         }]
-//     }
-// }
+    public export(): (VisualNovelControlItem | ControlItem)[] {
+        const options = this.choicesSpan.getValue().split(",").map(e => e.trim());
+        return [
+            { // create choice graphics (temporary)
+                visualNovelCtrl: "graphic",
+                id: 11,
+                fill: "f00",
+                points: [100, 15],
+            },
+            { // create choice graphics (temporary)
+                visualNovelCtrl: "graphic",
+                id: 12,
+                fill: "f00",
+                points: [100, 15],
+            },
+            { // position choice graphics (temporary)
+                visualNovelCtrl: "animate",
+                length: 0,
+                id: 11,
+                events: [
+                    [0, { key: "scale", to: { scale: 0.6 } }],
+                    [0, { key: "pos", to: [50, 10] }]
+                ]
+            },
+            { // position choice graphics (temporary)
+                visualNovelCtrl: "animate",
+                length: 0,
+                id: 12,
+                events: [
+                    [0, { key: "scale", to: { scale: 0.6 } }],
+                    [0, { key: "pos", to: [50, 30] }]
+                ]
+            },
+            { // show options
+                visualNovelCtrl: "choose",
+                options: [11, 12]
+            }, { // get input
+                ctrl: "input",
+                options: options,
+                variable: this.variableSpan.getValue()
+            }, { // hide options
+                visualNovelCtrl: "choose"
+            }
+        ]
+    }
+}
 
 class ChoiceBranchMacro extends Instruction {
     public block: SingleInstructionBlock = new SingleInstructionBlock(this);

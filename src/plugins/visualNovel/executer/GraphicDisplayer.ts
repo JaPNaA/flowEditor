@@ -1,27 +1,30 @@
 import { FileStructureRead } from "../../../filesystem/FileStructure";
 import { WorldElm, WorldElmWithComponents, Vec2, Vec2M, ParentComponent, RectangleM } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { AnimationFilter, ControlGraphic, ControlText } from "../controls";
+import { VNAnimation } from "./AnimationPlayer";
 import { TextBox } from "./TextBox";
+import { VisualNovelGame } from "./VisualNovelGame";
 
 export class GraphicDisplayer extends WorldElmWithComponents {
     public project!: FileStructureRead;
 
     private children = this.addComponent(new ParentComponent());
-    private graphics: (VNGraphic | undefined)[] = [undefined];
+
+    constructor(private game: VisualNovelGame) { super(); }
 
     public graphic(graphic: ControlGraphic) {
-        const previousGraphic = this.graphics[graphic.id];
+        const previousGraphic = this.game.graphics[graphic.id];
         if (previousGraphic) {
             this.children.removeChild(previousGraphic);
         }
         const newGraphic = new VNGraphic(graphic, this.project);
-        this.graphics[graphic.id] = newGraphic;
+        this.game.graphics[graphic.id] = newGraphic;
         this.children.addChild(newGraphic);
         this.engine.ticker.requestTick();
     }
 
     public text(text: ControlText) {
-        const graphic = this.graphics[text.id];
+        const graphic = this.game.graphics[text.id];
         if (!graphic) { throw new Error("No graphic exists with id"); }
         if (graphic.attachedText) {
             graphic.attachedText.write("", text.text);
@@ -35,7 +38,7 @@ export class GraphicDisplayer extends WorldElmWithComponents {
     }
 
     public getGraphic(id: number) {
-        const graphic = this.graphics[id];
+        const graphic = this.game.graphics[id];
         if (!graphic) { throw new Error("No graphic with id " + id); }
         return graphic;
     }
@@ -43,6 +46,8 @@ export class GraphicDisplayer extends WorldElmWithComponents {
 
 export class VNGraphic extends WorldElm {
     public id: number;
+
+    public animations: VNAnimation[] = [];
 
     /* What the graphic looks like */
     private textureSrc?: string;
@@ -73,7 +78,6 @@ export class VNGraphic extends WorldElm {
     private pointsWidth = 0;
     private pointsMinY = 0;
     private pointsHeight = 0;
-    public renderedBoundingBox = new RectangleM(0, 0, 0, 0);
 
     constructor(graphic: ControlGraphic, private project: FileStructureRead) {
         super();
@@ -121,6 +125,60 @@ export class VNGraphic extends WorldElm {
         }
 
         this.updatePointLimits();
+    }
+
+    private stepAnimations() {
+        const milliseconds = this.engine.ticker.timeElapsed;
+        for (const animation of this.animations) {
+            animation.step(milliseconds);
+        }
+        for (let i = this.animations.length - 1; i >= 0; i--) {
+            if (this.animations[i].done) {
+                this.animations.splice(i, 1);
+            }
+        }
+
+        if (this.animations.length > 0) {
+            this.engine.ticker.requestTick();
+        }
+    }
+
+    public tick(): void {
+        this.stepAnimations();
+
+        // scale graphic
+        let scale;
+        if (this.pointsWidth !== 0 && this.pointsHeight !== 0) {
+            const screenRatio = this.engine.sizer.width / this.engine.sizer.height;
+            const imageRatio = this.pointsWidth / this.pointsHeight;
+            if (screenRatio > imageRatio === (this.scaleBase === "fit")) {
+                // match height
+                scale = this.engine.sizer.height / this.pointsHeight;
+            } else {
+                // match width
+                scale = this.engine.sizer.width / this.pointsWidth;
+            }
+        } else {
+            scale = 1;
+        }
+
+        // translate graphic
+        const positionAnchor = this.positionAnchor || this.position;
+        const transformAnchor = this.transformAnchor || positionAnchor;
+        const xScreen = this.position.x * this.engine.sizer.width - (positionAnchor.x * this.pointsWidth + this.pointsMinX) * scale;
+        const yScreen = this.position.y * this.engine.sizer.height - (positionAnchor.y * this.pointsHeight + this.pointsMinY) * scale;
+
+        // apply transformations
+        const xObjTransformAnchor = transformAnchor.x * this.pointsWidth;
+        const yObjTransformAnchor = transformAnchor.y * this.pointsHeight;
+        scale *= this.scale;
+
+        this.rect.x = xScreen - (scale - scale / this.scale) * xObjTransformAnchor;
+        this.rect.y = yScreen - (scale - scale / this.scale) * yObjTransformAnchor;
+        this.rect.width = this.pointsWidth * scale;
+        this.rect.height = this.pointsHeight * scale;
+
+        this.attachedText?.updateRect();
     }
 
     public draw() {
@@ -171,10 +229,6 @@ export class VNGraphic extends WorldElm {
         // draw graphic
         X.beginPath();
 
-        this.renderedBoundingBox.x = xScreen - (scale - scale / this.scale) * xObjTransformAnchor;
-        this.renderedBoundingBox.y = yScreen - (scale - scale / this.scale) * yObjTransformAnchor;
-        this.renderedBoundingBox.width = this.pointsWidth * scale;
-        this.renderedBoundingBox.height = this.pointsHeight * scale;
         if (this.points) {
             X.moveTo(this.points[0] * pointScale, this.points[1] * pointScale);
             for (let i = 2; i < this.points.length; i += 2) {
@@ -199,7 +253,6 @@ export class VNGraphic extends WorldElm {
         }
 
         X.restore();
-        this.attachedText?.updateRect();
     }
 
     private async setTexture(src: string) {

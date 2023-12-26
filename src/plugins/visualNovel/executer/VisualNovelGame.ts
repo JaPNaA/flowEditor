@@ -13,15 +13,15 @@ export class VisualNovelGame {
     public onContinue = new EventBus<MouseEvent>();
     private engine: JaPNaAEngine2d;
 
-    private graphicDisplayer = new GraphicDisplayer();
+    private graphicDisplayer = new GraphicDisplayer(this);
     private animationPlayer = new AnimationPlayer();
     private chooser = new Chooser();
     private audio = new AudioPlayer();
     private project!: FileStructureRead;
 
-    private strings: (string | undefined)[] = [undefined];
-    private graphics: (VNGraphic | undefined)[] = [undefined];
-    private arrangements: (VNArrangement | undefined)[] = [undefined];
+    public strings: (string | undefined)[] = [undefined];
+    public graphics: (VNGraphic | undefined)[] = [undefined];
+    public arrangements: (VNArrangement | undefined)[] = [undefined];
 
     constructor(parentElm: HTMLElement, private executer: Executer) {
         this.engine = new JaPNaAEngine2d({
@@ -66,11 +66,11 @@ export class VisualNovelGame {
         // }
     }
 
-    public showChoices(choices: string[]) {
-        this.chooser.showChoices(choices);
+    public setChoices(choices: number[]) {
+        this.chooser.showChoices(choices.map(i => this.graphics[i]));
     }
 
-    public hideChoices() {
+    public unsetChoices() {
         this.chooser.clear();
     }
 
