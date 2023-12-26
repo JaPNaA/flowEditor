@@ -81,7 +81,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         const group = groupBlock.editor;
         group.parentEditor.undoLog.startGroup();
         const index = group.block.children.indexOf(this.parentBlock);
-        this.parentBlock.parent?._removeBlock(this.parentBlock);
+        this.parentBlock.parent?.removeBlock(this.parentBlock);
         const newGroup = group.splitAtInstruction(index);
         if (newGroup.block.children.length === 0) {
             newGroup.requestNewLine(0);
@@ -118,7 +118,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         const currentLine = parentBlock.locateLine(this);
         const currentInstructionIndex = parentBlock.children.indexOf(this.parentBlock);
         const position = group.parentEditor.cursor.getPosition();
-        parentBlock.removeBlock(currentLine);
+        parentBlock.removeBlock(currentInstructionIndex);
         parentBlock.insertBlock(currentInstructionIndex, instruction.block);
 
         if (instruction.isBranch() && parentBlock == groupBlock) {
