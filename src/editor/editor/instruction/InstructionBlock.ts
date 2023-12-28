@@ -90,7 +90,7 @@ export class SingleInstructionBlock implements InstructionBlock {
 
         const group = this.getGroupEditor();
         if (group) {
-            group.editor._insertInstructionLine(group.locateLine(line), line);
+            group.editor._insertInstructionLine(group.locateLine(line) + 1, line);
         }
     }
 

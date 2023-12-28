@@ -817,14 +817,13 @@ class ChoiceBranchMacro extends Instruction {
         const group = this.block.getGroupEditor();
         if (!group) { return false; }
 
-        const choiceNumber = index - group.locateLine(this.openingLine) - 1;
+        const choiceNumber = index - 1;
         if (choiceNumber < 0) { return false; }
         if (choiceNumber > this.choiceLines.length) { return false; }
         const newLine = new ChoiceBranchMacroLineOption("");
         newLine._setParent(this.block);
         this.choiceLines.splice(choiceNumber, 0, newLine);
-        this.block._insertLine(index + 1, newLine);
-        group.editor._insertInstructionLine(index, newLine);
+        this.block._insertLine(index, newLine);
         return true;
     }
 
