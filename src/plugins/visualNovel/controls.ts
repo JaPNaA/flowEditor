@@ -151,23 +151,23 @@ interface BaseVisualNovelAnimationEvent<T> {
     easing?: BezierEasingCurve;
 }
 
-interface AnimationEventPosition extends BaseVisualNovelAnimationEvent<[number, number]> {
+export interface AnimationEventPosition extends BaseVisualNovelAnimationEvent<[number, number]> {
     key: "pos";
 }
 
-interface AnimationEventPositionAnchor extends BaseVisualNovelAnimationEvent<[number, number]> {
+export interface AnimationEventPositionAnchor extends BaseVisualNovelAnimationEvent<[number, number]> {
     key: "posAnchor";
 }
 
-interface AnimationEventTransformAnchor extends BaseVisualNovelAnimationEvent<[number, number]> {
+export interface AnimationEventTransformAnchor extends BaseVisualNovelAnimationEvent<[number, number]> {
     key: "transformAnchor";
 }
 
-interface AnimationEventRotation extends BaseVisualNovelAnimationEvent<number> {
+export interface AnimationEventRotation extends BaseVisualNovelAnimationEvent<number> {
     key: "rotation";
 }
 
-interface AnimationEventScale extends BaseVisualNovelAnimationEvent<{
+export interface AnimationEventScale extends BaseVisualNovelAnimationEvent<{
     /**
      * Fit (default) - when scale: 1, the entire graphic fits in the screen.
      * Cover - when scale: 1, the graphic covers the entire screen.

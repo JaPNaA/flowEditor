@@ -8,7 +8,7 @@ import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../../editor/EditorPlugin";
 import { VisualNovelAnalyser } from "./analyser";
-import { ControlAnimate, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelControlItem } from "./controls";
+import { AnimationEventPosition, ControlAnimate, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelAnimationEvent, VisualNovelControlItem } from "./controls";
 import { VisualNovelExecuter } from "./executer";
 import { VisualNovelRenderer } from "./renderer";
 import { SingleInstructionBlock } from "../../editor/editor/instruction/InstructionBlock";
@@ -30,7 +30,6 @@ export default class VisualNovelPlugin implements EditorPlugin {
     }, {
         instructionName: "say-add",
         description: "Add more text to the previous 'say' or 'display' command",
-        shortcutKey: "KeyA",
         create: () => new VNContentInstrOneLine(new SayAddInstruction("")),
     }, {
         instructionName: "display",
@@ -115,6 +114,16 @@ export default class VisualNovelPlugin implements EditorPlugin {
         create: () => new CreateGraphicInstruction({
             params: [],
             name: "unnamed graphic"
+        })
+    }, {
+        instructionName: "animate",
+        description: "Animate movement of a graphic",
+        shortcutKey: "KeyA",
+        create: () => new AnimateInstruction({
+            visualNovelCtrl: "animate",
+            id: 0,
+            length: 0,
+            events: []
         })
     }];
     executer = new VisualNovelExecuter();
@@ -1120,53 +1129,114 @@ class CreateGraphicOutlineInstruction extends CreateGraphicSubInstruction {
     }
 }
 
-// class AnimateInstruction extends InstructionComposite {
-//     constructor(animateControl: ControlAnimate) {
-//         super(new AnimateLineOpening());
-//     }
-//     public export(): any[] {
-//         throw new Error("Method not implemented.");
-//     }
-//     public serialize() {
-//         throw new Error("Method not implemented.");
-//     }
-//     public removeLine(line: InstructionLine): boolean {
-//         throw new Error("Method not implemented.");
-//     }
-//     protected createNewInstruction(): Instruction {
-//         return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
-//     }
-// }
+class AnimateInstruction extends InstructionComposite<AnimateLineOpening> {
+    private static registery = new InstructionBlueprintRegistery();
+    private static blueprints: InstructionBlueprintMin[] = [{
+        instructionName: "position",
+        shortcutKey: "KeyP",
+        create: () => new InstructionOneLine(new AnimatePosEventLine(0, {
+            key: "pos",
+            to: [50, 50],
+        }))
+    }];
 
-/*
-Example:
+    static {
+        this.registery.registerBlueprints(this.blueprints, "animate");
+    }
 
-Animate
-  0s: posAnchor to (0, 0) from (50, 50) for 1s
-  1s: posAnchor to (50, 50) for 1s
-  2s: scale to 0.5 fit for 1s
-*/
-class AnimateLineOpening extends InstructionLine {
-    constructor() {
-        super();
-        this.setAreas("Animate", this.createEditable(""));
-        this.elm.class("control");
+    constructor(animateControl: ControlAnimate) {
+        super(new AnimateLineOpening());
+    }
+
+    public export(): any[] {
+        return [this.serialize()];
+    }
+
+    public serialize(): ControlAnimate {
+        const events: [number, VisualNovelAnimationEvent][] = [];
+        for (const child of this.block.children) {
+            if (child.instruction) {
+                const result = child.instruction.export();
+                for (const x of result) { events.push(x); }
+            }
+        }
+        return {
+            visualNovelCtrl: "animate",
+            id: this.openingLine.getId(),
+            length: this.openingLine.getLength(),
+            events
+        };
+    }
+
+    protected createNewInstruction(): Instruction {
+        return new NewInstruction(AnimateInstruction.registery);
     }
 }
 
-class AnimatePosEventLine extends InstructionLine {
+class AnimateLineOpening extends InstructionLine {
+    public idEditable: Editable;
+    public lengthEditable: Editable;
+
     constructor() {
         super();
         this.setAreas(
-            this.createEditable(0),
-            "s: pos to",
-            "(", this.createEditable(50),
-            ", ",
-            this.createEditable(50),
-            ") for ",
-            this.createEditable(1),
+            "Animate graphic ",
+            this.idEditable = this.createEditable("0"),
+            " for ",
+            this.lengthEditable = this.createEditable("0"),
             "s"
         );
         this.elm.class("control");
     }
+
+    public getId(): number {
+        const id = parseInt(this.idEditable.getValue());
+        if (isNaN(id)) { throw new Error("Not a number"); }
+        return id;
+    }
+
+    public getLength(): number {
+        const length = parseFloat(this.lengthEditable.getValue());
+        if (isNaN(length)) { throw new Error("Not a number"); }
+        return length;
+    }
+}
+
+class AnimatePosEventLine extends InstructionLine implements OneLineInstruction {
+    isBranch: boolean = false;
+
+    private x: Editable;
+    private y: Editable;
+    private time: Editable;
+    private length: Editable;
+
+    constructor(time: number, event: AnimationEventPosition) {
+        super();
+        this.setAreas(
+            "  ",
+            this.time = this.createEditable(time),
+            "s: pos to (",
+            this.x = this.createEditable(event.to[0]),
+            ", ",
+            this.y = this.createEditable(event.to[1]),
+            ") for ",
+            this.length = this.createEditable(event.length || 0),
+            "s"
+        );
+        this.elm.class("control");
+    }
+
+    serialize(): [number, AnimationEventPosition] {
+        return [parseFloatHard(this.time.getValue()), {
+            key: "pos",
+            to: [parseFloatHard(this.x.getValue()), parseFloatHard(this.y.getValue())],
+            length: parseFloatHard(this.length.getValue())
+        }];
+    }
+}
+
+function parseFloatHard(str: string) {
+    const val = parseFloat(str);
+    if (isNaN(val)) { throw new Error("Not a number"); }
+    return val;
 }
