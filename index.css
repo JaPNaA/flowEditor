@@ -76,26 +76,27 @@
     opacity: 0;
     font: inherit;
     transform: scaleY(0.001);
-    left: -2ch;
     margin: 0;
     border: 0;
-    padding: 0;
+    padding: 0 12px;
+    box-sizing: border-box;
     resize: none;
     pointer-events: none;
 
     /** Prevent wrapping */
-    white-space: pre;
+    /* white-space: pre;
     overflow-wrap: normal;
-    overflow-x: scroll;
+    overflow-x: scroll; */
 }
 
 /** Debug */
 
-/* .instructionGroup .inputCapture {
-    height: 64px;
+.instructionGroup .inputCapture {
+    height: 128px;
     opacity: 0.4;
-    transform: translateX(500px);
-} */
+    /* transform: translateX(500px); */
+    transform: none;
+}
 
 .instructionLine:first-of-type {
     padding-top: 8px;

@@ -122,7 +122,7 @@ export class TextareaUserInputCapture {
     }
 
     private generateTextareaText() {
-        return "\n \xa0" + this.areasToString(this.aboveLine) + "\n \xa0" + this.areasToString(this.currentLine) + "\n \xa0" + this.areasToString(this.belowLine) + "\n";
+        return "\n" + this.areasToString(this.aboveLine) + "\n" + this.areasToString(this.currentLine) + "\n" + this.areasToString(this.belowLine) + "\n";
     }
 
     private getChanges() {
@@ -165,10 +165,14 @@ export class TextareaUserInputCapture {
 
             // first extra space in front of line to capture moves to start of line
             // second extra space in front of line to capture moves to the previous line by moving left
-            currI += 2;
+            // currI += 2;
             if (i < currI) {
                 // probably backspaced at start of line
-                applyLineOperation(false, false);
+                if (posStr === "down") {
+                    applyLineOperation(true, false);
+                } else {
+                    applyLineOperation(false, false);
+                }
                 return;
             }
 
@@ -205,7 +209,7 @@ export class TextareaUserInputCapture {
                 }
             }
 
-            if (i <= currI++) {
+            if (i < currI++) {
                 // delete at end of line
                 applyLineOperation(true, false);
                 return;
@@ -322,23 +326,23 @@ export class TextareaUserInputCapture {
             for (const area of areas) { if (area instanceof Editable) { maxEditableIndex++; } }
 
             // first extra space in front of line to capture moves to start of line
-            if (curr <= 0) {
-                // return first editable
-                for (let i = 0; i < areas.length; i++) {
-                    const area = areas[i];
-                    if (area instanceof Editable) {
-                        return [posStr, 0, 0, area];
-                    }
-                }
-                return [posStr, 0, 0];
-            }
-            curr--;
+            // if (curr <= 0) {
+            //     // return first editable
+            //     for (let i = 0; i < areas.length; i++) {
+            //         const area = areas[i];
+            //         if (area instanceof Editable) {
+            //             return [posStr, 0, 0, area];
+            //         }
+            //     }
+            //     return [posStr, 0, 0];
+            // }
+            // curr--;
 
-            // second extra space in front of line to capture moves to the previous line by moving left
-            if (curr <= 0) {
-                return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset, previousLineLastEditable];
-            }
-            curr--;
+            // // second extra space in front of line to capture moves to the previous line by moving left
+            // if (curr <= 0) {
+            //     return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset, previousLineLastEditable];
+            // }
+            // curr--;
 
             for (let i = 0; i < areas.length; i++) {
                 const area = areas[i];
@@ -419,7 +423,7 @@ export class TextareaUserInputCapture {
     }
 
     private getIndexOnCurrentLine(editableOrIndex: number | Editable, characterIndex: number) {
-        let curr = 6; // 6 for '\n  ' at start and after above line
+        let curr = 2; // 6 for '\n' at start and after above line
         for (const area of this.aboveLine) {
             if (area instanceof Editable) { curr += area.getValue().length; }
             else { curr += area; }
