@@ -16,6 +16,9 @@ export class GraphicDisplayer extends WorldElmWithComponents {
         const previousGraphic = this.game.graphics[graphic.id];
         if (previousGraphic) {
             this.children.removeChild(previousGraphic);
+            if (previousGraphic.attachedText) {
+                this.children.removeChild(previousGraphic.attachedText);
+            }
         }
         const newGraphic = new VNGraphic(graphic, this.project);
         this.game.graphics[graphic.id] = newGraphic;

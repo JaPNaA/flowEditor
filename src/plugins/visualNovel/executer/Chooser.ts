@@ -24,7 +24,6 @@ export class Chooser extends WorldElmWithComponents {
             const hitbox = new Hitbox(choice.rect, new ChoiceCollidable(i));
             this.hitboxes.push(hitbox);
             this.engine.collisions.addHitbox(hitbox);
-            console.log(hitbox);
         }
     }
 
@@ -32,6 +31,7 @@ export class Chooser extends WorldElmWithComponents {
         for (const hitbox of this.hitboxes) {
             this.engine.collisions.removeHitbox(hitbox);
         }
+        this.hitboxes.length = 0;
     }
 
     public mousedownHandler() {

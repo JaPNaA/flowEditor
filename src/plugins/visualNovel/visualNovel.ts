@@ -697,48 +697,45 @@ class ChooseInstruction extends InstructionLine implements OneLineInstruction {
 
     public export(): (VisualNovelControlItem | ControlItem)[] {
         const options = this.choicesSpan.getValue().split(",").map(e => e.trim());
-        return [
-            { // create choice graphics (temporary)
+        const result: (VisualNovelControlItem | ControlItem)[] = [];
+        const graphicIds = [];
+        // todo: unique ids for choices instead of hardcoded
+        let currGraphicId = 10;
+        let currY = 0;
+        for (const option of options) {
+            const graphicId = currGraphicId++;
+            graphicIds.push(graphicId);
+            const y = currY++;
+            result.push({
                 visualNovelCtrl: "graphic",
-                id: 11,
+                id: graphicId,
                 fill: "f00",
                 points: [100, 15],
-            },
-            { // create choice graphics (temporary)
-                visualNovelCtrl: "graphic",
-                id: 12,
-                fill: "f00",
-                points: [100, 15],
-            },
-            { // position choice graphics (temporary)
+            }, { // position choice graphics (temporary)
                 visualNovelCtrl: "animate",
                 length: 0,
-                id: 11,
+                id: graphicId,
                 events: [
-                    [0, { key: "scale", to: { scale: 0.6 } }],
-                    [0, { key: "pos", to: [50, 10] }]
+                    [0, { key: "scale", to: { scale: 0.5 } }],
+                    [0, { key: "pos", to: [50, 10 + y * 20] }]
                 ]
-            },
-            { // position choice graphics (temporary)
-                visualNovelCtrl: "animate",
-                length: 0,
-                id: 12,
-                events: [
-                    [0, { key: "scale", to: { scale: 0.6 } }],
-                    [0, { key: "pos", to: [50, 30] }]
-                ]
-            },
-            { // show options
-                visualNovelCtrl: "choose",
-                options: [11, 12]
-            }, { // get input
-                ctrl: "input",
-                options: options,
-                variable: this.variableSpan.getValue()
-            }, { // hide options
-                visualNovelCtrl: "choose"
-            }
-        ]
+            }, {
+                visualNovelCtrl: "text",
+                id: graphicId,
+                text: option
+            });
+        }
+        result.push({
+            visualNovelCtrl: "choose",
+            options: graphicIds
+        }, { // get input
+            ctrl: "input",
+            options: options,
+            variable: this.variableSpan.getValue()
+        }, { // hide options
+            visualNovelCtrl: "choose"
+        });
+        return result;
     }
 }
 
