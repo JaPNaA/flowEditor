@@ -62,7 +62,10 @@ export class VisualNovelGame {
     }
 
     public characterSayAdd(text: string) {
-        // this.speechBubble.writeAdd(text);
+        if (!this.speechBubbleGraphicId) { throw new Error("No speech bubble set"); }
+        const graphic = this.graphics[this.speechBubbleGraphicId];
+        if (!graphic) { throw new Error("Speech bubble graphic doesn't exist"); }
+        return this.graphicDisplayer.sayAdd(graphic, text);
 
         // if (this.engine.mouse.rightDown) {
         //     // skip

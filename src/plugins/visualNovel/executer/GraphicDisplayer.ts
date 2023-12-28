@@ -75,7 +75,12 @@ export class GraphicDisplayer extends WorldElmWithComponents {
         if (graphic.visible) {
             this.children.addChild(textBox);
         }
-        textBox.write(charHTML, text);
+        textBox.write(text, charHTML);
+    }
+
+    public sayAdd(graphic: VNGraphic, text: string) {
+        if (!(graphic.attachedText instanceof SpeechBubble)) { return; }
+        graphic.attachedText.writeAdd(text);
     }
 
     public getGraphic(id: number) {

@@ -33,24 +33,16 @@ export default class VisualNovelPlugin implements EditorPlugin {
         shortcutKey: "KeyA",
         create: () => new VNContentInstrOneLine(new SayAddInstruction("")),
     }, {
-        //     instructionName: "show",
-        //     description: "Show an image in the foreground",
-        //     shortcutKey: "KeyK",
-        //     create: () => new VNContentInstrOneLine(new ShowInstruction({
-        //         visualNovelCtrl: "show",
-        //         src: ""
-        //     })),
-        // }, {
         instructionName: "display",
         description: "Display text indicating narration",
         shortcutKey: "KeyT",
         create: () => new VNContentInstrOneLine(new DisplayMacro("")),
     }, {
-        //     instructionName: "choose branch",
-        //     description: "Macro. Display buttons that allow the player to choose which instructions to execute",
-        //     shortcutKey: "KeyB",
-        //     create: () => new ChoiceBranchMacro(["a", "b"]),
-        // }, {
+        instructionName: "choose branch",
+        description: "Macro. Display buttons that allow the player to choose which instructions to execute",
+        shortcutKey: "KeyB",
+        create: () => new ChoiceBranchMacro(["a", "b"]),
+    }, {
         instructionName: "background",
         description: "Set the background",
         shortcutKey: "KeyH",
@@ -546,27 +538,6 @@ class BackgroundMacroLine extends InstructionLine implements OneLineInstruction 
         return data;
     }
 }
-
-// class ShowInstruction extends InstructionLine implements OneLineInstruction {
-//     private editable: Editable;
-//     public isBranch: boolean = false;
-
-//     constructor(data: ControlShow) {
-//         super();
-
-//         this.setAreas(
-//             "Show: ",
-//             this.editable = this.createEditable(data.src)
-//         );
-//         this.editable.autoCompleteType = autocompleteTypeShow;
-//         this.elm.class("secondary");
-//     }
-
-//     public serialize(): ControlShow {
-//         return { visualNovelCtrl: "show", src: this.editable.getValue() };
-//     }
-// }
-
 
 class BackgroundMusicInstruction extends InstructionLine implements OneLineInstruction {
     private editable: Editable;
