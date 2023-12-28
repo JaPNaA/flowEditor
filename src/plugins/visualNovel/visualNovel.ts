@@ -500,18 +500,23 @@ class BackgroundMacroLine extends InstructionLine implements OneLineInstruction 
             graphic.fill = data.color;
             graphic.points = [100, 100];
         }
-        return [graphic, {
-            visualNovelCtrl: "animate", id: 2, length: 0, events: [[0,
-                { key: "scale", to: { base: "cover" } }
-            ], [0,
-                {
-                    key: "pos", to: [
-                        data.x === undefined ? 50 : data.x,
-                        data.y === undefined ? 50 : data.y
-                    ]
-                }
-            ]]
-        }];
+        return [
+            graphic,
+            {
+                visualNovelCtrl: "animate", id: 2, length: 0, events: [[0,
+                    { key: "scale", to: { base: "cover" } }
+                ], [0,
+                    {
+                        key: "pos", to: [
+                            data.x === undefined ? 50 : data.x,
+                            data.y === undefined ? 50 : data.y
+                        ]
+                    }
+                ]]
+            }, {
+                visualNovelCtrl: "show", id: 2
+            }
+        ];
     }
 
     private parseBackgroundString(backgroundStr: string): ControlMacroBackground {
@@ -679,59 +684,63 @@ class ChooseInstruction extends InstructionLine implements OneLineInstruction {
 
     public export(): (VisualNovelControlItem | ControlItem)[] {
         const options = this.choicesSpan.getValue().split(",").map(e => e.trim());
-        const result: (VisualNovelControlItem | ControlItem)[] = [];
-        const graphicIds = [];
-        // todo: unique ids for choices instead of hardcoded
-        let currGraphicId = 10;
-        let currY = 0;
-        for (const option of options) {
-            const graphicId = currGraphicId++;
-            graphicIds.push(graphicId);
-            const y = currY++;
-            result.push({
-                visualNovelCtrl: "graphic",
-                id: graphicId,
-                fill: "f00",
-                points: [100, 15],
-            }, { // position choice graphics (temporary)
-                visualNovelCtrl: "animate",
-                length: 0,
-                id: graphicId,
-                events: [
-                    [0, { key: "scale", to: { scale: 0.5 } }],
-                    [0, { key: "pos", to: [50, 10 + y * 20] }]
-                ]
-            }, {
-                visualNovelCtrl: "text",
-                id: graphicId,
-                text: option
-            });
-        }
-        result.push({
-            visualNovelCtrl: "choose",
-            options: graphicIds
-        });
-        for (const graphic of graphicIds) {
-            result.push({
-                visualNovelCtrl: "show",
-                id: graphic
-            });
-        }
-        result.push({ // get input
-            ctrl: "input",
-            options: options,
-            variable: this.variableSpan.getValue()
-        }, { // hide options
-            visualNovelCtrl: "choose"
-        });
-        for (const graphic of graphicIds) {
-            result.push({
-                visualNovelCtrl: "hide",
-                id: graphic
-            });
-        }
-        return result;
+        return getSimpleChoiceInstructions(options, this.variableSpan.getValue());
     }
+}
+
+function getSimpleChoiceInstructions(options: string[], outputVar: string): (VisualNovelControlItem | ControlItem)[] {
+    const result: (VisualNovelControlItem | ControlItem)[] = [];
+    const graphicIds = [];
+    // todo: unique ids for choices instead of hardcoded
+    let currGraphicId = 10;
+    let currY = 0;
+    for (const option of options) {
+        const graphicId = currGraphicId++;
+        graphicIds.push(graphicId);
+        const y = currY++;
+        result.push({
+            visualNovelCtrl: "graphic",
+            id: graphicId,
+            fill: "f00",
+            points: [100, 15],
+        }, { // position choice graphics (temporary)
+            visualNovelCtrl: "animate",
+            length: 0,
+            id: graphicId,
+            events: [
+                [0, { key: "scale", to: { scale: 0.5 } }],
+                [0, { key: "pos", to: [50, 10 + y * 20] }]
+            ]
+        }, {
+            visualNovelCtrl: "text",
+            id: graphicId,
+            text: option
+        });
+    }
+    result.push({
+        visualNovelCtrl: "choose",
+        options: graphicIds
+    });
+    for (const graphic of graphicIds) {
+        result.push({
+            visualNovelCtrl: "show",
+            id: graphic
+        });
+    }
+    result.push({ // get input
+        ctrl: "input",
+        options: options,
+        variable: outputVar
+    }, { // hide options
+        visualNovelCtrl: "choose"
+    });
+    for (const graphic of graphicIds) {
+        result.push({
+            visualNovelCtrl: "hide",
+            id: graphic
+        });
+    }
+    return result;
 }
 
 class ChoiceBranchMacro extends Instruction {
@@ -821,16 +830,7 @@ class ChoiceBranchMacro extends Instruction {
 
     public export() {
         const choices = this.getChoices();
-        const output: (VisualNovelControlItem | ControlItem)[] = [{
-            visualNovelCtrl: "choose",
-            options: [] // choices
-        }, {
-            ctrl: "input",
-            options: choices,
-            variable: "__choice__"
-        }, { // hide options
-            visualNovelCtrl: "choose"
-        }];
+        const output: (VisualNovelControlItem | ControlItem)[] = getSimpleChoiceInstructions(choices, "__choice__");
         for (let i = 0; i < choices.length - 1; i++) {
             const offset = this.branchOffsets[i];
             if (offset) {

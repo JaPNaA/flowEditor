@@ -69,7 +69,6 @@ export class VisualNovelExecuter implements PluginExecuter {
             case "say-add":
                 this.executer.log.log('"' + data.text + '"');
                 this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
-                this.executer.pause();
                 return true;
             case "graphic":
                 this.executer.log.log(`Graphic ${JSON.stringify(data)}`);

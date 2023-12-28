@@ -314,7 +314,9 @@ export class VNGraphic extends WorldElm {
             this.texture.onload = () => {
                 this.textureLoaded = true;
                 this.updatePointLimits();
-                this.engine.ticker.requestTick();
+                if (this.engine) {
+                    this.engine.ticker.requestTick();
+                }
             };
         } else {
             this.texture = undefined;
