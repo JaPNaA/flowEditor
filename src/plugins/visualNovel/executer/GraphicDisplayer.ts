@@ -14,7 +14,7 @@ export class GraphicDisplayer extends WorldElmWithComponents {
 
     public graphic(graphic: ControlGraphic) {
         const previousGraphic = this.game.graphics[graphic.id];
-        if (previousGraphic) {
+        if (previousGraphic && previousGraphic.visible) {
             this.children.removeChild(previousGraphic);
             if (previousGraphic.attachedText) {
                 this.children.removeChild(previousGraphic.attachedText);
@@ -22,7 +22,23 @@ export class GraphicDisplayer extends WorldElmWithComponents {
         }
         const newGraphic = new VNGraphic(graphic, this.project);
         this.game.graphics[graphic.id] = newGraphic;
-        this.children.addChild(newGraphic);
+    }
+
+    public showGraphic(graphic: VNGraphic) {
+        this.children.addChild(graphic);
+        if (graphic.attachedText) {
+            this.children.addChild(graphic.attachedText);
+        }
+        graphic.visible = true;
+        this.engine.ticker.requestTick();
+    }
+
+    public hideGraphic(graphic: VNGraphic) {
+        this.children.removeChild(graphic);
+        if (graphic.attachedText) {
+            this.children.removeChild(graphic.attachedText);
+        }
+        graphic.visible = false;
         this.engine.ticker.requestTick();
     }
 
@@ -35,7 +51,9 @@ export class GraphicDisplayer extends WorldElmWithComponents {
             const textBox = new TextBox();
             textBox.setGraphic(graphic);
             graphic.attachedText = textBox;
-            this.children.addChild(textBox);
+            if (graphic.visible) {
+                this.children.addChild(textBox);
+            }
             textBox.write("", text.text);
         }
     }
@@ -51,6 +69,7 @@ export class VNGraphic extends WorldElm {
     public id: number;
 
     public animations: VNAnimation[] = [];
+    public visible = false;
 
     /* What the graphic looks like */
     private textureSrc?: string;

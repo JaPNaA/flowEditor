@@ -76,6 +76,14 @@ export class VisualNovelExecuter implements PluginExecuter {
                 this.executer.log.log(`Graphic ${JSON.stringify(data)}`);
                 this.game.graphic(data);
                 return true;
+            case "show":
+                this.executer.log.log(`Show graphic ${data.id}`);
+                this.game.show(data);
+                return true;
+            case "hide":
+                this.executer.log.log(`Hide graphic ${data.id}`);
+                this.game.hide(data);
+                return true;
             case "animate":
                 this.game.playAnimation(data);
                 return true;

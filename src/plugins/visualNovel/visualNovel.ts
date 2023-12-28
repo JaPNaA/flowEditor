@@ -195,6 +195,10 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 id: 2,
                 parent: 3
             },
+            {
+                visualNovelCtrl: "show",
+                id: 2
+            },
             // parent of ui graphics
             {
                 visualNovelCtrl: "graphic",
@@ -206,6 +210,10 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 id: 5,
                 parent: 4,
                 points: [100, 20]
+            },
+            {
+                visualNovelCtrl: "show",
+                id: 5
             },
             {
                 visualNovelCtrl: "animate",
@@ -728,13 +736,26 @@ class ChooseInstruction extends InstructionLine implements OneLineInstruction {
         result.push({
             visualNovelCtrl: "choose",
             options: graphicIds
-        }, { // get input
+        });
+        for (const graphic of graphicIds) {
+            result.push({
+                visualNovelCtrl: "show",
+                id: graphic
+            });
+        }
+        result.push({ // get input
             ctrl: "input",
             options: options,
             variable: this.variableSpan.getValue()
         }, { // hide options
             visualNovelCtrl: "choose"
         });
+        for (const graphic of graphicIds) {
+            result.push({
+                visualNovelCtrl: "hide",
+                id: graphic
+            });
+        }
         return result;
     }
 }

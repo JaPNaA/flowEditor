@@ -65,7 +65,9 @@ export class TextBox extends WorldElmWithComponents {
         if (this.charsPerSecond === 0) {
             this.showAllChars();
         }
-        this.engine.ticker.requestTick();
+        if (this.engine) {
+            this.engine.ticker.requestTick();
+        }
     }
 
     public writeAdd(html: string) {

@@ -4,6 +4,7 @@ import { VNGraphic } from "./GraphicDisplayer";
 export class Chooser extends WorldElmWithComponents {
     public onChosen = new EventBus<number>();
     public hitboxes: Hitbox<ChoiceCollidable>[] = [];
+    public active = false;
 
     constructor() {
         super();
@@ -25,9 +26,11 @@ export class Chooser extends WorldElmWithComponents {
             this.hitboxes.push(hitbox);
             this.engine.collisions.addHitbox(hitbox);
         }
+        this.active = true;
     }
 
     public clear() {
+        this.active = false;
         for (const hitbox of this.hitboxes) {
             this.engine.collisions.removeHitbox(hitbox);
         }
@@ -35,9 +38,9 @@ export class Chooser extends WorldElmWithComponents {
     }
 
     public mousedownHandler() {
+        if (!this.active) { return; }
         const rect = new RectangleM(this.engine.mouse.worldPos.x, this.engine.mouse.worldPos.y, 1, 1);
         const collisions = this.engine.collisions.getCollisionsWith(rect);
-        console.log("mousedown");
         for (const collision of collisions) {
             if (collision.elm instanceof ChoiceCollidable) {
                 this.onChosen.send(collision.elm.index);

@@ -26,12 +26,12 @@ export function isVisualNovelControlItem(item: any): item is VisualNovelControlI
 
 export interface ControlShow {
     visualNovelCtrl: "show";
-    id: string;
+    id: number;
 }
 
 export interface ControlHide {
     visualNovelCtrl: "hide";
-    id: string;
+    id: number;
 }
 
 export interface ControlGraphic {
