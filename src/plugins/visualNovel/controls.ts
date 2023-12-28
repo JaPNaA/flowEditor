@@ -277,6 +277,12 @@ export interface ControlSpeechBubbleSettings {
      */
     revealSpeed?: number;
     /**
+     * Capture a click to skip reveal?
+     * true: If the text is not fully revealed, a click will reveal all text;
+     * false: On click, 'wait' may capture the click and the next instruction will run
+     */
+    clickSkipReveal?: boolean;
+    /**
      * How much of the text must be revealed until moving onto the text instruction.
      * Default: 1.
      */

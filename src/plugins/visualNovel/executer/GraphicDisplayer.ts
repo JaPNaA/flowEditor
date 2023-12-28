@@ -2,7 +2,7 @@ import { FileStructureRead } from "../../../filesystem/FileStructure";
 import { WorldElm, WorldElmWithComponents, Vec2, Vec2M, ParentComponent, RectangleM } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { AnimationFilter, ControlGraphic, ControlText } from "../controls";
 import { VNAnimation } from "./AnimationPlayer";
-import { TextBox } from "./TextBox";
+import { SpeechBubble, TextBox } from "./TextBox";
 import { VisualNovelGame } from "./VisualNovelGame";
 
 export class GraphicDisplayer extends WorldElmWithComponents {
@@ -46,16 +46,36 @@ export class GraphicDisplayer extends WorldElmWithComponents {
         const graphic = this.game.graphics[text.id];
         if (!graphic) { throw new Error("No graphic exists with id"); }
         if (graphic.attachedText) {
-            graphic.attachedText.write("", text.text);
+            graphic.attachedText.write(text.text);
         } else {
-            const textBox = new TextBox();
+            const textBox = TextBox.create();
             textBox.setGraphic(graphic);
             graphic.attachedText = textBox;
             if (graphic.visible) {
                 this.children.addChild(textBox);
             }
-            textBox.write("", text.text);
+            textBox.write(text.text);
         }
+    }
+
+    public say(graphic: VNGraphic, charHTML: string, text: string) {
+        if (graphic.attachedText) {
+            if (graphic.attachedText instanceof SpeechBubble) {
+                graphic.attachedText.write(text, charHTML);
+                return;
+            }
+            if (graphic.visible) {
+                this.children.removeChild(graphic.attachedText);
+            }
+        }
+
+        const textBox = SpeechBubble.create();
+        textBox.setGraphic(graphic);
+        graphic.attachedText = textBox;
+        if (graphic.visible) {
+            this.children.addChild(textBox);
+        }
+        textBox.write(charHTML, text);
     }
 
     public getGraphic(id: number) {

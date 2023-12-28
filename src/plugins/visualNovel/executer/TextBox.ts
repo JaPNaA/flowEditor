@@ -3,24 +3,14 @@ import { Elm } from "../../../japnaaEngine2d/elements";
 import { VNGraphic } from "./GraphicDisplayer";
 
 export class TextBox extends WorldElmWithComponents {
-    public timePassed = 0;
-    public charsShowing = 0;
-
     private attachedGraphic?: VNGraphic;
 
-    private subs = new SubscriptionsComponent();
-
-    private elm = new SpeechBubbleElm();
-    private fullHTML: string = "";
-    private numChars: number = 0;
-    private characterNameHTML: string = "";
-    private isDone = true;
-
-    private charsPerSecond = 50;
-    private secondsPerChar = 1 / this.charsPerSecond;
-
-    constructor() {
+    constructor(protected elm: TextBoxElm) {
         super();
+    }
+
+    static create() {
+        return new TextBox(new TextBoxElm());
     }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
@@ -41,6 +31,79 @@ export class TextBox extends WorldElmWithComponents {
         this.elm.setRect(graphic.rect);
     }
 
+    public write(html: string) {
+        this.elm.setFullHTML(html);
+    }
+
+    public remove(): void {
+        super.remove();
+        this.elm.remove();
+    }
+}
+
+class TextBoxElm extends Elm {
+    constructor() {
+        super();
+        this.elm.style.position = "absolute";
+        this.elm.style.fontSize = "32px";
+        this.elm.style.backgroundColor = "#000a";
+        this.elm.style.whiteSpace = "pre-wrap";
+        this.elm.style.boxSizing = "border-box";
+        this.elm.style.overflow = "hidden"; // prevent very large text from expanding hitbox
+    }
+
+    /**
+     * Set the full html to show.
+     * Returns the number of characters that are showable.
+     */
+    public setFullHTML(html: string): void {
+        this.replaceContents(
+            new Elm().withSelf(elm => elm.getHTMLElement().innerHTML = html)
+        );
+    }
+
+    public setRect(rect: Rectangle) {
+        // screen height - height - margin - padding - border
+        // const margin = 720 - 180 - 16 * 2 * 2 - 2 * 2;
+        this.elm.style.left = rect.x + "px";
+        this.elm.style.top = rect.y + "px";
+        this.elm.style.width = rect.width + "px";
+        this.elm.style.height = rect.height + "px";
+        this.elm.style.bottom = "";
+    }
+
+    public setVisible() {
+        this.elm.style.display = "block";
+    }
+
+    public setInvisible() {
+        this.elm.style.display = "none";
+    }
+}
+
+export class SpeechBubble extends TextBox {
+    public timePassed = 0;
+    public charsShowing = 0;
+
+    protected elm!: SpeechBubbleElm;
+    private subs = new SubscriptionsComponent();
+
+    private fullHTML: string = "";
+    private numChars: number = 0;
+    private characterNameHTML: string = "";
+    private isDone = true;
+
+    private charsPerSecond = 50;
+    private secondsPerChar = 1 / this.charsPerSecond;
+
+    constructor(elm: SpeechBubbleElm) {
+        super(elm);
+    }
+
+    public static create(): SpeechBubble {
+        return new SpeechBubble(new SpeechBubbleElm());
+    }
+
     public setSpeed(charsPerSecond: number) {
         this.charsPerSecond = charsPerSecond;
         if (charsPerSecond > 0) {
@@ -54,13 +117,13 @@ export class TextBox extends WorldElmWithComponents {
         return this.charsPerSecond;
     }
 
-    public write(characterHTML: string, html: string) {
+    public write(html: string, characterHTML?: string) {
         this.timePassed = 0;
         this.charsShowing = 0;
         this.isDone = false;
-        this.characterNameHTML = characterHTML;
+        this.characterNameHTML = characterHTML || "";
         this.fullHTML = html;
-        this.numChars = this.elm.setFullHTML(this.characterNameHTML, html);
+        this.numChars = this.elm.setFullHTML(html, this.characterNameHTML);
 
         if (this.charsPerSecond === 0) {
             this.showAllChars();
@@ -75,7 +138,7 @@ export class TextBox extends WorldElmWithComponents {
         this.charsShowing = this.numChars + 1;
         this.isDone = false;
         this.fullHTML = this.fullHTML + "\n" + html;
-        this.numChars = this.elm.setFullHTML(this.characterNameHTML, this.fullHTML);
+        this.numChars = this.elm.setFullHTML(this.fullHTML, this.characterNameHTML);
 
         if (this.charsPerSecond === 0) {
             this.showAllChars();
@@ -103,17 +166,12 @@ export class TextBox extends WorldElmWithComponents {
         this.render();
     }
 
-    public remove(): void {
-        super.remove();
-        this.elm.remove();
-    }
-
     private render() {
         this.elm.showChars(this.charsShowing);
     }
 }
 
-class SpeechBubbleElm extends Elm {
+class SpeechBubbleElm extends TextBoxElm {
     /** [revealed text, hidden text][] */
     private revealNodes?: [Text, HTMLSpanElement][];
 
@@ -140,11 +198,11 @@ class SpeechBubbleElm extends Elm {
      * Set the full html to show.
      * Returns the number of characters that are showable.
      */
-    public setFullHTML(characterHTML: string, html: string): number {
+    public setFullHTML(html: string, characterHTML?: string): number {
         let elm;
         this.replaceContents(
             new Elm().attribute("style", "font-weight: bold")
-                .withSelf(elm => elm.getHTMLElement().innerHTML = characterHTML),
+                .withSelf(elm => elm.getHTMLElement().innerHTML = characterHTML || ""),
             elm = new Elm().withSelf(elm => elm.getHTMLElement().innerHTML = html)
         );
 
@@ -201,23 +259,5 @@ class SpeechBubbleElm extends Elm {
                 this.recursiveAddTextNodes(nodes, child);
             }
         }
-    }
-
-    public setRect(rect: Rectangle) {
-        // screen height - height - margin - padding - border
-        // const margin = 720 - 180 - 16 * 2 * 2 - 2 * 2;
-        this.elm.style.left = rect.x + "px";
-        this.elm.style.top = rect.y + "px";
-        this.elm.style.width = rect.width + "px";
-        this.elm.style.height = rect.height + "px";
-        this.elm.style.bottom = "";
-    }
-
-    public setVisible() {
-        this.elm.style.display = "block";
-    }
-
-    public setInvisible() {
-        this.elm.style.display = "none";
     }
 }

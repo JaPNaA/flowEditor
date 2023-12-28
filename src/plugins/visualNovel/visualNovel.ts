@@ -216,6 +216,10 @@ export default class VisualNovelPlugin implements EditorPlugin {
                 id: 5
             },
             {
+                visualNovelCtrl: "speechBubbleSettings",
+                id: 5
+            },
+            {
                 visualNovelCtrl: "animate",
                 id: 5,
                 length: 0,
@@ -274,11 +278,10 @@ class SayInstruction extends InstructionLine implements OneLineInstruction {
 
     public export(): VisualNovelControlItem[] {
         return [
-            // temporary, until the say control is properly implemented
             {
-                visualNovelCtrl: "text",
-                id: 5,
-                text: this.characterEditable.getValue() + ":\n" + this.textEditable.getValue()
+                visualNovelCtrl: "say",
+                char: this.characterEditable.getValue(),
+                text: this.textEditable.getValue()
             },
             { visualNovelCtrl: "wait" }
         ];

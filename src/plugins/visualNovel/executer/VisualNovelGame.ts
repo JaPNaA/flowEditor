@@ -22,6 +22,7 @@ export class VisualNovelGame {
     public strings: (string | undefined)[] = [undefined];
     public graphics: (VNGraphic | undefined)[] = [undefined];
     public arrangements: (VNArrangement | undefined)[] = [undefined];
+    public speechBubbleGraphicId?: number;
 
     constructor(parentElm: HTMLElement, private executer: Executer) {
         this.engine = new JaPNaAEngine2d({
@@ -47,6 +48,10 @@ export class VisualNovelGame {
     }
 
     public characterSay(charHTML: string, text: string) {
+        if (!this.speechBubbleGraphicId) { throw new Error("No speech bubble set"); }
+        const graphic = this.graphics[this.speechBubbleGraphicId];
+        if (!graphic) { throw new Error("Speech bubble graphic doesn't exist"); }
+        return this.graphicDisplayer.say(graphic, charHTML, text);
         // this.speechBubble.write(charHTML, text);
 
         // if (this.engine.mouse.rightDown) {
@@ -101,6 +106,9 @@ export class VisualNovelGame {
     }
 
     public setSpeechBubbleSettings(settings: ControlSpeechBubbleSettings) {
+        if (settings.id !== undefined) {
+            this.speechBubbleGraphicId = settings.id;
+        }
         // if (settings.visible !== undefined) {
         //     this.speechBubble.setVisible(settings.visible);
         // }

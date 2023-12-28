@@ -35,7 +35,7 @@ export class VisualNovelExecuter implements PluginExecuter {
             }
         });
 
-        // this.getVariable = this.getVariable.bind(this);
+        this.getVariable = this.getVariable.bind(this);
     }
 
     public start(executer: Executer): Promise<void> {
@@ -59,14 +59,13 @@ export class VisualNovelExecuter implements PluginExecuter {
         if (!isVisualNovelControlItem(data)) { return false; }
 
         switch (data.visualNovelCtrl) {
-            // case "say":
-            //     this.executer.log.log(`${data.char}: "${data.text}"`);
-            //     this.game.characterSay(
-            //         visualNovelMdToHTML(data.char, this.getVariable),
-            //         visualNovelMdToHTML(data.text, this.getVariable)
-            //     );
-            //     this.executer.pause();
-            //     return true;
+            case "say":
+                this.executer.log.log(`${data.char}: "${data.text}"`);
+                this.game.characterSay(
+                    visualNovelMdToHTML(data.char, this.getVariable),
+                    visualNovelMdToHTML(data.text, this.getVariable)
+                );
+                return true;
             // case "say-add":
             //     this.executer.log.log('"' + data.text + '"');
             //     this.game.characterSayAdd(visualNovelMdToHTML(data.text, this.getVariable));
@@ -146,5 +145,22 @@ export class VisualNovelExecuter implements PluginExecuter {
 
     public setState(state: any): void {
         this.game?.setState(state.game);
+    }
+
+    private getVariable(v: string) {
+        if (!this.game) { return; }
+
+        if (v.startsWith("#")) {
+            // number
+            const pointer = this.executer.getVariable(v.slice(1));
+            return pointer?.toString();
+        } else {
+            // string
+            const pointer = this.executer.getVariable(v);
+            if (!pointer) { return; }
+            const str = this.game.strings[pointer];
+            if (!str) { return; }
+            return str;
+        }
     }
 }
