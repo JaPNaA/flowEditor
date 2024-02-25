@@ -41,7 +41,6 @@ export class Editable extends Elm<"span"> {
         group.parentEditor.undoLog.perform(
             new EditableEditAction(this, value)
         );
-        console.log(value);
     }
 
     /** Called by TextareaUserInput after setting a new value for the editable and moving the cursor. */
@@ -89,7 +88,6 @@ export class Editable extends Elm<"span"> {
 
         if (this.elm.textContent !== this._value) {
             this.replaceContents(this._value);
-            console.log("replace");
         }
     }
 }

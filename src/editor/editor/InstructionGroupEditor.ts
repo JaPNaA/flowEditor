@@ -170,22 +170,42 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     // }
 
     public selectionToPosition(selection: DOMSelection): EditorCursorPositionAbsolute | undefined {
-        const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"));
-        if (instructionLine) {
-            const instructionLineElm = this._htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
-            if (instructionLineElm) {
-                const index = this.block.locateLine(instructionLineElm);
-                const newEditable = instructionLineElm.getEditableIndexFromSelection(selection);
-                if (newEditable >= 0) {
-                    const characterOffset = instructionLineElm.getEditableFromIndex(newEditable).getCharacterOffset(selection);
-                    return {
-                        group: this,
-                        line: index,
-                        editable: newEditable,
-                        char: characterOffset
-                    };
-                }
+        const instructionLineElm = this.nodeToLine(selection.anchorNode);
+        if (instructionLineElm) {
+            const index = this.block.locateLine(instructionLineElm);
+            const newEditable = instructionLineElm.getEditableIndexFromSelection(selection);
+            if (newEditable >= 0) {
+                const characterOffset = instructionLineElm.getEditableFromIndex(newEditable).getCharacterOffset(selection);
+                return {
+                    group: this,
+                    line: index,
+                    editable: newEditable,
+                    char: characterOffset
+                };
             }
+        }
+    }
+
+    public nodeToPosition(node: Node): EditorCursorPositionAbsolute | undefined {
+        const instructionLineElm = this.nodeToLine(node);
+        if (instructionLineElm) {
+            const index = this.block.locateLine(instructionLineElm);
+            const newEditable = instructionLineElm.getEditableIndexFromNode(node);
+            if (newEditable >= 0) {
+                return {
+                    group: this,
+                    line: index,
+                    editable: newEditable,
+                    char: 0
+                };
+            }
+        }
+    }
+
+    public nodeToLine(node: Node) {
+        const instructionLine = getAncestorWhich(node || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"));
+        if (instructionLine) {
+            return this._htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
         }
     }
 

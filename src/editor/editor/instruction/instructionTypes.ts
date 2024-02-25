@@ -63,6 +63,7 @@ export abstract class InstructionLine extends Component {
     public preferredStartingCharOffset = 0;
     public parentBlock!: InstructionBlock;
 
+    private areas: (Editable | string)[] = [];
     private spanToEditable = new Map<HTMLSpanElement, Editable>();
     private editables: Editable[] = [];
 
@@ -72,6 +73,10 @@ export abstract class InstructionLine extends Component {
 
     public _setParent(instruction: InstructionBlock) {
         this.parentBlock = instruction;
+    }
+
+    public resetElm() {
+        this.elm.replaceContents(...this.areas);
     }
 
     public getEditableIndexFromSelection(selection: DOMSelection): number {
@@ -109,22 +114,17 @@ export abstract class InstructionLine extends Component {
         return null;
     }
 
-    protected setAreas(...elements: (string | Editable)[]) {
-        for (const element of elements) {
-            this.elm.append(element);
-        }
+    public getEditableIndexFromNode(node: Node): number {
+        const editable = this.getEditableFromNode(node);
+        if (!editable) { return -1; }
+        return this.editables.indexOf(editable);
     }
 
-    protected createEditable(text: string | number): Editable {
-        const editable = new Editable(text.toString(), this);
-        this.registerEditable(editable);
-        return editable;
-    }
-
-    protected registerEditable<T extends Editable>(editable: T): T {
-        this.spanToEditable.set(editable.getHTMLElement(), editable);
-        this.editables.push(editable);
-        return editable;
+    public getEditableFromNode(node: Node): Editable | null {
+        const thisElm = this.elm.getHTMLElement();
+        return this.spanToEditable.get(
+            getAncestorWhich(node, node => node.parentElement === thisElm) as HTMLSpanElement
+        ) || null;
     }
 
     public getEditables(): ReadonlyArray<Editable> {
@@ -141,6 +141,25 @@ export abstract class InstructionLine extends Component {
 
     public getLastEditableCharacterIndex() {
         return this.editables[this.editables.length - 1].getValue().length;
+    }
+
+    protected setAreas(...elements: (string | Editable)[]) {
+        this.areas = elements;
+        for (const element of elements) {
+            this.elm.append(element);
+        }
+    }
+
+    protected createEditable(text: string | number): Editable {
+        const editable = new Editable(text.toString(), this);
+        this.registerEditable(editable);
+        return editable;
+    }
+
+    protected registerEditable<T extends Editable>(editable: T): T {
+        this.spanToEditable.set(editable.getHTMLElement(), editable);
+        this.editables.push(editable);
+        return editable;
     }
 }
 
