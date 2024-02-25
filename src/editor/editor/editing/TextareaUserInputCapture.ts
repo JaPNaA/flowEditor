@@ -50,6 +50,13 @@ export class TextareaUserInputCapture {
         // from https://stackoverflow.com/a/53999418
         this.inputCapture.on("keydown", ev => {
             if (this.keydownIntercepter && this.keydownIntercepter(ev)) { return; }
+            // workaround to enable proper handling of home key
+            if (ev.key === "Home" && !ev.ctrlKey) {
+                this.textarea.selectionStart = this.textarea.selectionEnd = this.getIndexOnCurrentLine(0, 0);
+                this.onChange();
+                ev.preventDefault();
+                return;
+            }
             setTimeout(() => this.checkCursorPosition(), 1);
         });
         this.inputCapture.on("paste", () => this.checkCursorPosition()); // Clipboard actions
@@ -324,25 +331,6 @@ export class TextareaUserInputCapture {
 
             let maxEditableIndex = -1;
             for (const area of areas) { if (area instanceof Editable) { maxEditableIndex++; } }
-
-            // first extra space in front of line to capture moves to start of line
-            // if (curr <= 0) {
-            //     // return first editable
-            //     for (let i = 0; i < areas.length; i++) {
-            //         const area = areas[i];
-            //         if (area instanceof Editable) {
-            //             return [posStr, 0, 0, area];
-            //         }
-            //     }
-            //     return [posStr, 0, 0];
-            // }
-            // curr--;
-
-            // // second extra space in front of line to capture moves to the previous line by moving left
-            // if (curr <= 0) {
-            //     return [previousLinePos, previousLineLastEditableIndex, previousLineLastCharacterOffset, previousLineLastEditable];
-            // }
-            // curr--;
 
             for (let i = 0; i < areas.length; i++) {
                 const area = areas[i];
