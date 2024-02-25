@@ -1,15 +1,15 @@
 import { Editor } from "./Editor";
 import { EditorCursorPositionAbsolute } from "./editing/EditorCursor";
-import { LineOperationEvent, TextareaUserInputCapture, TextareaUserInputCaptureContext, TextareaUserInputCursorPositionRelative, UserInputEvent } from "./editing/TextareaUserInputCapture";
+import { LineOperationEvent, UserInputEvent } from "./editing/UserInputEvents";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
 import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { getAncestorWhich } from "../utils";
-import { AddInstructionAction, RemoveInstructionAction } from "./editing/actions";
 import { NewInstruction } from "./instruction/NewInstruction";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes";
 import { pluginHooks } from "../index";
 import { InstructionElmData } from "./EditorSaveData";
-import { InstructionGroupEditorBlock, SingleInstructionBlock } from "./instruction/InstructionBlock";
+import { InstructionGroupEditorBlock } from "./instruction/InstructionBlock";
+import { DOMSelection } from "./editing/DOMSelection";
 
 export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public static defaultWidth = 720 + 24; // 24 is padding
@@ -36,6 +36,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
     private isSetup = false;
     private selected = false;
+    private isEditMode = false;
     private initBranchTargets: ((InstructionGroupEditor | null)[] | null)[] = [];
 
     private elmVisible = false;
@@ -90,10 +91,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.updateAfterMove();
     }
 
-    public appendInputCapture(inputCapture: TextareaUserInputCapture) {
-        inputCapture.appendTo(this.elm);
-    }
-
     public onCursorInput(position: EditorCursorPositionAbsolute, ev: UserInputEvent) {
         if (ev.isRejected()) {
             if (ev.added.includes("\n")) {
@@ -146,33 +143,33 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
     }
 
-    public calculateNewPosition(pos: EditorCursorPositionAbsolute, change: TextareaUserInputCursorPositionRelative): EditorCursorPositionAbsolute {
-        if (change[0] === "up") {
-            if (pos.line - 1 < 0) {
-                return { group: this, line: 0, editable: 0, char: 0 };
-            } else {
-                return { group: this, line: pos.line - 1, editable: change[1], char: change[2] };
-            }
-        }
-        if (change[0] === "down") {
-            if (pos.line + 1 >= this.block.numLines) {
-                return { group: this, line: this.block.numLines - 1, editable: change[1], char: change[2] };
-            } else {
-                return { group: this, line: pos.line + 1, editable: change[1], char: change[2] };
-            }
-        }
-        if (change[0] === "top") {
-            return { group: this, line: 0, editable: 0, char: 0 };
-        }
-        if (change[0] === "bottom") {
-            return { group: this, line: this.block.numLines - 1, editable: change[1], char: change[2] };
-        }
+    // public calculateNewPosition(pos: EditorCursorPositionAbsolute, change: UserInputCursorPositionRelative): EditorCursorPositionAbsolute {
+    //     if (change[0] === "up") {
+    //         if (pos.line - 1 < 0) {
+    //             return { group: this, line: 0, editable: 0, char: 0 };
+    //         } else {
+    //             return { group: this, line: pos.line - 1, editable: change[1], char: change[2] };
+    //         }
+    //     }
+    //     if (change[0] === "down") {
+    //         if (pos.line + 1 >= this.block.numLines) {
+    //             return { group: this, line: this.block.numLines - 1, editable: change[1], char: change[2] };
+    //         } else {
+    //             return { group: this, line: pos.line + 1, editable: change[1], char: change[2] };
+    //         }
+    //     }
+    //     if (change[0] === "top") {
+    //         return { group: this, line: 0, editable: 0, char: 0 };
+    //     }
+    //     if (change[0] === "bottom") {
+    //         return { group: this, line: this.block.numLines - 1, editable: change[1], char: change[2] };
+    //     }
 
-        // pos[0] === 'same'
-        return { group: this, line: pos.line, editable: change[1], char: change[2] };
-    }
+    //     // pos[0] === 'same'
+    //     return { group: this, line: pos.line, editable: change[1], char: change[2] };
+    // }
 
-    public selectionToPosition(selection: Selection): EditorCursorPositionAbsolute | undefined {
+    public selectionToPosition(selection: DOMSelection): EditorCursorPositionAbsolute | undefined {
         const instructionLine = getAncestorWhich(selection.anchorNode || null, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine"));
         if (instructionLine) {
             const instructionLineElm = this._htmlInstructionLineToJS.get(instructionLine as HTMLDivElement);
@@ -192,16 +189,16 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
     }
 
-    public getContextForPosition(position: EditorCursorPositionAbsolute): TextareaUserInputCaptureContext {
-        return {
-            above: position.line - 1 >= 0 ?
-                this.block.getLine(position.line - 1).getAreas() : [],
-            current: position.line >= 0 ?
-                this.block.getLine(position.line).getAreas() : [],
-            below: position.line + 1 < this.block.numLines ?
-                this.block.getLine(position.line + 1).getAreas() : []
-        };
-    }
+    // public getContextForPosition(position: EditorCursorPositionAbsolute): TextareaUserInputCaptureContext {
+    //     return {
+    //         above: position.line - 1 >= 0 ?
+    //             this.block.getLine(position.line - 1).getAreas() : [],
+    //         current: position.line >= 0 ?
+    //             this.block.getLine(position.line).getAreas() : [],
+    //         below: position.line + 1 < this.block.numLines ?
+    //             this.block.getLine(position.line + 1).getAreas() : []
+    //     };
+    // }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
         super._setEngine(engine);
@@ -437,11 +434,17 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     }
 
     public setEditMode() {
+        if (this.isEditMode) { return; }
+        this.isEditMode = true;
         this.elm.class("editMode");
+        this.parentEditor.cursor.registerGroupEditor(this);
     }
 
     public unsetEditMode() {
+        if (!this.isEditMode) { return; }
+        this.isEditMode = false;
         this.elm.removeClass("editMode");
+        this.parentEditor.cursor.unregisterGroupEditor(this);
     }
 
     /**

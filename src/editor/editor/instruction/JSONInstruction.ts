@@ -1,7 +1,6 @@
 import { Editable } from "../editing/Editable";
 import { InstructionLine, OneLineInstruction, InstructionOneLine } from "./instructionTypes";
-import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture";
-import { SingleInstructionBlock } from "./InstructionBlock";
+import { UserInputEvent } from "../editing/UserInputEvents";
 
 export class JSONInstruction extends InstructionOneLine<JSONLine> {
     constructor(data: any) {
@@ -25,10 +24,6 @@ class JSONLine extends InstructionLine implements OneLineInstruction {
 
     public serialize(): any {
         return JSON.parse(this.editable.getValue());
-    }
-
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [this.editable];
     }
 }
 

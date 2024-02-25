@@ -1,6 +1,6 @@
 import { Editable } from "../editing/Editable";
 import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } from "./instructionTypes";
-import { TextareaUserInputCaptureAreas, UserInputEvent } from "../editing/TextareaUserInputCapture";
+import { UserInputEvent } from "../editing/UserInputEvents";
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
@@ -92,10 +92,6 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 
     public serialize() {
         return { ctrl: "nop" };
-    }
-
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [this.editable];
     }
 
     public changeView(instruction: Instruction) {

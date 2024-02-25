@@ -1,7 +1,8 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { UserInputEvent } from "./TextareaUserInputCapture";
+import { UserInputEvent } from "./UserInputEvents";
 import { InstructionLine } from "../instruction/instructionTypes";
 import { EditableEditAction } from "./actions";
+import { DOMSelection } from "./DOMSelection";
 
 export class Editable extends Elm<"span"> {
     public onChange = new EventBus<string>();
@@ -32,6 +33,7 @@ export class Editable extends Elm<"span"> {
     }
 
     public setValue(value: string) {
+        if (this._value === value) { return; }
         const groupBlock = this.parentLine.parentBlock.getGroupEditor();
         if (!groupBlock) { return; }
         const group = groupBlock.editor;
@@ -39,6 +41,7 @@ export class Editable extends Elm<"span"> {
         group.parentEditor.undoLog.perform(
             new EditableEditAction(this, value)
         );
+        console.log(value);
     }
 
     /** Called by TextareaUserInput after setting a new value for the editable and moving the cursor. */
@@ -50,7 +53,7 @@ export class Editable extends Elm<"span"> {
         }
     }
 
-    public getCharacterOffset(selection: Selection) {
+    public getCharacterOffset(selection: DOMSelection) {
         let curr: ChildNode | undefined | null = this.elm.firstChild;
         let count = 0;
         while (curr && curr !== selection.anchorNode) {
@@ -68,22 +71,25 @@ export class Editable extends Elm<"span"> {
     }
 
     public update() {
-        const group = this.parentLine.parentBlock.getGroupEditor();
-        if (group) {
-            const cursor = group.editor.parentEditor.cursor;
-            if (cursor.activeEditable === this) {
-                const { start, end } = cursor.getPositions();
-                const before = this._value.slice(0, start!.char);
-                const selected = this._value.slice(start!.char, end!.char);
-                const after = this._value.slice(end!.char);
+        // const group = this.parentLine.parentBlock.getGroupEditor();
+        // if (group) {
+        //     const cursor = group.editor.parentEditor.cursor;
+        //     if (cursor.activeEditable === this) {
+        //         const { start, end } = cursor.getPositions();
+        //         const before = this._value.slice(0, start!.char);
+        //         const selected = this._value.slice(start!.char, end!.char);
+        //         const after = this._value.slice(end!.char);
 
-                cursor.setSelectedText(selected);
+        //         cursor.setSelectedText(selected);
 
-                this.replaceContents(before, cursor, after);
-                return;
-            }
+        //         this.replaceContents(before, cursor, after);
+        //         return;
+        //     }
+        // }
+
+        if (this.elm.textContent !== this._value) {
+            this.replaceContents(this._value);
+            console.log("replace");
         }
-
-        this.replaceContents(this._value);
     }
 }

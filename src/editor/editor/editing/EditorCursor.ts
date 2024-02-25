@@ -1,9 +1,10 @@
-import { TextareaUserInputCapture } from "./TextareaUserInputCapture";
+import { ContentEditableInputCapture } from "./ContentEditableInputCapture";
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { getAncestorWhich, isAncestor } from "../../utils";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
+import { DOMSelection } from "./DOMSelection";
 
 export class EditorCursor extends Elm<"span"> {
     public groupEditorsElmsMap = new WeakMap<HTMLDivElement, InstructionGroupEditor>();
@@ -16,7 +17,7 @@ export class EditorCursor extends Elm<"span"> {
     public onKeydownIntercept = new EventBus<KeyboardEvent>();
     public onInput = new EventBus();
 
-    private inputCapture = new TextareaUserInputCapture();
+    private inputCapture = new ContentEditableInputCapture();
     private positionStart?: Readonly<EditorCursorPositionAbsolute>;
     private positionEnd?: Readonly<EditorCursorPositionAbsolute>;
 
@@ -39,74 +40,85 @@ export class EditorCursor extends Elm<"span"> {
                     anchorNode,
                     node => node instanceof HTMLDivElement && node.classList.contains("instructionGroup")
                 ) as HTMLDivElement;
-            if (parentInstructionElm) {
-                const group = this.groupEditorsElmsMap.get(parentInstructionElm);
-                if (group) {
-                    const position = group.selectionToPosition(selection);
-                    if (position) {
-                        this.setPosition(position);
-                        this.onClickGroup.send(group);
+            if (!parentInstructionElm) { return; }
+            const group = this.groupEditorsElmsMap.get(parentInstructionElm);
+            if (!group) { return; }
+            const position = group.selectionToPosition(selection as DOMSelection);
+            if (position) {
+                this.setPosition(position);
+                this.onClickGroup.send(group);
 
-                        this.allowAutocomplete = false;
-                        this.autocomplete.clearSuggestions();
-                    }
-                }
+                this.allowAutocomplete = false;
+                this.autocomplete.clearSuggestions();
             }
         });
+
+        // document.addEventListener("input", e => {
+        //     if (!(e.target instanceof HTMLElement)) { return; }
+        //     const parentInstructionElm =
+        //         getAncestorWhich(
+        //             e.target,
+        //             node => node instanceof HTMLDivElement && node.classList.contains("instructionGroup")
+        //         ) as HTMLDivElement;
+        //     if (!parentInstructionElm) { return; }
+        //     const group = this.groupEditorsElmsMap.get(parentInstructionElm);
+        //     if (!group) { return; }
+        //     this.inputCapture.handleInputEvent(group, e as InputEvent);
+        // });
 
         let justInputted = false;
         let prevPosStart: EditorCursorPositionAbsolute | undefined;
         let prevPosEnd: EditorCursorPositionAbsolute | undefined;
-        this.inputCapture.positionChangeHandler = (relPosStart, relPosEnd, backwards) => {
-            if (!this.positionStart) { return; }
-            const newPosStart = this.positionStart.group.calculateNewPosition(this.positionStart, relPosStart);
-            const newPosEnd = this.positionStart.group.calculateNewPosition(this.positionStart, relPosEnd);
+        // this.inputCapture.positionChangeHandler = (relPosStart, relPosEnd, backwards) => {
+        //     if (!this.positionStart) { return; }
+        //     const newPosStart = this.positionStart.group.calculateNewPosition(this.positionStart, relPosStart);
+        //     const newPosEnd = this.positionStart.group.calculateNewPosition(this.positionStart, relPosEnd);
 
-            // select entire editable if is placeholder
-            if (
-                newPosStart.char === newPosEnd.char &&
-                newPosStart.editable === newPosEnd.editable &&
-                newPosStart.group === newPosEnd.group &&
-                newPosStart.line === newPosEnd.line
-            ) {
-                const editable = this.getEditableFromPosition(newPosStart);
-                if (editable?.placeholder) {
-                    relPosStart[2] = newPosStart.char = 0;
-                    relPosEnd[2] = newPosEnd.char = editable.getValue().length;
-                }
-            }
+        //     // select entire editable if is placeholder
+        //     if (
+        //         newPosStart.char === newPosEnd.char &&
+        //         newPosStart.editable === newPosEnd.editable &&
+        //         newPosStart.group === newPosEnd.group &&
+        //         newPosStart.line === newPosEnd.line
+        //     ) {
+        //         const editable = this.getEditableFromPosition(newPosStart);
+        //         if (editable?.placeholder) {
+        //             relPosStart[2] = newPosStart.char = 0;
+        //             relPosEnd[2] = newPosEnd.char = editable.getValue().length;
+        //         }
+        //     }
 
-            if (this.positionStart.group !== newPosStart.group || this.positionStart.line !== newPosStart.line) {
-                this.positionStart.group.appendInputCapture(this.inputCapture);
-                this.setTextareInputCursorPosition(newPosStart, newPosEnd);
-            }
-            this.setVirtualCursorPosition(newPosStart, newPosEnd, backwards);
-            this._setPosition(newPosStart);
-            this.inputCapture.focus();
+        //     if (this.positionStart.group !== newPosStart.group || this.positionStart.line !== newPosStart.line) {
+        //         // this.positionStart.group.appendInputCapture(this.inputCapture);
+        //         this.setTextareInputCursorPosition(newPosStart, newPosEnd);
+        //     }
+        //     this.setVirtualCursorPosition(newPosStart, newPosEnd, backwards);
+        //     this._setPosition(newPosStart);
+        //     // this.inputCapture.focus();
 
-            // filter events duplicate events
-            if (prevPosStart && prevPosEnd &&
-                newPosStart.group === prevPosStart.group &&
-                newPosStart.line === prevPosStart.line &&
-                newPosStart.editable === prevPosStart.editable &&
-                newPosStart.char === prevPosStart.char &&
-                newPosEnd.group === prevPosEnd.group &&
-                newPosEnd.line === prevPosEnd.line &&
-                newPosEnd.editable === prevPosEnd.editable &&
-                newPosEnd.char === prevPosEnd.char
-            ) {
-                return;
-            }
+        //     // filter events duplicate events
+        //     if (prevPosStart && prevPosEnd &&
+        //         newPosStart.group === prevPosStart.group &&
+        //         newPosStart.line === prevPosStart.line &&
+        //         newPosStart.editable === prevPosStart.editable &&
+        //         newPosStart.char === prevPosStart.char &&
+        //         newPosEnd.group === prevPosEnd.group &&
+        //         newPosEnd.line === prevPosEnd.line &&
+        //         newPosEnd.editable === prevPosEnd.editable &&
+        //         newPosEnd.char === prevPosEnd.char
+        //     ) {
+        //         return;
+        //     }
 
-            prevPosStart = newPosStart;
-            prevPosEnd = newPosEnd;
+        //     prevPosStart = newPosStart;
+        //     prevPosEnd = newPosEnd;
 
-            if (!justInputted) {
-                this.allowAutocomplete = false;
-                this.autocomplete.clearSuggestions();
-            }
-            justInputted = false;
-        };
+        //     if (!justInputted) {
+        //         this.allowAutocomplete = false;
+        //         this.autocomplete.clearSuggestions();
+        //     }
+        //     justInputted = false;
+        // };
 
         this.inputCapture.inputHandler = input => {
             if (!this.positionStart) { return; }
@@ -205,12 +217,22 @@ export class EditorCursor extends Elm<"span"> {
         };
     }
 
+    /** Register a group editor. Called by InstructionGroupEditor when entering edit mode */
+    public registerGroupEditor(group: InstructionGroupEditor) {
+        this.inputCapture.registerGroup(group);
+    }
+
+    /** Unregister a group editor. Called by InstructionGroupEditor when exiting edit mode */
+    public unregisterGroupEditor(group: InstructionGroupEditor) {
+        this.inputCapture.unregisterGroup(group);
+    }
+
     public unfocus() {
-        this.inputCapture.unfocus();
+        // this.inputCapture.unfocus();
     }
 
     public focus() {
-        this.inputCapture.focus();
+        // this.inputCapture.focus();
     }
 
     public setSelectedText(text: string) {
@@ -242,18 +264,18 @@ export class EditorCursor extends Elm<"span"> {
                 char: editable.getValue().length
             };
             this._setPosition(posStart);
-            position.group.appendInputCapture(this.inputCapture);
+            // position.group.appendInputCapture(this.inputCapture);
             this.setVirtualCursorPosition(posStart, posEnd, false);
             this.setTextareInputCursorPosition(posStart, posEnd);
         } else {
             this._setPosition(position);
             this.clampPosition();
-            position.group.appendInputCapture(this.inputCapture);
+            // position.group.appendInputCapture(this.inputCapture);
             this.setVirtualCursorPosition(this.positionStart!, this.positionStart!, false);
             this.setTextareInputCursorPosition(this.positionStart!, this.positionStart!);
         }
 
-        this.inputCapture.focus();
+        // this.inputCapture.focus();
     }
 
     public update() {
@@ -286,7 +308,7 @@ export class EditorCursor extends Elm<"span"> {
             this.autocomplete.updatePosition(this);
             this.autocomplete.showSuggestions(editable);
         }
-        this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);
+        // this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);
         if (backwards) { this.class("backwards"); } else { this.removeClass("backwards"); }
     }
 
@@ -301,10 +323,10 @@ export class EditorCursor extends Elm<"span"> {
         positionEnd: Readonly<EditorCursorPositionAbsolute>
     ) {
         this.updateInputCaptureContext(positionStart);
-        this.inputCapture.setPositionsOnCurrentLine(
-            positionStart.editable, positionStart.char,
-            positionEnd.editable, positionEnd.char
-        );
+        // this.inputCapture.setPositionsOnCurrentLine(
+        //     positionStart.editable, positionStart.char,
+        //     positionEnd.editable, positionEnd.char
+        // );
     }
 
     private clampPosition() {
@@ -343,9 +365,9 @@ export class EditorCursor extends Elm<"span"> {
     }
 
     private updateInputCaptureContext(position: Readonly<EditorCursorPositionAbsolute>) {
-        this.inputCapture.setContext(
-            position.group.getContextForPosition(position)
-        );
+        // this.inputCapture.setContext(
+        //     position.group.getContextForPosition(position)
+        // );
     }
 
     public registerInstructionGroup(group: InstructionGroupEditor) {

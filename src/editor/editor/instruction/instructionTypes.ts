@@ -3,9 +3,9 @@ import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { getAncestorWhich } from "../../utils";
 import { Editable } from "../editing/Editable";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
-import { TextareaUserInputCaptureAreas } from "../editing/TextareaUserInputCapture";
 import { BranchTargetChangeAction } from "../editing/actions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
+import { DOMSelection } from "../editing/DOMSelection";
 
 export abstract class Instruction {
     /** Block containing the instruction's lines. Only to be used by InstructionBlock and this class. */
@@ -63,7 +63,6 @@ export abstract class InstructionLine extends Component {
     public preferredStartingCharOffset = 0;
     public parentBlock!: InstructionBlock;
 
-    private areas: TextareaUserInputCaptureAreas = [];
     private spanToEditable = new Map<HTMLSpanElement, Editable>();
     private editables: Editable[] = [];
 
@@ -75,13 +74,13 @@ export abstract class InstructionLine extends Component {
         this.parentBlock = instruction;
     }
 
-    public getEditableIndexFromSelection(selection: Selection): number {
+    public getEditableIndexFromSelection(selection: DOMSelection): number {
         const editable = this.getEditableFromSelection(selection);
         if (!editable) { return -1; }
         return this.editables.indexOf(editable);
     }
 
-    public getEditableFromSelection(selection: Selection): Editable | null {
+    public getEditableFromSelection(selection: DOMSelection): Editable | null {
         const thisElm = this.elm.getHTMLElement();
         let directChild = getAncestorWhich(
             selection.anchorNode, node => node.parentElement === thisElm
@@ -110,24 +109,8 @@ export abstract class InstructionLine extends Component {
         return null;
     }
 
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return this.areas;
-    }
-
     protected setAreas(...elements: (string | Editable)[]) {
-        let lastStringLength = 0;
-        this.areas = [];
-
         for (const element of elements) {
-            if (typeof element === "string") {
-                lastStringLength += element.length;
-            } else {
-                if (lastStringLength) {
-                    this.areas.push(lastStringLength);
-                    lastStringLength = 0;
-                }
-                this.areas.push(element);
-            }
             this.elm.append(element);
         }
     }

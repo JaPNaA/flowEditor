@@ -38,7 +38,11 @@
     pointer-events: all;
 } */
 
-.instructionGroup .editable .cursor {
+.instructionGroup {
+    caret-color: #6086f0;
+}
+
+/* .instructionGroup .editable .cursor {
     display: inline;
     background-color: #3665ffa2;
 }
@@ -67,7 +71,7 @@
     margin-right: 0;
     border-left-width: 0;
     border-right-width: 0;
-}
+} */
 
 .instructionGroup .inputCapture {
     position: absolute;

@@ -1,7 +1,6 @@
 import { ControlBranch, ControlEnd, ControlInput, ControlJump, ControlVariable, isControlItem } from "../../FlowRunner";
 import { AutoCompleteSuggester, globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete";
 import { Editable } from "../../editor/editor/editing/Editable";
-import { TextareaUserInputCaptureAreas } from "../../editor/editor/editing/TextareaUserInputCapture";
 import { InstructionBlueprintMin } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
 import { JSONInstruction } from "../../editor/editor/instruction/JSONInstruction";
 import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
@@ -141,9 +140,9 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
         };
     }
 
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [3, this.v1Span, 1, this.opSpan, 1, this.v2Span];
-    }
+    // public getAreas(): TextareaUserInputCaptureAreas {
+    //     return [3, this.v1Span, 1, this.opSpan, 1, this.v2Span];
+    // }
 }
 
 
@@ -161,9 +160,9 @@ class ControlJumpLine extends BranchInstructionLine implements OneLineInstructio
         return { ctrl: 'jump', offset: this.branchOffset };
     }
 
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [7, this.editable];
-    }
+    // public getAreas(): TextareaUserInputCaptureAreas {
+    //     return [7, this.editable];
+    // }
 }
 
 
@@ -180,9 +179,9 @@ class ControlEndLine extends InstructionLine implements OneLineInstruction {
         return { ctrl: 'end' };
     }
 
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [3, this.editable];
-    }
+    // public getAreas(): TextareaUserInputCaptureAreas {
+    //     return [3, this.editable];
+    // }
 }
 
 
@@ -211,9 +210,9 @@ class ControlInputLine extends InstructionLine implements OneLineInstruction {
         };
     }
 
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [this.variableSpan, 17, this.choicesSpan];
-    }
+    // public getAreas(): TextareaUserInputCaptureAreas {
+    //     return [this.variableSpan, 17, this.choicesSpan];
+    // }
 }
 
 
@@ -287,7 +286,7 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
         }
     }
 
-    public getAreas(): TextareaUserInputCaptureAreas {
-        return [this.variableSpan, 4, this.expressionSpan];
-    }
+    // public getAreas(): TextareaUserInputCaptureAreas {
+    //     return [this.variableSpan, 4, this.expressionSpan];
+    // }
 }
