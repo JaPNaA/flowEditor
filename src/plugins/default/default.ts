@@ -109,7 +109,7 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
     constructor(data: ControlBranch) {
         super();
 
-        this.elm.append(
+        this.setAreas(
             "If ",
             this.v1Span = this.createEditable(data.v1),
             " ",
@@ -117,7 +117,8 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
             " ",
             this.v2Span = this.createEditable(data.v2),
             ", goto..."
-        ).class("jump");
+        );
+        this.elm.class("jump");
         this.opSpan.autoCompleteType = autocompleteTypeCompareOp;
         this.v1Span.autoCompleteType = globalAutocompleteTypes.variable;
         this.v2Span.autoCompleteType = globalAutocompleteTypes.variable;
@@ -139,10 +140,6 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
             offset: this.branchOffset
         };
     }
-
-    // public getAreas(): TextareaUserInputCaptureAreas {
-    //     return [3, this.v1Span, 1, this.opSpan, 1, this.v2Span];
-    // }
 }
 
 
@@ -153,16 +150,13 @@ class ControlJumpLine extends BranchInstructionLine implements OneLineInstructio
 
     constructor() {
         super();
-        this.elm.append('Goto...', this.editable).class("jump");
+        this.elm.class("jump");
+        this.setAreas('Goto...', this.editable);
     }
 
     public serialize(): ControlJump {
         return { ctrl: 'jump', offset: this.branchOffset };
     }
-
-    // public getAreas(): TextareaUserInputCaptureAreas {
-    //     return [7, this.editable];
-    // }
 }
 
 
@@ -172,16 +166,13 @@ class ControlEndLine extends InstructionLine implements OneLineInstruction {
 
     constructor() {
         super();
-        this.elm.append('End', this.editable).class("control");
+        this.elm.class("control");
+        this.setAreas('End', this.editable);
     }
 
     public serialize(): ControlEnd {
         return { ctrl: 'end' };
     }
-
-    // public getAreas(): TextareaUserInputCaptureAreas {
-    //     return [3, this.editable];
-    // }
 }
 
 
@@ -192,12 +183,13 @@ class ControlInputLine extends InstructionLine implements OneLineInstruction {
 
     constructor(data: ControlInput) {
         super();
-        this.elm.append(
+        this.setAreas(
             this.variableSpan = this.createEditable(data.variable),
             ' <- choose from [',
             this.choicesSpan = this.createEditable(data.options.join(", ")),
             ']'
-        ).class("control");
+        );
+        this.elm.class("control");
 
         this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
     }
@@ -209,10 +201,6 @@ class ControlInputLine extends InstructionLine implements OneLineInstruction {
             variable: this.variableSpan.getValue()
         };
     }
-
-    // public getAreas(): TextareaUserInputCaptureAreas {
-    //     return [this.variableSpan, 17, this.choicesSpan];
-    // }
 }
 
 
@@ -240,7 +228,8 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
             data.op === "=" ?
                 data.v2 : `${op}${v2}`
         );
-        this.elm.append(this.variableSpan, " <- ", this.expressionSpan).class("control");
+        this.setAreas(this.variableSpan, " <- ", this.expressionSpan)
+        this.elm.class("control");
     }
 
     public serialize(): ControlVariable {
@@ -285,8 +274,4 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
             return str;
         }
     }
-
-    // public getAreas(): TextareaUserInputCaptureAreas {
-    //     return [this.variableSpan, 4, this.expressionSpan];
-    // }
 }

@@ -15,12 +15,11 @@ class JSONLine extends InstructionLine implements OneLineInstruction {
 
     constructor(data: any) {
         super();
-        this.elm.append(this.editable = this.registerEditable(
+        this.setAreas(this.editable = this.registerEditable(
             new JSONLineEditable(JSON.stringify(data), this)
         ));
         this.editable.setParentLine(this);
     }
-
 
     public serialize(): any {
         return JSON.parse(this.editable.getValue());

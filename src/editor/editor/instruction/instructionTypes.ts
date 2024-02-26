@@ -76,7 +76,14 @@ export abstract class InstructionLine extends Component {
     }
 
     public resetElm() {
-        this.elm.replaceContents(...this.areas);
+        this.elm.clear();
+        for (const element of this.areas) {
+            if (typeof element === "string") {
+                this.elm.append(new Elm("span").attribute("contenteditable", "false").append(element));
+            } else {
+                this.elm.append(element);
+            }
+        }
     }
 
     public getEditableIndexFromSelection(selection: DOMSelection): number {
@@ -145,9 +152,7 @@ export abstract class InstructionLine extends Component {
 
     protected setAreas(...elements: (string | Editable)[]) {
         this.areas = elements;
-        for (const element of elements) {
-            this.elm.append(element);
-        }
+        this.resetElm();
     }
 
     protected createEditable(text: string | number): Editable {
@@ -289,18 +294,21 @@ export abstract class BranchInstructionLine extends InstructionLine {
     public branchTarget: InstructionGroupEditor | null = null;
     public branchOffset: number = 0;
 
-    private branchConnectElm: Elm;
+    private branchConnectElm = new Elm()
+        .class("branchConnect").attribute("contenteditable", "false")
+        .on("click", () => {
+            this.parentBlock.getGroupEditor()?.editor.unsetEditMode();
+            appHooks.focusEditor();
+            this.requestUserToSetBranchTarget();
+        });
 
     constructor() {
         super();
-        this.elm
-            .class("hanging")
-            .append(this.branchConnectElm =
-                new Elm().class("branchConnect").on("click", () => {
-                    this.parentBlock.getGroupEditor()?.editor.unsetEditMode();
-                    appHooks.focusEditor();
-                    this.requestUserToSetBranchTarget();
-                }));
+    }
+
+    public resetElm(): void {
+        super.resetElm();
+        this.elm.class("hanging").appendAsFirst(this.branchConnectElm);
     }
 
     public requestUserToSetBranchTarget() {

@@ -33,17 +33,16 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
 export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     public editable: NewInstructionEditable;
     public isBranch: boolean = false;
-    private placeholderText: Elm<'span'>;
+    private placeholderText: Elm<'span'> = new Elm('span')
+        .class("placeholder").attribute("contenteditable", "false")
+        .append(`Press shortcut or hold shift and type to search...`);
     private isEmpty = true;
 
     constructor() {
         super();
 
         this.elm.class("newInstructionLine");
-        this.elm.append(
-            this.editable = this.registerEditable(new NewInstructionEditable(this)),
-            this.placeholderText = new Elm('span').class("placeholder").append(`Press shortcut or hold shift and type to search...`)
-        );
+        this.setAreas(this.editable = this.registerEditable(new NewInstructionEditable(this)));
 
         this.editable.onCheckInput.subscribe(changes => {
             if (changes.newContent && changes.newContent[0] === "\n") {
@@ -73,6 +72,11 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             }
         });
         this.editable.parentLine = this;
+    }
+
+    public resetElm(): void {
+        super.resetElm();
+        this.elm.append(this.placeholderText);
     }
 
     public splitGroupHere() {
