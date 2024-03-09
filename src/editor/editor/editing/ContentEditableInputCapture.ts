@@ -1,5 +1,5 @@
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
-import { DOMSelection } from "./DOMSelection";
+import { InstructionLine } from "../instruction/instructionTypes";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 
@@ -84,8 +84,20 @@ export class ContentEditableInputCapture {
                 if (line) {
                     line.resetElm();
                 } else {
-                    // todo: reset group / trigger line deletions
-                    console.log(mutation);
+                    if (mutation.addedNodes.length !== 0) {
+                        // insert nodes (ex. by undo/paste) not supported (yet)
+                        group.resetElm();
+                        continue;
+                    }
+                    const deleteList: InstructionLine[] = [];
+                    for (const node of mutation.removedNodes) {
+                        const line = group.nodeToLine(node);
+                        if (!line) { continue; } // not supported
+                        deleteList.push(line);
+                    }
+                    for (const line of deleteList) {
+                        line.parentBlock.parentInstruction()?.removeLine(line);
+                    }
                 }
             }
         }

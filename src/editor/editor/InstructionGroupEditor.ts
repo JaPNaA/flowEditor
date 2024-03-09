@@ -532,6 +532,19 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         return newGroup;
     }
 
+    /**
+     * Resets the element on the DOM. Used for undoing or restoring the group
+     * after user edits
+     */
+    public resetElm() {
+        this.elm.clear();
+        for (const line of this.block.lineIter()) {
+            line.resetElm();
+            this.elm.append(line);
+        }
+        this.updateHeight();
+    }
+
     public requestNewLine(lineIndex: number) {
         if (lineIndex > 0) {
             const previousLine = this.block.getLine(lineIndex - 1);

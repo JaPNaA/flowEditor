@@ -78,11 +78,7 @@ export abstract class InstructionLine extends Component {
     public resetElm() {
         this.elm.clear();
         for (const element of this.areas) {
-            if (typeof element === "string") {
-                this.elm.append(new Elm("span").attribute("contenteditable", "false").append(element));
-            } else {
-                this.elm.append(element);
-            }
+            this.elm.append(element);
         }
     }
 
