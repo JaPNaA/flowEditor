@@ -304,7 +304,8 @@ export abstract class BranchInstructionLine extends InstructionLine {
 
     public resetElm(): void {
         super.resetElm();
-        this.elm.class("hanging").appendAsFirst(this.branchConnectElm);
+        this.elm.appendAsFirst(this.branchConnectElm);
+        this._updateElmState();
     }
 
     public requestUserToSetBranchTarget() {
@@ -322,7 +323,7 @@ export abstract class BranchInstructionLine extends InstructionLine {
         return this.branchTarget;
     }
 
-    /** DO NOT CALL OUTSIDE OF `UndoableAction` */
+    /** DO NOT CALL OUTSIDE OF `UndoableAction` or `BranchInstructionLine` */
     public _updateElmState() {
         if (this.branchTarget) {
             this.elm.removeClass("hanging");
