@@ -70,6 +70,13 @@ export class ContentEditableInputCapture {
     private mutationHandler(group: InstructionGroupEditor, observer: MutationObserver, mutations: MutationRecord[]) {
         observer.disconnect();
 
+        console.log(mutations);
+
+        // When user presses '\n', Chrome may insert two '\n' elements. As a workaround to
+        // prevent detection of two newline insertions, each line can only trigger one new
+        // line insertion.
+        const nodesWithInsertedNewLinesSet = new Set();
+
         for (const mutation of mutations) {
             if (mutation.type === "characterData") {
                 const position = group.nodeToPosition(mutation.target);
@@ -82,7 +89,27 @@ export class ContentEditableInputCapture {
             } else if (mutation.type === "childList") {
                 const line = group.nodeToLine(mutation.target);
                 if (line) {
-                    line.resetElm();
+                    const editable = line.getEditableFromNode(mutation.target);
+                    if (mutation.addedNodes.length > 0 && mutation.removedNodes.length === 0) {
+                        if (
+                            mutation.addedNodes[0].nodeValue?.includes("\n") &&
+                            !nodesWithInsertedNewLinesSet.has(line)
+                        ) {
+                            nodesWithInsertedNewLinesSet.add(line);
+                            // likely an attempt to insert a line
+                            if (editable) {
+                                editable.update();
+                            } else {
+                                line.resetElm();
+                            }
+                            group.requestNewLine(group.block.locateLine(line) + 1);
+                        } else if (editable) {
+                            console.log("set");
+                            editable.setValue(editable.getHTMLElement().innerText);
+                        }
+                    } else {
+                        line.resetElm();
+                    }
                 } else {
                     if (mutation.addedNodes.length !== 0) {
                         // insert nodes (ex. by undo/paste) not supported (yet)

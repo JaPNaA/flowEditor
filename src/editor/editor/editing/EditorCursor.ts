@@ -297,6 +297,9 @@ export class EditorCursor extends Elm<"span"> {
         if (lastActiveEditable) {
             lastActiveEditable.placeholder = false;
         }
+
+        console.log(this.positionStart, positionStart);
+
         this.positionStart = positionStart;
         this.positionEnd = positionEnd;
         const editable = this.getEditableFromPosition(positionStart);
@@ -308,8 +311,32 @@ export class EditorCursor extends Elm<"span"> {
             this.autocomplete.updatePosition(this);
             this.autocomplete.showSuggestions(editable);
         }
+
+        // set caret position
+        const selection = getSelection();
+        const range = document.createRange();
+        range.setStart(editable.getHTMLElement().childNodes[0], positionStart.char);
+        range.collapse(true);
+
+        if (selection) {
+            if (selection.rangeCount === 1) {
+                const currRange = selection.getRangeAt(0);
+                if (
+                    currRange.startContainer == range.startContainer &&
+                    currRange.startOffset == range.startOffset &&
+                    currRange.endContainer == range.endContainer &&
+                    currRange.endOffset == range.endOffset
+                ) {
+                    return; // don't need to change
+                }
+            }
+
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
         // this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);
-        if (backwards) { this.class("backwards"); } else { this.removeClass("backwards"); }
+        // if (backwards) { this.class("backwards"); } else { this.removeClass("backwards"); }
     }
 
     private getEditableFromPosition(position: Readonly<EditorCursorPositionAbsolute>) {
@@ -384,4 +411,12 @@ export interface EditorCursorPositionAbsolute {
     line: number;
     editable: number;
     char: number;
+}
+
+function compareAbsoluteCursorPositions(a: EditorCursorPositionAbsolute, b: EditorCursorPositionAbsolute) {
+    if (a.group != b.group) { return null; }
+    if (a.line < b.line) { return -1; } else if (a.line > b.line) { return 1; }
+    if (a.editable < b.editable) { return -1; } else if (a.editable > b.editable) { return 1; }
+    if (a.char < b.char) { return -1; } else if (a.char > b.char) { return 1; }
+    return 0;
 }
