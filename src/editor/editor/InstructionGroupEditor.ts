@@ -103,8 +103,8 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         }
     }
 
-    public onLineDelete(position: EditorCursorPositionAbsolute, lineOp: LineOperationEvent) {
-        let targetLine = position.line;
+    public onLineDelete(lineOp: LineOperationEvent) {
+        let targetLine = this.block.locateLine(lineOp.line);
         if (lineOp.isNextLine) { targetLine++ }
         if (lineOp.isInsert) {
             this.insertLineAndUpdateCursor(targetLine);

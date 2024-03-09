@@ -126,7 +126,7 @@ export class ContentEditableInputCapture {
                             } else {
                                 line.resetElm();
                             }
-                            group.requestNewLine(group.block.locateLine(line) + 1);
+                            this.lineDeleteHandler?.(new LineOperationEvent(line, true, true));
                         } else if (editable) {
                             console.log("set");
                             editable.setValue(editable.getHTMLElement().innerText);
@@ -140,14 +140,16 @@ export class ContentEditableInputCapture {
                         group.resetElm();
                         continue;
                     }
-                    const deleteList: InstructionLine[] = [];
-                    for (const node of mutation.removedNodes) {
-                        const line = group.nodeToLine(node);
-                        if (!line) { continue; } // not supported
-                        deleteList.push(line);
-                    }
-                    for (const line of deleteList) {
-                        line.parentBlock.parentInstruction()?.removeLine(line);
+                    if (this.lineDeleteHandler) {
+                        const deleteList: InstructionLine[] = [];
+                        for (const node of mutation.removedNodes) {
+                            const line = group.nodeToLine(node);
+                            if (!line) { continue; } // not supported
+                            deleteList.push(line);
+                        }
+                        for (const line of deleteList) {
+                            this.lineDeleteHandler(new LineOperationEvent(line, false, false));
+                        }
                     }
                 }
             }

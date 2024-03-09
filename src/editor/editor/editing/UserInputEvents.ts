@@ -1,6 +1,8 @@
 /** Change of line. Then, (only for "up", "same", "down") offset on line given by which editiable, then character offset in editable */
 // export type UserInputCursorPositionRelative = ["top" | "up" | "same" | "down" | "bottom", number, number, Editable?];
 
+import { InstructionLine } from "../instruction/instructionTypes";
+
 export abstract class RejectableEvent {
     private rejected = false;
 
@@ -23,6 +25,7 @@ export class UserInputEvent extends RejectableEvent {
 
 export class LineOperationEvent extends RejectableEvent {
     constructor(
+        public readonly line: InstructionLine,
         /** Is the operation on the current line or next line? */
         public readonly isNextLine: boolean,
         /** Is the operation an insertion or deletion? */

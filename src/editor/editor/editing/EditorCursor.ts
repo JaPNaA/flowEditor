@@ -135,10 +135,9 @@ export class EditorCursor extends Elm<"span"> {
             if (!editable) { return; }
         };
 
-        // todo: probably obsolete (already handled in inputCapture)
         this.inputCapture.lineDeleteHandler = lineOp => {
             if (!this.positionStart) { return; }
-            this.positionStart.group.onLineDelete(this.positionStart, lineOp);
+            this.positionStart.group.onLineDelete(lineOp);
         };
 
         this.inputCapture.keydownIntercepter = e => {
