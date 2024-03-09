@@ -40,6 +40,14 @@ export class ContentEditableInputCapture {
     private observerToGroup: Map<MutationObserver, InstructionGroupEditor> = new Map();
     private groupToObserver: Map<InstructionGroupEditor, MutationObserver> = new Map();
 
+    constructor() {
+        this.keydownHandler = this.keydownHandler.bind(this);
+    }
+
+    public keydownHandler(ev: KeyboardEvent) {
+        this.keydownIntercepter?.(ev);
+    }
+
     /** Register an element and watches for edits. */
     public registerGroup(group: InstructionGroupEditor) {
         const observer: MutationObserver = new MutationObserver(
@@ -48,6 +56,7 @@ export class ContentEditableInputCapture {
         observer.observe(group.elm.getHTMLElement(), ContentEditableInputCapture.observerOptions);
         this.observerToGroup.set(observer, group);
         this.groupToObserver.set(group, observer);
+        group.elm.getHTMLElement().addEventListener("keydown", this.keydownHandler);
 
         if (ContentEditableInputCapture.supportsContentEditablePlaintextOnly) {
             group.elm.attribute("contenteditable", "plaintext-only");
@@ -63,6 +72,7 @@ export class ContentEditableInputCapture {
         observer.disconnect();
         this.observerToGroup.delete(observer);
         this.groupToObserver.delete(group);
+        group.elm.getHTMLElement().removeEventListener("keydown", this.keydownHandler);
 
         group.elm.attribute("contenteditable", "false");
     }
@@ -85,7 +95,21 @@ export class ContentEditableInputCapture {
                 if (!line) { mutation.target.nodeValue = mutation.oldValue; continue; } // revert
                 const editable = line.getEditableFromIndex(position.editable);
                 if (!editable) { line.resetElm(); continue; } // revert
-                editable.setValue(mutation.target.nodeValue || "");
+
+                if (mutation.target.nodeValue) {
+                    const diff = this.singleDiff(mutation.oldValue || "", mutation.target.nodeValue);
+                    if (!diff) { continue; }
+                    const userInputEvent = new UserInputEvent(diff.added, diff.removed, mutation.target.nodeValue);
+                    this.inputHandler?.(userInputEvent);
+
+                    if (userInputEvent.isRejected()) {
+                        // revert
+                        mutation.target.nodeValue = mutation.oldValue;
+                        continue;
+                    }
+                    editable.setValue(mutation.target.nodeValue);
+                    this.afterInputHandler?.(userInputEvent);
+                }
             } else if (mutation.type === "childList") {
                 const line = group.nodeToLine(mutation.target);
                 if (line) {
@@ -130,6 +154,36 @@ export class ContentEditableInputCapture {
         }
 
         observer.observe(group.elm.getHTMLElement(), ContentEditableInputCapture.observerOptions);
+    }
+
+    /** Diffs a string with a single difference (added/removed/replaced substring). */
+    private singleDiff(original: string, currentValue: string): { added: string, removed: string } | null {
+        let hadChange = false;
+        let sameToIndex;
+        const maxLength = Math.max(original.length, currentValue.length);
+        for (sameToIndex = 0; sameToIndex < maxLength; sameToIndex++) {
+            if (currentValue[sameToIndex] !== original[sameToIndex]) {
+                hadChange = true;
+                break;
+            }
+        }
+
+        if (!hadChange) { return null; } // no changes
+
+        const currentValueLen = currentValue.length;
+        const lastValueLen = original.length;
+        const maxBackwardSearch = Math.min(currentValueLen, lastValueLen) - sameToIndex;
+        let sameToIndexRev;
+        for (sameToIndexRev = 1; sameToIndexRev <= maxBackwardSearch; sameToIndexRev++) {
+            if (currentValue[currentValueLen - sameToIndexRev] !== original[lastValueLen - sameToIndexRev]) {
+                break;
+            }
+        }
+
+        return {
+            added: currentValue.slice(sameToIndex, 1 - sameToIndexRev),
+            removed: original.slice(sameToIndex, 1 - sameToIndexRev)
+        };
     }
 }
 
