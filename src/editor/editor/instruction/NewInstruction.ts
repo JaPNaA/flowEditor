@@ -33,9 +33,6 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
 export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     public editable: NewInstructionEditable;
     public isBranch: boolean = false;
-    private placeholderText: Elm<'span'> = new Elm('span')
-        .class("placeholder").attribute("contenteditable", "false")
-        .append(`Press shortcut or hold shift and type to search...`);
     private isEmpty = true;
 
     constructor() {
@@ -51,10 +48,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             }
 
             if (changes.newContent) {
-                this.placeholderText.class("hidden");
+                this.editable.setPlaceholder();
                 this.isEmpty = false;
             } else {
-                this.placeholderText.removeClass("hidden");
+                this.editable.unsetPlaceholder();
                 this.isEmpty = true;
             }
         });
@@ -72,11 +69,6 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             }
         });
         this.editable.parentLine = this;
-    }
-
-    public resetElm(): void {
-        super.resetElm();
-        this.elm.append(this.placeholderText);
     }
 
     public splitGroupHere() {
@@ -147,11 +139,15 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 export class NewInstructionEditable extends Editable {
     public onCheckInput = new EventBus<UserInputEvent>();
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
+
+    private static placeholderText = "Press shortcut or hold shift and type to search...";
     private isActive = false;
     private previousCursor?: EditorCursor;
 
     constructor(parentLine: NewInstructionLine) {
-        super("", parentLine);
+        super(NewInstructionEditable.placeholderText, parentLine);
+        this.placeholder = true;
+        this.class("placeholder");
         this.intercepter = this.intercepter.bind(this);
         this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
     }
@@ -159,6 +155,17 @@ export class NewInstructionEditable extends Editable {
     public checkInput(event: UserInputEvent): void {
         // allow all
         this.onCheckInput.send(event);
+    }
+
+    public setPlaceholder() {
+        this.setValue(NewInstructionEditable.placeholderText);
+        this.placeholder = true;
+        this.removeClass("placeholder");
+    }
+
+    public unsetPlaceholder() {
+        this.class("placeholder");
+        this.placeholder = false;
     }
 
     public update() {
