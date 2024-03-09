@@ -89,27 +89,57 @@ export class ContentEditableInputCapture {
 
         for (const mutation of mutations) {
             if (mutation.type === "characterData") {
-                const position = group.nodeToPosition(mutation.target);
-                if (!position) { mutation.target.nodeValue = mutation.oldValue; continue; } // revert
+                let position = group.nodeToPosition(mutation.target);
+                let wasPositionFixed = false;
+                let diff: { added: string, removed: string } | null = null;
+                let newValue = mutation.target.nodeValue || "";
+
+                if (!position) {
+                    mutation.target.nodeValue = mutation.oldValue; // revert
+                    if (mutation.target.nextSibling) {
+                        // try to fix the insertion position...
+                        // the insertion position may be incorrect (not on an editable)
+                        // when trying to insert into an empty editable because
+                        // contenteditable tries to insert into the previous non-empty node
+                        position = group.nodeToPosition(mutation.target.nextSibling);
+                        if (!position) { continue; } // can't fix
+                        diff = this.singleDiff(mutation.oldValue || "", newValue);
+                        wasPositionFixed = true;
+                    } else {
+                        continue;
+                    }
+                }
+
                 const line = group.block.getLine(position.line);
                 if (!line) { mutation.target.nodeValue = mutation.oldValue; continue; } // revert
                 const editable = line.getEditableFromIndex(position.editable);
                 if (!editable) { line.resetElm(); continue; } // revert
 
-                if (mutation.target.nodeValue) {
-                    const diff = this.singleDiff(mutation.oldValue || "", mutation.target.nodeValue);
-                    if (!diff) { continue; }
-                    const userInputEvent = new UserInputEvent(diff.added, diff.removed, mutation.target.nodeValue);
-                    this.inputHandler?.(userInputEvent);
-
-                    if (userInputEvent.isRejected()) {
-                        // revert
-                        mutation.target.nodeValue = mutation.oldValue;
-                        continue;
-                    }
-                    editable.setValue(mutation.target.nodeValue);
-                    this.afterInputHandler?.(userInputEvent);
+                if (diff === null) {
+                    diff = this.singleDiff(mutation.oldValue || "", newValue);
+                } else if (editable.getValue() === "") {
+                    diff.removed = "";
+                    newValue = diff.added;
+                } else {
+                    continue;
                 }
+
+                if (!diff) { continue; }
+                const userInputEvent = new UserInputEvent(diff.added, diff.removed, newValue);
+                this.inputHandler?.(userInputEvent);
+
+                if (userInputEvent.isRejected()) {
+                    // revert
+                    mutation.target.nodeValue = mutation.oldValue;
+                    continue;
+                }
+                editable.setValue(newValue);
+                if (wasPositionFixed) {
+                    position.char++;
+                    this.positionChangeHandler?.(position, position, false);
+                }
+                this.afterInputHandler?.(userInputEvent);
+
             } else if (mutation.type === "childList") {
                 const line = group.nodeToLine(mutation.target);
                 if (line) {
@@ -182,10 +212,18 @@ export class ContentEditableInputCapture {
             }
         }
 
-        return {
-            added: currentValue.slice(sameToIndex, 1 - sameToIndexRev),
-            removed: original.slice(sameToIndex, 1 - sameToIndexRev)
-        };
+        if (maxBackwardSearch == 0) {
+            return {
+                added: currentValue.slice(sameToIndex),
+                removed: original.slice(sameToIndex)
+            };
+        } else {
+            return {
+                added: currentValue.slice(sameToIndex, 1 - sameToIndexRev),
+                removed: original.slice(sameToIndex, 1 - sameToIndexRev)
+            };
+        }
+
     }
 }
 

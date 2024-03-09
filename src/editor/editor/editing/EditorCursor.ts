@@ -118,6 +118,8 @@ export class EditorCursor extends Elm<"span"> {
             justInputted = false;
         };
 
+        this.inputCapture.positionChangeHandler = positionChangeHandler;
+
         this.inputCapture.inputHandler = input => {
             if (!this.positionStart) { return; }
             this.allowAutocomplete = true;
