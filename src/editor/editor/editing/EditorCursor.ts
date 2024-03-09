@@ -228,6 +228,9 @@ export class EditorCursor extends Elm<"span"> {
     }
 
     public unfocus() {
+        if (document.activeElement && document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
         // this.inputCapture.unfocus();
     }
 

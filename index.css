@@ -29,6 +29,10 @@
     user-select: none;
 }
 
+.instructionGroup {
+    outline: none;
+}
+
 .instructionGroup.editMode {
     pointer-events: all;
     user-select: auto;
