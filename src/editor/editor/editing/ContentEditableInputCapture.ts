@@ -3,6 +3,25 @@ import { InstructionLine } from "../instruction/instructionTypes";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 
+/**
+ * ContentEditableInputCapture is a replacement for TextareaUserInputCapture.
+ * 
+ * The current version of ContentEditableInputCapture uses the contenteditable
+ * attribute on div.instructionGroup elements. When a mutation to the group
+ * editor element is detected, the class (1) ensures the div.instructionGroup
+ * element is still in a valid form (without extra elements, formatting, etc.)
+ * and (2) triggers events corresponding to mutations.
+ * 
+ * This method resolves a main issue with the TextareaUserInputCapture
+ * implementation -- you can select by dragging on the GUI.
+ * 
+ * The current version has one fatal issue -- you cannot place the cursor
+ * inside empty editables. Additionally, the workarounds break the normal
+ * editing flow (requiring to reset elements means an unfocus -> focus), which
+ * is problematic for IMEs, etc.
+ * 
+ * Thus, we are abandoning this implementation along with TextareaUserInputCapture.
+ */
 export class ContentEditableInputCapture {
     /** Fired when the cursor position changes */
     public positionChangeHandler?: (posStart: EditorCursorPositionAbsolute, posEnd: EditorCursorPositionAbsolute, selectBackwards: boolean) => void;
