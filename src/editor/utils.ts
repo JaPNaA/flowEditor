@@ -76,3 +76,45 @@ export function looseStartsWith(start: string, str: string): number {
 
     return skipped;
 }
+
+export class TwoWayMap<K, V> {
+    private kv = new Map<K, V>();
+    private vk = new Map<V, K>();
+
+    clear(): void {
+        this.kv.clear();
+        this.vk.clear();
+    }
+
+    deleteK(k: K): boolean {
+        const v = this.kv.get(k);
+        if (this.kv.delete(k)) {
+            this.vk.delete(v!);
+            return true;
+        }
+        return false;
+    }
+
+    deleteV(v: V): boolean {
+        const k = this.vk.get(v);
+        if (this.vk.delete(v)) {
+            this.kv.delete(k!);
+            return true;
+        }
+        return false;
+    }
+
+    getV(k: K): V | undefined {
+        return this.kv.get(k);
+    }
+
+    getK(v: V): K | undefined {
+        return this.vk.get(v);
+    }
+
+    set(key: K, value: V): this {
+        this.kv.set(key, value);
+        this.vk.set(value, key);
+        return this;
+    }
+}

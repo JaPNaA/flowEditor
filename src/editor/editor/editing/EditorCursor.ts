@@ -1,10 +1,10 @@
-import { ContentEditableInputCapture } from "./ContentEditableInputCapture";
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { getAncestorWhich, isAncestor } from "../../utils";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
 import { DOMSelection } from "./DOMSelection";
+import { ContentEditableOverlayInputCapture } from "./ContentEditableOverlayInputCapture";
 
 export class EditorCursor extends Elm<"span"> {
     public groupEditorsElmsMap = new WeakMap<HTMLDivElement, InstructionGroupEditor>();
@@ -17,7 +17,7 @@ export class EditorCursor extends Elm<"span"> {
     public onKeydownIntercept = new EventBus<KeyboardEvent>();
     public onInput = new EventBus();
 
-    private inputCapture = new ContentEditableInputCapture();
+    private inputCapture = new ContentEditableOverlayInputCapture();
     private positionStart?: Readonly<EditorCursorPositionAbsolute>;
     private positionEnd?: Readonly<EditorCursorPositionAbsolute>;
 
