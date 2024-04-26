@@ -1,4 +1,6 @@
-const path = require("path");
+import path from "path";
+import { fileURLToPath } from 'url';
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 const webpackConfig = {
     mode: "development",
@@ -19,7 +21,7 @@ const webpackConfig = {
     }
 };
 
-module.exports = [{
+export default [{
     entry: "./src/editor/index.ts",
     output: {
         filename: "editor-bundle.js",
