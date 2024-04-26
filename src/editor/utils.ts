@@ -127,16 +127,13 @@ export class TwoWayMap<K, V> {
  * @param currentCursor new cursor position
  * @returns An object describing the change that occurred
  */
-export function getChanges(lastValue: string, lastCursor: number, currentValue: string, currentCursor: number) {
+export function singleDiffWithCursor(lastValue: string, lastCursor: number, currentValue: string, currentCursor: number) {
     const currentValueLen = currentValue.length;
     const lastValueLen = lastValue.length;
 
     const maxStartMatch = Math.min(lastCursor, currentCursor);
-    const maxEndMatch = Math.min(
-        lastValueLen - lastCursor,
-        currentValueLen - currentCursor
-    );
 
+    // match up to first cursor location
     let i: number;
     for (i = 0; i < maxStartMatch; i++) {
         if (currentValue[i] !== lastValue[i]) {
@@ -144,16 +141,38 @@ export function getChanges(lastValue: string, lastCursor: number, currentValue: 
         }
     }
 
-    let j: number;
-    for (j = 1; j < maxEndMatch; j++) {
+    // remove matching front and back characters
+    const maxBackwardSearch = Math.min(currentValueLen, lastValueLen) - i;
+    let j: number = 1;
+    for (j = 1; j <= maxBackwardSearch; j++) {
         if (currentValue[currentValueLen - j] !== lastValue[lastValueLen - j]) {
             break;
         }
     }
 
-    return {
-        index: i,
-        added: currentValue.slice(i, currentValueLen - j),
-        removed: lastValue.slice(i, lastValueLen - j)
-    };
+    const maxLength = Math.min(lastValueLen, currentValueLen) - j;
+    for (; i <= maxLength; i++) {
+        if (currentValue[i] !== lastValue[i]) {
+            break;
+        }
+    }
+
+    // identify when no changes occur
+    if (currentValueLen == lastValueLen && i >= currentValueLen - j) {
+        return null;
+    }
+
+    if (j <= 1) {
+        return {
+            index: i,
+            added: currentValue.slice(i),
+            removed: lastValue.slice(i)
+        };
+    } else {
+        return {
+            index: i,
+            added: currentValue.slice(i, 1 - j),
+            removed: lastValue.slice(i, 1 - j)
+        };
+    }
 }

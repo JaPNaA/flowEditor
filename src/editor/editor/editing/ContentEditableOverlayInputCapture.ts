@@ -2,7 +2,7 @@ import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
-import { TwoWayMap, getChanges } from "../../utils";
+import { TwoWayMap, singleDiffWithCursor } from "../../utils";
 
 /**
  * `ContentEditableOverlayInputCapture` uses a hidden contenteditable
@@ -145,7 +145,7 @@ class InputCaptureElm extends Elm<"pre"> {
                 let diff: { added: string, removed: string } | null = null;
                 let newValue = mutation.target.nodeValue || "";
 
-                console.log(getChanges(
+                console.log(singleDiffWithCursor(
                     mutation.oldValue || "", this.parent._lastSelection?.anchorOffset || 0,
                     newValue, this.parent._currentSelection?.anchorOffset || 0));
             } else if (mutation.type === "childList") {
