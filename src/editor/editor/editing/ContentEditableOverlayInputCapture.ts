@@ -1,9 +1,8 @@
-import { Editable } from "./Editable";
 import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
-import { TwoWayMap } from "../../utils";
+import { TwoWayMap, getChanges } from "../../utils";
 
 /**
  * `ContentEditableOverlayInputCapture` uses a hidden contenteditable
@@ -146,7 +145,7 @@ class InputCaptureElm extends Elm<"pre"> {
                 let diff: { added: string, removed: string } | null = null;
                 let newValue = mutation.target.nodeValue || "";
 
-                console.log(this.getChanges(
+                console.log(getChanges(
                     mutation.oldValue || "", this.parent._lastSelection?.anchorOffset || 0,
                     newValue, this.parent._currentSelection?.anchorOffset || 0));
             } else if (mutation.type === "childList") {
@@ -156,42 +155,4 @@ class InputCaptureElm extends Elm<"pre"> {
         this.observer.observe(this.elm, InputCaptureElm.observerOptions);
     }
 
-    /**
-     * Identify the change the user made based on difference in strings and cursor position.
-     * @param lastValue original string before modification
-     * @param lastCursor last cursor position
-     * @param currentValue new string after modification
-     * @param currentCursor new cursor position
-     * @returns An object describing the change that occurred
-     */
-    private getChanges(lastValue: string, lastCursor: number, currentValue: string, currentCursor: number) {
-        const currentValueLen = currentValue.length;
-        const lastValueLen = lastValue.length;
-
-        const maxStartMatch = Math.min(lastCursor, currentCursor);
-        const maxEndMatch = Math.min(
-            lastValueLen - lastCursor,
-            currentValueLen - currentCursor
-        );
-
-        let i: number;
-        for (i = 0; i < maxStartMatch; i++) {
-            if (currentValue[i] !== lastValue[i]) {
-                break;
-            }
-        }
-
-        let j: number;
-        for (j = 1; j < maxEndMatch; j++) {
-            if (currentValue[currentValueLen - j] !== lastValue[lastValueLen - j]) {
-                break;
-            }
-        }
-
-        return {
-            index: i,
-            added: currentValue.slice(i, currentValueLen - j),
-            removed: lastValue.slice(i, lastValueLen - j)
-        };
-    }
 }
