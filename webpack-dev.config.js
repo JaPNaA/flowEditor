@@ -2,7 +2,7 @@ const path = require("path");
 
 const webpackConfig = {
     mode: "development",
-    watch: true,
+    watch: true, // <- watch files in dev mode
     resolve: {
         symlinks: false,
         extensions: [".ts", ".tsx", ".js"],
