@@ -69,6 +69,10 @@ test('singleDiffWithCursor: character substitution', () => {
         .toMatchObject({ index: 3, added: "ペン", removed: "ぺｎ" });
     expect(singleDiffWithCursor("これはぺｎです", 0, "これはペンです", 0))
         .toMatchObject({ index: 3, added: "ペン", removed: "ぺｎ" });
+    expect(singleDiffWithCursor("これはｔです", 0, "これはてです", 0))
+        .toMatchObject({ index: 3, added: "て", removed: "ｔ" });
+    expect(singleDiffWithCursor("これはｔ", 0, "これはて", 0))
+        .toMatchObject({ index: 3, added: "て", removed: "ｔ" });
 });
 
 test('singleDiffWithCursor: same character', () => {

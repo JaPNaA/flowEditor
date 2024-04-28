@@ -158,7 +158,7 @@ export function singleDiffWithCursor(lastValue: string, lastCursor: number, curr
     }
 
     // identify when no changes occur
-    if (currentValueLen == lastValueLen && i >= currentValueLen - j) {
+    if (currentValueLen == lastValueLen && i > currentValueLen - j) {
         return null;
     }
 
