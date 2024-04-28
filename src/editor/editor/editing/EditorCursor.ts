@@ -246,10 +246,6 @@ export class EditorCursor extends Elm<"span"> {
         return this.positionStart;
     }
 
-    public getPositions() {
-        return { start: this.positionStart, end: this.positionEnd };
-    }
-
     // todo: probably obsolete (behaviour same as positionChangeHandler)
     public setPosition(position: EditorCursorPositionAbsolute) {
         const editable = this.getEditableFromPosition(position);

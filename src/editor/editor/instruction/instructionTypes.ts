@@ -82,52 +82,35 @@ export abstract class InstructionLine extends Component {
         }
     }
 
-    public getEditableIndexFromSelection(selection: DOMSelection): number {
-        const editable = this.getEditableFromSelection(selection);
-        if (!editable) { return -1; }
-        return this.editables.indexOf(editable);
-    }
-
-    public getEditableFromSelection(selection: DOMSelection): Editable | null {
-        const thisElm = this.elm.getHTMLElement();
-        let directChild = getAncestorWhich(
-            selection.anchorNode, node => node.parentElement === thisElm
-        ) as Node | Element | null;
-
-        // search backwards
-        let curr = directChild;
-        while (curr) {
-            const editable = this.spanToEditable.get(curr as HTMLSpanElement);
-            curr = curr.previousSibling;
-            if (editable) {
-                return editable;
+    public getEditableFromCharIndex(charIndex: number): Editable | null {
+        for (const area of this.areas) {
+            if (typeof area === 'string') {
+                charIndex -= area.length;
+                // not <= to account for the possibility we have the
+                // charIndex at the start (charIndex = 0) of the next Editable
+                if (charIndex < 0) { return null; }
+            } else {
+                const value = area.getValue();
+                charIndex -= value.length;
+                if (charIndex <= 0) { return area; }
             }
         }
-
-        // search forwards
-        curr = directChild;
-        while (curr) {
-            const editable = this.spanToEditable.get(curr as HTMLSpanElement);
-            curr = curr.nextSibling;
-            if (editable) {
-                return editable;
-            }
-        }
-
         return null;
     }
 
-    public getEditableIndexFromNode(node: Node): number {
-        const editable = this.getEditableFromNode(node);
-        if (!editable) { return -1; }
-        return this.editables.indexOf(editable);
-    }
-
-    public getEditableFromNode(node: Node): Editable | null {
-        const thisElm = this.elm.getHTMLElement();
-        return this.spanToEditable.get(
-            getAncestorWhich(node, node => node.parentElement === thisElm) as HTMLSpanElement
-        ) || null;
+    public getCharIndexOfEditable(editable: Editable) {
+        let offset = 0;
+        for (const area of this.areas) {
+            if (typeof area === 'string') {
+                offset += area.length;
+            } else {
+                if (area === editable) {
+                    return offset;
+                }
+                offset += area.getValue().length;
+            }
+        }
+        return -1;
     }
 
     public getEditables(): ReadonlyArray<Editable> {

@@ -2,7 +2,8 @@ import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
-import { TwoWayMap, singleDiffWithCursor } from "../../utils";
+import { TwoWayMap, getAncestorWhich, singleDiffWithCursor } from "../../utils";
+import { InstructionLine } from "../instruction/instructionTypes";
 
 /**
  * `ContentEditableOverlayInputCapture` uses a hidden contenteditable
@@ -58,7 +59,6 @@ export class ContentEditableOverlayInputCapture {
             const selection = getSelection();
             this._lastSelection = this._currentSelection;
             this._currentSelection = selection || undefined;
-            console.log(selection);
         });
     }
 
@@ -103,6 +103,7 @@ class InputCaptureElm extends Elm<"pre"> {
         subtree: true
     };
 
+    private lineMap = new WeakMap<HTMLDivElement, InstructionLine>();
     private observer: MutationObserver = new MutationObserver(
         mutations => this.mutationHandler(mutations)
     );
@@ -113,7 +114,8 @@ class InputCaptureElm extends Elm<"pre"> {
         this.class("inputCapture");
 
         for (const line of group.block.lineIter()) {
-            this.append(new Elm().class("instructionLine").append(line.elm.getHTMLElement().innerText));
+            const elm = new Elm().class("instructionLine").append(line.elm.getHTMLElement().innerText).appendTo(this);
+            this.lineMap.set(elm.getHTMLElement(), line);
         }
 
         this.attribute("contenteditable",
@@ -133,21 +135,35 @@ class InputCaptureElm extends Elm<"pre"> {
 
         console.log(mutations);
 
-        // When user presses '\n', Chrome may insert two '\n' elements. As a workaround to
-        // prevent detection of two newline insertions, each line can only trigger one new
-        // line insertion.
-        const nodesWithInsertedNewLinesSet = new Set();
+        // Sometimes chrome inserts multiple records of mutations for one node, which
+        // we don't want. This variable checks to make sure characterData mutations
+        // are only checked once per mutation.
+        const characterDataNodesChecked = new Set();
 
         for (const mutation of mutations) {
             if (mutation.type === "characterData") {
-                let position = this.group.nodeToPosition(mutation.target);
-                let wasPositionFixed = false;
-                let diff: { added: string, removed: string } | null = null;
-                let newValue = mutation.target.nodeValue || "";
+                if (characterDataNodesChecked.has(mutation.target)) { continue; }
+                characterDataNodesChecked.add(mutation.target);
 
-                console.log(singleDiffWithCursor(
-                    mutation.oldValue || "", this.parent._lastSelection?.anchorOffset || 0,
-                    newValue, this.parent._currentSelection?.anchorOffset || 0));
+                const lineElm = getAncestorWhich(mutation.target, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine")) as HTMLDivElement;
+                if (!lineElm) { continue; }
+                let newValue = mutation.target.nodeValue || "";
+                const oldValue = mutation.oldValue || "";
+                const deltaLength = newValue.length - oldValue.length;
+                const diff = singleDiffWithCursor( // note: potential bug: mutation event happens before selectionChange event
+                    oldValue, this.parent._lastSelection?.anchorOffset || 0,
+                    newValue, this.parent._currentSelection?.anchorOffset || 0);
+                if (!diff) { continue; }
+
+                const line = this.lineMap.get(lineElm);
+                if (!line) { continue; }
+
+                const editable = line.getEditableFromCharIndex(diff.index);
+                if (editable) {
+                    let index = line.getCharIndexOfEditable(editable);
+                    editable.setValue(newValue.slice(index, index + editable.getValue().length + deltaLength));
+                }
+
             } else if (mutation.type === "childList") {
             }
         }
