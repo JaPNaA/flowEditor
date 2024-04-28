@@ -75,13 +75,6 @@ export abstract class InstructionLine extends Component {
         this.parentBlock = instruction;
     }
 
-    public resetElm() {
-        this.elm.clear();
-        for (const element of this.areas) {
-            this.elm.append(element);
-        }
-    }
-
     public getEditableFromCharIndex(charIndex: number): Editable | null {
         for (const area of this.areas) {
             if (typeof area === 'string') {
@@ -131,7 +124,9 @@ export abstract class InstructionLine extends Component {
 
     protected setAreas(...elements: (string | Editable)[]) {
         this.areas = elements;
-        this.resetElm();
+        for (const element of elements) {
+            this.elm.append(element);
+        }
     }
 
     protected createEditable(text: string | number): Editable {
@@ -283,10 +278,6 @@ export abstract class BranchInstructionLine extends InstructionLine {
 
     constructor() {
         super();
-    }
-
-    public resetElm(): void {
-        super.resetElm();
         this.elm.appendAsFirst(this.branchConnectElm);
         this._updateElmState();
     }
