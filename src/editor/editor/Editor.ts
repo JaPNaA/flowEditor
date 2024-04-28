@@ -228,6 +228,7 @@ export class Editor extends WorldElmWithComponents {
             this.unsetTempEditMode();
         }
         this.tempEditModeGroup = group;
+        group.setEditMode();
         if (this.cursor.getPosition()?.group !== group) {
             // focus selected group
             this.cursor.setPosition({
@@ -238,7 +239,6 @@ export class Editor extends WorldElmWithComponents {
             });
             this.cursor.unfocus();
         }
-        group.setEditMode();
     }
 
     private unsetTempEditMode() {

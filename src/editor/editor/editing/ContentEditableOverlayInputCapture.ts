@@ -77,6 +77,49 @@ export class ContentEditableOverlayInputCapture {
         inputCapture.remove();
     }
 
+    public setPosition(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
+        if (positionStart.group !== positionEnd.group) { throw new Error("Cannot do cross-group selections"); }
+
+        const groupElm = this.inputCaptureGroup.getK(positionStart.group);
+        if (!groupElm) { throw new Error("Trying to set position in group that is not registered"); }
+
+        const startLine = positionStart.group.block.getLine(positionStart.line);
+        const startLineHTMLElm = groupElm.lineMap.getK(startLine);
+        if (!startLineHTMLElm) { return; }
+
+        const endLine = positionEnd.group.block.getLine(positionEnd.line);
+        const endLineHTMLElm = groupElm.lineMap.getK(endLine);
+        if (!endLineHTMLElm) { return; }
+
+        const selection = getSelection();
+        const range = document.createRange();
+        range.setStart(startLineHTMLElm.childNodes[0], positionStart.char);
+        if (endLine) {
+            range.setEnd(endLineHTMLElm.childNodes[0], positionEnd.char);
+        } else {
+            range.collapse(true);
+        }
+
+        if (selection) {
+            if (selection.rangeCount === 1) {
+                const currRange = selection.getRangeAt(0);
+                if (
+                    currRange.startContainer == range.startContainer &&
+                    currRange.startOffset == range.startOffset &&
+                    currRange.endContainer == range.endContainer &&
+                    currRange.endOffset == range.endOffset
+                ) {
+                    return; // don't need to change
+                }
+            }
+
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        setTimeout(() => groupElm.getHTMLElement().focus(), 1);
+    }
+
     private createInputCapture(group: InstructionGroupEditor) {
         const inputCapture = new InputCaptureElm(this, group);
         inputCapture.on("focus", () => this.focusHandler?.());
@@ -90,6 +133,8 @@ export class ContentEditableOverlayInputCapture {
  * <div>s inside .instructionGroup are instructionLines
  */
 class InputCaptureElm extends Elm<"pre"> {
+    public lineMap = new TwoWayMap<HTMLDivElement, InstructionLine>();
+
     private static supportsContentEditablePlaintextOnly = false;
     static {
         const pre = document.createElement('pre');
@@ -103,7 +148,6 @@ class InputCaptureElm extends Elm<"pre"> {
         subtree: true
     };
 
-    private lineMap = new WeakMap<HTMLDivElement, InstructionLine>();
     private observer: MutationObserver = new MutationObserver(
         mutations => this.mutationHandler(mutations)
     );
@@ -135,17 +179,21 @@ class InputCaptureElm extends Elm<"pre"> {
 
         console.log(mutations);
 
-        // Sometimes chrome inserts multiple records of mutations for one node, which
+        // Sometimes Chrome inserts multiple records of mutations for one node, which
         // we don't want. This variable checks to make sure characterData mutations
         // are only checked once per mutation.
         const characterDataNodesChecked = new Set();
+        // Sometimes Chrome duplicates mutation records when inserting newlines.
+        // We will workaround this so one DOM Node can trigger one newline insertion.
+        const nodesWithInsertedNewLinesSet = new Set();
 
         for (const mutation of mutations) {
+            const lineElm = this.parentLineElement(mutation.target);
+
             if (mutation.type === "characterData") {
                 if (characterDataNodesChecked.has(mutation.target)) { continue; }
                 characterDataNodesChecked.add(mutation.target);
 
-                const lineElm = getAncestorWhich(mutation.target, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine")) as HTMLDivElement;
                 if (!lineElm) { continue; }
                 let newValue = mutation.target.nodeValue || "";
                 const oldValue = mutation.oldValue || "";
@@ -155,7 +203,7 @@ class InputCaptureElm extends Elm<"pre"> {
                     newValue, this.parent._currentSelection?.anchorOffset || 0);
                 if (!diff) { continue; }
 
-                const line = this.lineMap.get(lineElm);
+                const line = this.lineMap.getV(lineElm);
                 if (!line) { continue; }
 
                 const editable = line.getEditableFromCharIndex(diff.index);
@@ -165,10 +213,58 @@ class InputCaptureElm extends Elm<"pre"> {
                 }
 
             } else if (mutation.type === "childList") {
+                if (!lineElm) { continue; }
+                const line = this.lineMap.getV(lineElm);
+                if (line) {
+                    const editable = null; // line.getEditableFromNode(mutation.target);
+                    if (mutation.addedNodes.length > 0 && mutation.removedNodes.length === 0) {
+                        if (
+                            mutation.addedNodes[0].nodeValue?.includes("\n") &&
+                            !nodesWithInsertedNewLinesSet.has(line)
+                        ) {
+                            nodesWithInsertedNewLinesSet.add(line);
+                            // likely an attempt to insert a line
+                            if (editable) {
+                                // editable.update();
+                            } else {
+                                // line.resetElm();
+                            }
+                            this.parent.lineDeleteHandler?.(new LineOperationEvent(line, true, true));
+                        } else if (editable) {
+                            console.log("set");
+                            // editable.setValue(editable.getHTMLElement().innerText);
+                        }
+                    } else {
+                        // line.resetElm();
+                    }
+                } else {
+                    if (mutation.addedNodes.length !== 0) {
+                        // insert nodes (ex. by undo/paste) not supported (yet)
+                        // this.group.resetElm();
+                        continue;
+                    }
+                    if (this.parent.lineDeleteHandler) {
+                        const deleteList: InstructionLine[] = [];
+                        for (const node of mutation.removedNodes) {
+                            const lineElm = this.parentLineElement(node);
+                            if (!lineElm) { continue; }
+                            const line = this.lineMap.getV(lineElm);
+                            if (!line) { continue; } // not supported
+                            deleteList.push(line);
+                        }
+                        for (const line of deleteList) {
+                            this.parent.lineDeleteHandler(new LineOperationEvent(line, false, false));
+                        }
+                    }
+                }
             }
         }
 
         this.observer.observe(this.elm, InputCaptureElm.observerOptions);
+    }
+
+    private parentLineElement(node: Node): HTMLDivElement | null {
+        return getAncestorWhich(node, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine")) as HTMLDivElement;
     }
 
 }

@@ -1,9 +1,7 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
-import { getAncestorWhich, isAncestor } from "../../utils";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
-import { DOMSelection } from "./DOMSelection";
 import { ContentEditableOverlayInputCapture } from "./ContentEditableOverlayInputCapture";
 
 export class EditorCursor extends Elm<"span"> {
@@ -27,45 +25,49 @@ export class EditorCursor extends Elm<"span"> {
         super("span");
         this.class("cursor");
 
-        document.addEventListener("selectionchange", e => {
-            if (!e.isTrusted) { return; }
+        // note: todo remove below -- should not capture selection changes
+        // however, we should make sure the relevant function calls are
+        // still performed.
 
-            const selection = getSelection();
-            if (!selection) { return; }
-            const anchorNode = selection.anchorNode;
-            if (isAncestor(anchorNode, this.elm)) { return; }
+        // document.addEventListener("selectionchange", e => {
+        //     if (!e.isTrusted) { return; }
 
-            const parentInstructionElm =
-                getAncestorWhich(
-                    anchorNode,
-                    node => node instanceof HTMLDivElement && node.classList.contains("instructionGroup")
-                ) as HTMLDivElement;
-            if (!parentInstructionElm) { return; }
-            const group = this.groupEditorsElmsMap.get(parentInstructionElm);
-            if (!group) { return; }
-            if (selection.rangeCount !== 1) { return; }
-            const firstRange = selection.getRangeAt(0);
-            const positionStart = group.selectionToPosition(new DOMSelection(
-                firstRange.startContainer, firstRange.startOffset
-            ));
-            const positionEnd = group.selectionToPosition(new DOMSelection(
-                firstRange.endContainer, firstRange.endOffset
-            ));
-            if (!positionStart || !positionEnd) { return; }
+        //     const selection = getSelection();
+        //     if (!selection) { return; }
+        //     const anchorNode = selection.anchorNode;
+        //     if (isAncestor(anchorNode, this.elm)) { return; }
 
-            // const compare = compareAbsoluteCursorPositions(positionStart, positionEnd);
-            // if (!compare) { return; }
-            // if (compare > 0) {
-            positionChangeHandler(positionStart, positionEnd, false);
-            // } else {
-            //     positionChangeHandler(positionEnd, positionStart, true);
-            // }
-            // this.setPosition(position);
-            this.onClickGroup.send(group);
+        //     const parentInstructionElm =
+        //         getAncestorWhich(
+        //             anchorNode,
+        //             node => node instanceof HTMLDivElement && node.classList.contains("instructionGroup")
+        //         ) as HTMLDivElement;
+        //     if (!parentInstructionElm) { return; }
+        //     const group = this.groupEditorsElmsMap.get(parentInstructionElm);
+        //     if (!group) { return; }
+        //     if (selection.rangeCount !== 1) { return; }
+        //     const firstRange = selection.getRangeAt(0);
+        //     const positionStart = group.selectionToPosition(new DOMSelection(
+        //         firstRange.startContainer, firstRange.startOffset
+        //     ));
+        //     const positionEnd = group.selectionToPosition(new DOMSelection(
+        //         firstRange.endContainer, firstRange.endOffset
+        //     ));
+        //     if (!positionStart || !positionEnd) { return; }
 
-            this.allowAutocomplete = false;
-            this.autocomplete.clearSuggestions();
-        });
+        //     // const compare = compareAbsoluteCursorPositions(positionStart, positionEnd);
+        //     // if (!compare) { return; }
+        //     // if (compare > 0) {
+        //     positionChangeHandler(positionStart, positionEnd, false);
+        //     // } else {
+        //     //     positionChangeHandler(positionEnd, positionStart, true);
+        //     // }
+        //     // this.setPosition(position);
+        //     this.onClickGroup.send(group);
+
+        //     this.allowAutocomplete = false;
+        //     this.autocomplete.clearSuggestions();
+        // });
 
         let justInputted = false;
         let prevPosStart: EditorCursorPositionAbsolute | undefined;
@@ -308,34 +310,8 @@ export class EditorCursor extends Elm<"span"> {
             this.autocomplete.showSuggestions(editable);
         }
 
-        const endEditable = this.getEditableFromPosition(positionEnd);
-
         // set caret position
-        const selection = getSelection();
-        const range = document.createRange();
-        range.setStart(editable.getHTMLElement().childNodes[0], positionStart.char);
-        if (endEditable) {
-            range.setEnd(endEditable.getHTMLElement().childNodes[0], positionEnd.char);
-        } else {
-            range.collapse(true);
-        }
-
-        if (selection) {
-            if (selection.rangeCount === 1) {
-                const currRange = selection.getRangeAt(0);
-                if (
-                    currRange.startContainer == range.startContainer &&
-                    currRange.startOffset == range.startOffset &&
-                    currRange.endContainer == range.endContainer &&
-                    currRange.endOffset == range.endOffset
-                ) {
-                    return; // don't need to change
-                }
-            }
-
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
+        this.inputCapture.setPosition(positionStart, positionEnd);
 
         // this.inputCapture.setStyleTop(this.elm.offsetTop + this.elm.offsetHeight);
         // if (backwards) { this.class("backwards"); } else { this.removeClass("backwards"); }
