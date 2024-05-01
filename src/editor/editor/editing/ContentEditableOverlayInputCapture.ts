@@ -4,6 +4,8 @@ import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { TwoWayMap, getAncestorWhich, singleDiffWithCursor } from "../../utils";
 import { InstructionLine } from "../instruction/instructionTypes";
+import { Editable } from "./Editable";
+import { AddInstructionAction, EditableEditAction, RemoveInstructionAction, UndoableAction } from "./actions";
 
 /**
  * `ContentEditableOverlayInputCapture` uses a hidden contenteditable
@@ -28,7 +30,8 @@ import { InstructionLine } from "../instruction/instructionTypes";
  *     is performed (ex. paste formatted text)
  */
 export class ContentEditableOverlayInputCapture {
-    private inputCaptureGroup = new TwoWayMap<InputCaptureElm, InstructionGroupEditor>();
+    private inputCaptureElmToEditor = new TwoWayMap<InputCaptureElm, InstructionGroupEditor>();
+    private inputCaptureElmToHTMLElm = new TwoWayMap<InputCaptureElm, HTMLPreElement>();
 
     /** Fired when the cursor position changes */
     public positionChangeHandler?: (posStart: EditorCursorPositionAbsolute, posEnd: EditorCursorPositionAbsolute, selectBackwards: boolean) => void;
@@ -45,57 +48,94 @@ export class ContentEditableOverlayInputCapture {
     /** Fired on keydown, before changing the textarea. Can preventDefault here. Return 'true' to cancel change check. */
     public keydownIntercepter?: (event: KeyboardEvent) => boolean | undefined;
 
-    /** Fired when textarea in focus */
+    /** Fired when an editable in focus */
     public focusHandler?: () => void;
-    /** Fired when textarea is no longer focused */
+    /** Fired when no editables are in focus */
     public unfocusHandler?: () => void;
 
     public _lastSelection?: Selection;
     public _currentSelection?: Selection;
+    public lastPosition?: EditorCursorPositionAbsolute;
+
+    private freezeSelectionEvents = false;
 
     constructor() {
         document.addEventListener("selectionchange", ev => {
             if (!ev.isTrusted) { return; }
+            if (this.freezeSelectionEvents) { return; }
             const selection = getSelection();
             this._lastSelection = this._currentSelection;
             this._currentSelection = selection || undefined;
+            if (!selection) { return; }
+
+            const anchorNode = selection.anchorNode;
+            const parentInstructionLine =
+                getAncestorWhich(
+                    anchorNode,
+                    node => node instanceof HTMLDivElement && node.classList.contains("instructionLine")
+                ) as HTMLDivElement;
+            const inputCaptureHTMLElm =
+                getAncestorWhich(
+                    parentInstructionLine,
+                    node => node instanceof HTMLPreElement && node.classList.contains("inputCapture")
+                ) as HTMLPreElement;
+            const inputCaptureElm = this.inputCaptureElmToHTMLElm.getK(inputCaptureHTMLElm);
+            if (!inputCaptureElm) { return; }
+            const instructionLine = inputCaptureElm.lineMap.getV(parentInstructionLine);
+            if (!instructionLine) { return; }
+            const lineNumber = inputCaptureElm.group.block.locateLine(instructionLine);
+            const positionInLine = instructionLine.getEditableAndOffsetFromCharIndex(selection.anchorOffset);
+            const position: EditorCursorPositionAbsolute = {
+                group: inputCaptureElm.group,
+                line: lineNumber,
+                char: positionInLine ? positionInLine.offset : 0, // todo
+                editable: positionInLine ? positionInLine.editableIndex : 0 // todo
+            };
+            if (!this.lastPosition || compareAbsoluteCursorPositions(this.lastPosition, position) !== 0) {
+                this.positionChangeHandler?.(position, position, false);
+            }
+            this.lastPosition = position;
         });
     }
 
     /** Register an element and watches for edits. */
     public registerGroup(group: InstructionGroupEditor) {
         const inputCapture = this.createInputCapture(group);
-        this.inputCaptureGroup.set(inputCapture, group);
+        this.inputCaptureElmToEditor.set(inputCapture, group);
+        this.inputCaptureElmToHTMLElm.set(inputCapture, inputCapture.getHTMLElement());
         group.elm.append(inputCapture);
     }
 
     /** Unregister an element and stop watching for edits. */
     public unregisterGroup(group: InstructionGroupEditor) {
-        const inputCapture = this.inputCaptureGroup.getK(group);
-        this.inputCaptureGroup.deleteV(group);
+        const inputCapture = this.inputCaptureElmToEditor.getK(group);
+        this.inputCaptureElmToEditor.deleteV(group);
         if (!inputCapture) { return; }
+        this.inputCaptureElmToHTMLElm.deleteK(inputCapture);
         inputCapture.remove();
     }
 
     public setPosition(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
         if (positionStart.group !== positionEnd.group) { throw new Error("Cannot do cross-group selections"); }
 
-        const groupElm = this.inputCaptureGroup.getK(positionStart.group);
+        const groupElm = this.inputCaptureElmToEditor.getK(positionStart.group);
         if (!groupElm) { throw new Error("Trying to set position in group that is not registered"); }
 
         const startLine = positionStart.group.block.getLine(positionStart.line);
+        const startEditableOffset = startLine.getCharIndexOfEditable(startLine.getEditableFromIndex(positionStart.editable));
         const startLineHTMLElm = groupElm.lineMap.getK(startLine);
         if (!startLineHTMLElm) { return; }
 
         const endLine = positionEnd.group.block.getLine(positionEnd.line);
+        const endEditableOffset = startLine.getCharIndexOfEditable(startLine.getEditableFromIndex(positionStart.editable));
         const endLineHTMLElm = groupElm.lineMap.getK(endLine);
         if (!endLineHTMLElm) { return; }
 
         const selection = getSelection();
         const range = document.createRange();
-        range.setStart(startLineHTMLElm.childNodes[0], positionStart.char);
+        range.setStart(startLineHTMLElm.childNodes[0], startEditableOffset + positionStart.char);
         if (endLine) {
-            range.setEnd(endLineHTMLElm.childNodes[0], positionEnd.char);
+            range.setEnd(endLineHTMLElm.childNodes[0], endEditableOffset + positionEnd.char);
         } else {
             range.collapse(true);
         }
@@ -113,11 +153,37 @@ export class ContentEditableOverlayInputCapture {
                 }
             }
 
+            this.freezeSelectionEvents = true;
             selection.removeAllRanges();
             selection.addRange(range);
+            this.freezeSelectionEvents = false;
+        }
+    }
+
+    public focus() {
+        if (this.lastPosition) {
+            this.inputCaptureElmToEditor.getK(this.lastPosition.group)?.getHTMLElement().focus();
+        }
+    }
+
+    public unfocus() {
+        if (this.lastPosition) {
+            this.inputCaptureElmToEditor.getK(this.lastPosition.group)?.getHTMLElement().blur();
+        }
+    }
+
+    public onAction(action: UndoableAction) {
+        let group;
+
+        if (action instanceof EditableEditAction) {
+            group = action.editable.parentLine.parentBlock.getGroupEditor();
+        } else if (action instanceof AddInstructionAction || action instanceof RemoveInstructionAction) {
+            group = action.block.getGroupEditor();
         }
 
-        setTimeout(() => groupElm.getHTMLElement().focus(), 1);
+        if (!group) { return; }
+
+        this.inputCaptureElmToEditor.getK(group.editor)?.onAction(action);
     }
 
     private createInputCapture(group: InstructionGroupEditor) {
@@ -143,7 +209,6 @@ class InputCaptureElm extends Elm<"pre"> {
     }
     private static observerOptions = {
         characterData: true,
-        characterDataOldValue: true,
         childList: true,
         subtree: true
     };
@@ -151,21 +216,56 @@ class InputCaptureElm extends Elm<"pre"> {
     private observer: MutationObserver = new MutationObserver(
         mutations => this.mutationHandler(mutations)
     );
-    private lastSelectionPosition = 0;
+    private lines: { str: string, line: InstructionLine, elm: Elm }[] = [];
 
-    constructor(private parent: ContentEditableOverlayInputCapture, private group: InstructionGroupEditor) {
+    private activeEditable?: Editable;
+    private activeEditableValue?: string;
+
+    constructor(private parent: ContentEditableOverlayInputCapture, public group: InstructionGroupEditor) {
         super("pre");
         this.class("inputCapture");
 
-        for (const line of group.block.lineIter()) {
-            const elm = new Elm().class("instructionLine").append(line.elm.getHTMLElement().innerText).appendTo(this);
-            this.lineMap.set(elm.getHTMLElement(), line);
-        }
+        this.resetContext();
 
         this.attribute("contenteditable",
             InputCaptureElm.supportsContentEditablePlaintextOnly ?
                 "plaintext-only" : "true"
         );
+        this.observer.observe(this.elm, InputCaptureElm.observerOptions);
+        this.on("keydown", ev => this.parent.keydownIntercepter?.(ev));
+    }
+
+    public onAction(action: UndoableAction) {
+        // ignore edit events caused by us
+        if (action instanceof EditableEditAction &&
+            action.editable === this.activeEditable &&
+            action.newValue == this.activeEditableValue) {
+            return;
+        }
+
+        this.resetContext();
+    }
+
+    private resetContext(): void {
+        this.observer.disconnect();
+
+        this.lineMap.clear();
+        this.lines.length = 0;
+        this.clear();
+        for (const line of this.group.block.lineIter()) {
+            const strContent = line.elm.getHTMLElement().innerText;
+            const elm = new Elm().class("instructionLine").append(strContent).appendTo(this);
+            this.lines.push({ str: strContent, line, elm });
+            this.lineMap.set(elm.getHTMLElement(), line);
+        }
+
+        if (this.group == this.parent.lastPosition?.group) {
+            this.parent.setPosition(
+                clampPosition(this.parent.lastPosition),
+                clampPosition(this.parent.lastPosition)
+            );
+        }
+
         this.observer.observe(this.elm, InputCaptureElm.observerOptions);
     }
 
@@ -182,89 +282,126 @@ class InputCaptureElm extends Elm<"pre"> {
         // Sometimes Chrome inserts multiple records of mutations for one node, which
         // we don't want. This variable checks to make sure characterData mutations
         // are only checked once per mutation.
-        const characterDataNodesChecked = new Set();
-        // Sometimes Chrome duplicates mutation records when inserting newlines.
-        // We will workaround this so one DOM Node can trigger one newline insertion.
-        const nodesWithInsertedNewLinesSet = new Set();
+        const checkedElements = new Set<HTMLDivElement>();
 
         for (const mutation of mutations) {
             const lineElm = this.parentLineElement(mutation.target);
-
-            if (mutation.type === "characterData") {
-                if (characterDataNodesChecked.has(mutation.target)) { continue; }
-                characterDataNodesChecked.add(mutation.target);
-
-                if (!lineElm) { continue; }
-                let newValue = mutation.target.nodeValue || "";
-                const oldValue = mutation.oldValue || "";
-                const deltaLength = newValue.length - oldValue.length;
-                const diff = singleDiffWithCursor( // note: potential bug: mutation event happens before selectionChange event
-                    oldValue, this.parent._lastSelection?.anchorOffset || 0,
-                    newValue, this.parent._currentSelection?.anchorOffset || 0);
-                if (!diff) { continue; }
-
-                const line = this.lineMap.getV(lineElm);
-                if (!line) { continue; }
-
-                const editable = line.getEditableFromCharIndex(diff.index);
-                if (editable) {
-                    let index = line.getCharIndexOfEditable(editable);
-                    editable.setValue(newValue.slice(index, index + editable.getValue().length + deltaLength));
-                }
-
-            } else if (mutation.type === "childList") {
-                if (!lineElm) { continue; }
-                const line = this.lineMap.getV(lineElm);
-                if (line) {
-                    const editable = null; // line.getEditableFromNode(mutation.target);
-                    if (mutation.addedNodes.length > 0 && mutation.removedNodes.length === 0) {
-                        if (
-                            mutation.addedNodes[0].nodeValue?.includes("\n") &&
-                            !nodesWithInsertedNewLinesSet.has(line)
-                        ) {
-                            nodesWithInsertedNewLinesSet.add(line);
-                            // likely an attempt to insert a line
-                            if (editable) {
-                                // editable.update();
-                            } else {
-                                // line.resetElm();
-                            }
-                            this.parent.lineDeleteHandler?.(new LineOperationEvent(line, true, true));
-                        } else if (editable) {
-                            console.log("set");
-                            // editable.setValue(editable.getHTMLElement().innerText);
-                        }
-                    } else {
-                        // line.resetElm();
-                    }
-                } else {
-                    if (mutation.addedNodes.length !== 0) {
-                        // insert nodes (ex. by undo/paste) not supported (yet)
-                        // this.group.resetElm();
-                        continue;
-                    }
-                    if (this.parent.lineDeleteHandler) {
-                        const deleteList: InstructionLine[] = [];
-                        for (const node of mutation.removedNodes) {
-                            const lineElm = this.parentLineElement(node);
-                            if (!lineElm) { continue; }
-                            const line = this.lineMap.getV(lineElm);
-                            if (!line) { continue; } // not supported
-                            deleteList.push(line);
-                        }
-                        for (const line of deleteList) {
-                            this.parent.lineDeleteHandler(new LineOperationEvent(line, false, false));
-                        }
-                    }
-                }
-            }
+            if (!lineElm) { continue; }
+            if (checkedElements.has(lineElm)) { continue; }
+            checkedElements.add(lineElm);
+            this.onMutateLineContent(lineElm);
         }
 
         this.observer.observe(this.elm, InputCaptureElm.observerOptions);
     }
 
+    private onMutateLineContent(line: HTMLDivElement) {
+        const newValue = line.innerText;
+        const instructionLine = this.lineMap.getV(line);
+        if (!instructionLine) { throw new Error("Line not registered"); }
+        const lineIndex = this.group.block.locateLine(instructionLine);
+
+        const oldValue = this.lines[lineIndex].str;
+        const deltaLength = newValue.length - oldValue.length;
+        const diff = singleDiffWithCursor( // note: potential bug: mutation event happens before selectionChange event
+            oldValue, this.parent._lastSelection?.anchorOffset || 0,
+            newValue, this.parent._currentSelection?.anchorOffset || 0);
+        if (!diff) { return; }
+
+        const position = this.getPositionFromLineElmAndOffset(line, diff.index);
+        if (position) {
+            const line = this.group.block.getLine(position.line);
+            const editable = line.getEditableFromIndex(position.editable);
+            const editableFirstCharIndex = line.getCharIndexOfEditable(editable);
+
+            const newContent = newValue.slice(editableFirstCharIndex, editableFirstCharIndex + editable.getValue().length + deltaLength);
+            const editEvent = new UserInputEvent(diff.added, diff.removed, newContent);
+            console.log(editEvent);
+            editable.checkInput(editEvent);
+            this.parent.inputHandler?.(editEvent);
+            if (editEvent.isRejected()) {
+                // reject
+                this.resetContext();
+            } else {
+                // set variables so we can ignore context updates caused by this event
+                this.activeEditable = editable;
+                this.activeEditableValue = newContent;
+
+                editable.setValue(newContent);
+                this.lines[lineIndex].str = newValue;
+                this.parent.afterInputHandler?.(editEvent);
+            }
+        }
+    }
+
+    private getPositionFromLineElmAndOffset(lineElm: HTMLDivElement, offset: number): EditorCursorPositionAbsolute | undefined {
+        const line = this.lineMap.getV(lineElm);
+        if (!line) { return; }
+
+        const linePosition = line.getEditableAndOffsetFromCharIndex(offset);
+        if (linePosition) {
+            return {
+                group: this.group,
+                char: linePosition.offset,
+                editable: linePosition.editableIndex,
+                line: this.group.block.locateLine(line)
+            };
+        }
+    }
+
     private parentLineElement(node: Node): HTMLDivElement | null {
         return getAncestorWhich(node, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine")) as HTMLDivElement;
     }
+}
 
+function clampPosition(position: EditorCursorPositionAbsolute): EditorCursorPositionAbsolute {
+    const block = position.group.block;
+    if (position.line >= block.numLines) {
+        const lastLine = block.getLine(block.numLines - 1);
+        return {
+            group: position.group,
+            line: block.numLines - 1,
+            editable: lastLine.getLastEditableIndex(),
+            char: lastLine.getLastEditableCharacterIndex()
+        };
+    } else if (position.line < 0) {
+        return {
+            group: position.group,
+            line: 0,
+            editable: 0,
+            char: 0
+        };
+    } else {
+        const line = position.group.block.getLine(position.line);
+        const editable = line.getEditableFromIndex(position.editable) ||
+            line.getEditableFromIndex(line.getLastEditableIndex());
+        const maxCharOffset = editable.getValue().length;
+        if (position.char > maxCharOffset) { // clamp offset
+            return {
+                group: position.group,
+                line: position.line,
+                editable: position.editable,
+                char: maxCharOffset
+            };
+        }
+    }
+
+    return position;
+}
+
+/**
+ * Compares two cursor position.
+ * 
+ * @returns
+ *   - null => different, but not comparable
+ *   - -1 => first is smaller
+ *   - 0 => same position
+ *   - 1 => first is larger
+ */
+function compareAbsoluteCursorPositions(a: EditorCursorPositionAbsolute, b: EditorCursorPositionAbsolute) {
+    if (a.group != b.group) { return null; }
+    if (a.line < b.line) { return -1; } else if (a.line > b.line) { return 1; }
+    if (a.editable < b.editable) { return -1; } else if (a.editable > b.editable) { return 1; }
+    if (a.char < b.char) { return -1; } else if (a.char > b.char) { return 1; }
+    return 0;
 }

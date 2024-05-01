@@ -75,7 +75,12 @@ export abstract class InstructionLine extends Component {
         this.parentBlock = instruction;
     }
 
-    public getEditableFromCharIndex(charIndex: number): Editable | null {
+    public getEditableAndOffsetFromCharIndex(charIndex: number): {
+        editable: Editable,
+        editableIndex: number,
+        offset: number
+    } | null {
+        let editableIndex = 0;
         for (const area of this.areas) {
             if (typeof area === 'string') {
                 charIndex -= area.length;
@@ -84,8 +89,11 @@ export abstract class InstructionLine extends Component {
                 if (charIndex < 0) { return null; }
             } else {
                 const value = area.getValue();
+                if (charIndex <= value.length) {
+                    return { editable: area, editableIndex, offset: charIndex };
+                }
                 charIndex -= value.length;
-                if (charIndex <= 0) { return area; }
+                editableIndex++;
             }
         }
         return null;
