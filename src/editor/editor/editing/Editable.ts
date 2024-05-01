@@ -43,9 +43,10 @@ export class Editable extends Elm<"span"> {
         );
     }
 
-    /** Called by TextareaUserInput after setting a new value for the editable and moving the cursor. */
+    /** Called by ContentEditableOverlayInputCapture after setting a new value for the editable and moving the cursor. */
     public afterChangeApply() { }
 
+    /** Called by ContentEditableOverlayInputCapture to verify validity of input */
     public checkInput(event: UserInputEvent) {
         if (event.added.includes("\n")) {
             event.reject();
@@ -70,22 +71,6 @@ export class Editable extends Elm<"span"> {
     }
 
     public update() {
-        // const group = this.parentLine.parentBlock.getGroupEditor();
-        // if (group) {
-        //     const cursor = group.editor.parentEditor.cursor;
-        //     if (cursor.activeEditable === this) {
-        //         const { start, end } = cursor.getPositions();
-        //         const before = this._value.slice(0, start!.char);
-        //         const selected = this._value.slice(start!.char, end!.char);
-        //         const after = this._value.slice(end!.char);
-
-        //         cursor.setSelectedText(selected);
-
-        //         this.replaceContents(before, cursor, after);
-        //         return;
-        //     }
-        // }
-
         if (this.elm.textContent !== this._value) {
             this.replaceContents(this._value);
         }

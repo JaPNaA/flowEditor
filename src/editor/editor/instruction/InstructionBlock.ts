@@ -124,6 +124,7 @@ export class CompositeInstructionBlock implements InstructionBlock {
 
     constructor(public instruction?: Instruction | undefined) { }
 
+    /** Get line by number relative to this block */
     public getLine(index: number): InstructionLine {
         let curr = 0;
         for (const child of this.children) {
@@ -136,6 +137,7 @@ export class CompositeInstructionBlock implements InstructionBlock {
         throw new Error("Line not found");
     }
 
+    /** Find the line number of the specified line relative to this block */
     public locateLine(line: InstructionLine): number {
         let curr: InstructionBlock | undefined = line.parentBlock;
         let index = curr.locateLine(line);
