@@ -87,10 +87,6 @@ export const pluginHooks = {
         visualNovelPlugin.analyser.onFlowLoad(editor);
     },
 
-    onAction(action: UndoableAction) {
-        visualNovelPlugin.analyser.onActionPerformed(action);
-    },
-
     setProject(project: Project) {
         visualNovelPlugin.setProject(project);
     },

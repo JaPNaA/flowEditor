@@ -111,6 +111,11 @@ export class EditorContainer extends Component {
     private _addPluginToEditor(plugin: EditorPlugin) {
         this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
         this.editor.deserializer.registerDeserializer(plugin.parse);
+        if (plugin.analyser) {
+            this.editor.undoLog.onActionPerformed.subscribe(
+                plugin.analyser.onActionPerformed.bind(plugin.analyser)
+            );
+        }
         if (plugin.autocomplete) {
             for (const [key, suggester] of plugin.autocomplete) {
                 this.editor.cursor.autocomplete.registerSuggester(key, suggester);

@@ -5,6 +5,7 @@ import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { BranchInstructionLine, Instruction } from "../instruction/instructionTypes";
 import { Editable } from "./Editable";
 import { CompositeInstructionBlock, InstructionBlock } from "../instruction/InstructionBlock";
+import { EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 
 export class UndoLog {
     private currLogGroup: UndoableAction[] = [];
@@ -13,7 +14,8 @@ export class UndoLog {
     private groupDepth = 0;
     private frozen = false;
 
-    public onAfterActionPerform!: Function;
+    public onAfterAllActionsPerformed = new EventBus();
+    public onActionPerformed = new EventBus<UndoableAction>();
 
     public undo() {
         this.flushLogGroup();
@@ -23,9 +25,9 @@ export class UndoLog {
         while (log = logs.pop()) {
             const action = log.inverse();
             action.perform();
-            pluginHooks.onAction(action);
+            this.onActionPerformed.send(action);
         }
-        this.onAfterActionPerform();
+        this.onAfterAllActionsPerformed.send();
     }
 
     public freeze() {
@@ -52,8 +54,8 @@ export class UndoLog {
     public perform(action: UndoableAction) {
         if (!this.frozen) { this.currLogGroup.push(action); }
         action.perform();
-        pluginHooks.onAction(action);
-        this.onAfterActionPerform();
+        this.onActionPerformed.send(action);
+        this.onAfterAllActionsPerformed.send();
     }
 
     private flushLogGroup() {
@@ -75,7 +77,7 @@ export class AddGroupAction implements UndoableAction {
     public perform(): void {
         this.editor._groupEditors.push(this.group);
         this.editor._children.addChild(this.group);
-        this.editor.cursor.registerInstructionGroup(this.group);
+        this.editor.cursor.registerGroupEditor(this.group);
 
         // add parent-child relations
         for (const child of this.group._childGroups) {
@@ -97,7 +99,7 @@ export class RemoveGroupAction implements UndoableAction {
     public perform(): void {
         removeElmFromArray(this.group, this.editor._groupEditors);
         this.editor._children.removeChild(this.group);
-        this.editor.cursor.unregisterInstructionGroup(this.group);
+        this.editor.cursor.unregisterGroupEditor(this.group);
 
         // remove parent-child relations
         for (const child of this.group._childGroups) {
@@ -258,7 +260,6 @@ export class EditableEditAction implements UndoableAction {
         this.editable.placeholder = false;
         if (autocomplete) { autocomplete.enteredValue(this.editable); }
 
-        this.editable.parentLine.parentBlock.getGroupEditor()
         this.editable.update();
     }
 

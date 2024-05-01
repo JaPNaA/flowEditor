@@ -78,7 +78,9 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.cursor.onClickGroup, group => this.handleClickGroup(group));
         this.subscriptions.subscribe(this.cursor.onInput, () => this.dirty = true);
 
-        this.undoLog.onAfterActionPerform = () => this.engine.ticker.requestTick();
+
+        this.undoLog.onActionPerformed.subscribe(action => this.cursor.onAction(action));
+        this.undoLog.onAfterAllActionsPerformed.subscribe(() => this.engine.ticker.requestTick());
     }
 
     public getGroups(): ReadonlyArray<InstructionGroupEditor> {
