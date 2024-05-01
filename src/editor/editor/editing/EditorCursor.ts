@@ -92,7 +92,7 @@ export class EditorCursor extends Elm<"span"> {
                 }
             }
 
-            this.setVirtualCursorPosition(posStart, posEnd, backwards);
+            // this.setVirtualCursorPosition(posStart, posEnd, backwards);
             this._setPosition(posStart);
             // this.inputCapture.focus();
 

@@ -84,16 +84,33 @@ export class ContentEditableOverlayInputCapture {
             const instructionLine = inputCaptureElm.lineMap.getV(parentInstructionLine);
             if (!instructionLine) { return; }
             const lineNumber = inputCaptureElm.group.block.locateLine(instructionLine);
-            const positionInLine = instructionLine.getEditableAndOffsetFromCharIndex(selection.anchorOffset);
-            const position: EditorCursorPositionAbsolute = {
-                group: inputCaptureElm.group,
-                line: lineNumber,
-                char: positionInLine ? positionInLine.offset : 0, // todo
-                editable: positionInLine ? positionInLine.editableIndex : 0 // todo
-            };
+            const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(selection.anchorOffset);
+            const editable = instructionLine.getEditableFromIndex(closestEditableIndex);
+            let position: EditorCursorPositionAbsolute;
+            if (editable) { // verify editable exists
+                const editableCharIndex = instructionLine.getCharIndexOfEditable(editable);
+                const editableLength = editable.getValue().length;
+                position = {
+                    group: inputCaptureElm.group,
+                    line: lineNumber,
+                    char: selection.anchorOffset < editableCharIndex ? 0 : (
+                        selection.anchorOffset > editableCharIndex + editableLength ? editableLength :
+                            selection.anchorOffset - editableCharIndex
+                    ),
+                    editable: closestEditableIndex // todo
+                };
+            } else {
+                position = {
+                    group: inputCaptureElm.group,
+                    line: lineNumber,
+                    char: 0,
+                    editable: 0
+                };
+            }
             if (!this.lastPosition || compareAbsoluteCursorPositions(this.lastPosition, position) !== 0) {
                 this.positionChangeHandler?.(position, position, false);
             }
+            this.setPosition(position, position);
             this.lastPosition = position;
         });
     }

@@ -75,6 +75,13 @@ export abstract class InstructionLine extends Component {
         this.parentBlock = instruction;
     }
 
+    /**
+     * Find the corresponding editable and offset in editable.
+     * 
+     * Used for identifying which editable a user is typing into.
+     * 
+     * @param charIndex Character index on this line
+     */
     public getEditableAndOffsetFromCharIndex(charIndex: number): {
         editable: Editable,
         editableIndex: number,
@@ -99,6 +106,12 @@ export abstract class InstructionLine extends Component {
         return null;
     }
 
+    /**
+     * Find the character index of the first character of an editable
+     * relative to this line.
+     * 
+     * Used for getting cursor coordinates from an EditorCursorPositionAbsolute.
+     */
     public getCharIndexOfEditable(editable: Editable) {
         let offset = 0;
         for (const area of this.areas) {
@@ -112,6 +125,36 @@ export abstract class InstructionLine extends Component {
             }
         }
         return -1;
+    }
+
+    /**
+     * Find the editable "closest" to a character index. The function will find
+     * the closest editable to the left first. If there is no editable to the
+     * left, will find the closest editable to the right.
+     * 
+     * Used for repositioning the cursor after a user clicks to move the
+     * cursor.
+     * 
+     * @param charIndex Character index on this line
+     */
+    public getClosestEditableIndexToCharIndex(charIndex: number): number {
+        let editableIndex = 0;
+        for (const area of this.areas) {
+            if (typeof area === 'string') {
+                charIndex -= area.length;
+                // not <= to account for the possibility we have the
+                // charIndex at the start (charIndex = 0) of the next Editable
+                if (charIndex < 0) { break; }
+            } else {
+                const value = area.getValue();
+                if (charIndex <= value.length) {
+                    return editableIndex;
+                }
+                charIndex -= value.length;
+                editableIndex++;
+            }
+        }
+        return editableIndex - 1;
     }
 
     public getEditables(): ReadonlyArray<Editable> {
