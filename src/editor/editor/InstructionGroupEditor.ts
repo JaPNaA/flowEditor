@@ -3,13 +3,11 @@ import { EditorCursorPositionAbsolute } from "./editing/EditorCursor";
 import { LineOperationEvent, UserInputEvent } from "./editing/UserInputEvents";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
 import { Collidable, Elm, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, RectangleM, WorldElm } from "../../japnaaEngine2d/JaPNaAEngine2d";
-import { getAncestorWhich } from "../utils";
 import { NewInstruction } from "./instruction/NewInstruction";
 import { Instruction, InstructionLine, BranchInstructionLine } from "./instruction/instructionTypes";
 import { pluginHooks } from "../index";
 import { InstructionElmData } from "./EditorSaveData";
 import { InstructionGroupEditorBlock } from "./instruction/InstructionBlock";
-import { DOMSelection } from "./editing/DOMSelection";
 
 export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public static defaultWidth = 720 + 24; // 24 is padding
