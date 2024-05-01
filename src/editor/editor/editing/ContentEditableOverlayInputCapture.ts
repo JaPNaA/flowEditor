@@ -33,7 +33,7 @@ export class ContentEditableOverlayInputCapture {
     private inputCaptureElmToEditor = new TwoWayMap<InputCaptureElm, InstructionGroupEditor>();
     private inputCaptureElmToHTMLElm = new TwoWayMap<InputCaptureElm, HTMLPreElement>();
 
-    /** Fired when the cursor position changes */
+    /** Fired when the cursor position changes. Expect posStart < posEnd */
     public positionChangeHandler?: (posStart: EditorCursorPositionAbsolute, posEnd: EditorCursorPositionAbsolute, selectBackwards: boolean) => void;
 
     /** Fired when an editable is edited */
@@ -55,7 +55,8 @@ export class ContentEditableOverlayInputCapture {
 
     public _lastSelection?: Selection;
     public _currentSelection?: Selection;
-    public lastPosition?: EditorCursorPositionAbsolute;
+    public lastPositionStart?: EditorCursorPositionAbsolute;
+    public lastPositionEnd?: EditorCursorPositionAbsolute;
 
     private freezeSelectionEvents = false;
 
@@ -66,52 +67,26 @@ export class ContentEditableOverlayInputCapture {
             const selection = getSelection();
             this._lastSelection = this._currentSelection;
             this._currentSelection = selection || undefined;
-            if (!selection) { return; }
 
-            const anchorNode = selection.anchorNode;
-            const parentInstructionLine =
-                getAncestorWhich(
-                    anchorNode,
-                    node => node instanceof HTMLDivElement && node.classList.contains("instructionLine")
-                ) as HTMLDivElement;
-            const inputCaptureHTMLElm =
-                getAncestorWhich(
-                    parentInstructionLine,
-                    node => node instanceof HTMLPreElement && node.classList.contains("inputCapture")
-                ) as HTMLPreElement;
-            const inputCaptureElm = this.inputCaptureElmToHTMLElm.getK(inputCaptureHTMLElm);
-            if (!inputCaptureElm) { return; }
-            const instructionLine = inputCaptureElm.lineMap.getV(parentInstructionLine);
-            if (!instructionLine) { return; }
-            const lineNumber = inputCaptureElm.group.block.locateLine(instructionLine);
-            const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(selection.anchorOffset);
-            const editable = instructionLine.getEditableFromIndex(closestEditableIndex);
-            let position: EditorCursorPositionAbsolute;
-            if (editable) { // verify editable exists
-                const editableCharIndex = instructionLine.getCharIndexOfEditable(editable);
-                const editableLength = editable.getValue().length;
-                position = {
-                    group: inputCaptureElm.group,
-                    line: lineNumber,
-                    char: selection.anchorOffset < editableCharIndex ? 0 : (
-                        selection.anchorOffset > editableCharIndex + editableLength ? editableLength :
-                            selection.anchorOffset - editableCharIndex
-                    ),
-                    editable: closestEditableIndex // todo
-                };
-            } else {
-                position = {
-                    group: inputCaptureElm.group,
-                    line: lineNumber,
-                    char: 0,
-                    editable: 0
-                };
+            if (!selection || !selection.focusNode || !selection.anchorNode) { return; }
+            const positionStart = this.domSelectionToPosition(selection.anchorNode, selection.anchorOffset);
+            const positionEnd = this.domSelectionToPosition(selection.focusNode, selection.focusOffset);
+            if (!positionStart || !positionEnd) { return; }
+
+            if (
+                !this.lastPositionStart || compareAbsoluteCursorPositions(this.lastPositionStart, positionStart) !== 0 ||
+                !this.lastPositionEnd || compareAbsoluteCursorPositions(this.lastPositionEnd, positionEnd) !== 0
+            ) {
+                const diff = compareAbsoluteCursorPositions(positionStart, positionEnd);
+                if (diff && diff > 0) {
+                    this.positionChangeHandler?.(positionEnd, positionStart, true);
+                } else {
+                    this.positionChangeHandler?.(positionStart, positionEnd, false);
+                }
             }
-            if (!this.lastPosition || compareAbsoluteCursorPositions(this.lastPosition, position) !== 0) {
-                this.positionChangeHandler?.(position, position, false);
-            }
-            this.setPosition(position, position);
-            this.lastPosition = position;
+            this.setPosition(positionStart, positionEnd);
+            this.lastPositionStart = positionStart;
+            this.lastPositionEnd = positionEnd;
         });
     }
 
@@ -144,48 +119,43 @@ export class ContentEditableOverlayInputCapture {
         if (!startLineHTMLElm) { return; }
 
         const endLine = positionEnd.group.block.getLine(positionEnd.line);
-        const endEditableOffset = startLine.getCharIndexOfEditable(startLine.getEditableFromIndex(positionStart.editable));
+        const endEditableOffset = endLine.getCharIndexOfEditable(endLine.getEditableFromIndex(positionEnd.editable));
         const endLineHTMLElm = groupElm.lineMap.getK(endLine);
         if (!endLineHTMLElm) { return; }
 
         const selection = getSelection();
-        const range = document.createRange();
-        range.setStart(startLineHTMLElm.childNodes[0], startEditableOffset + positionStart.char);
-        if (endLine) {
-            range.setEnd(endLineHTMLElm.childNodes[0], endEditableOffset + positionEnd.char);
-        } else {
-            range.collapse(true);
-        }
+        const startRangeNode = startLineHTMLElm.childNodes[0];
+        const startRangeOffset = startEditableOffset + positionStart.char;
+        const endRangeNode = endLineHTMLElm.childNodes[0];
+        const endRangeOffset = endEditableOffset + positionEnd.char;
 
         if (selection) {
             if (selection.rangeCount === 1) {
-                const currRange = selection.getRangeAt(0);
                 if (
-                    currRange.startContainer == range.startContainer &&
-                    currRange.startOffset == range.startOffset &&
-                    currRange.endContainer == range.endContainer &&
-                    currRange.endOffset == range.endOffset
+                    selection.anchorNode == startRangeNode &&
+                    selection.anchorOffset == startRangeOffset &&
+                    selection.focusNode == endRangeNode &&
+                    selection.focusOffset == endRangeOffset
                 ) {
                     return; // don't need to change
                 }
             }
 
             this.freezeSelectionEvents = true;
-            selection.removeAllRanges();
-            selection.addRange(range);
+            selection.setBaseAndExtent(startRangeNode, startRangeOffset, endRangeNode, endRangeOffset);
             this.freezeSelectionEvents = false;
         }
     }
 
     public focus() {
-        if (this.lastPosition) {
-            this.inputCaptureElmToEditor.getK(this.lastPosition.group)?.getHTMLElement().focus();
+        if (this.lastPositionStart) {
+            this.inputCaptureElmToEditor.getK(this.lastPositionStart.group)?.getHTMLElement().focus();
         }
     }
 
     public unfocus() {
-        if (this.lastPosition) {
-            this.inputCaptureElmToEditor.getK(this.lastPosition.group)?.getHTMLElement().blur();
+        if (this.lastPositionStart) {
+            this.inputCaptureElmToEditor.getK(this.lastPositionStart.group)?.getHTMLElement().blur();
         }
     }
 
@@ -208,6 +178,53 @@ export class ContentEditableOverlayInputCapture {
         inputCapture.on("focus", () => this.focusHandler?.());
         inputCapture.on("blur", () => this.unfocusHandler?.());
         return inputCapture;
+    }
+
+    /**
+     * Gets the EditorCursorPositionAbsolute from an HTML Anchor node and offset
+     * @param anchorNode Selection anchor node
+     * @param focusOffset Selection focus offset
+     */
+    private domSelectionToPosition(anchorNode: Node, focusOffset: number) {
+        const parentInstructionLine =
+            getAncestorWhich(
+                anchorNode,
+                node => node instanceof HTMLDivElement && node.classList.contains("instructionLine")
+            ) as HTMLDivElement;
+        const inputCaptureHTMLElm =
+            getAncestorWhich(
+                parentInstructionLine,
+                node => node instanceof HTMLPreElement && node.classList.contains("inputCapture")
+            ) as HTMLPreElement;
+        const inputCaptureElm = this.inputCaptureElmToHTMLElm.getK(inputCaptureHTMLElm);
+        if (!inputCaptureElm) { return; }
+        const instructionLine = inputCaptureElm.lineMap.getV(parentInstructionLine);
+        if (!instructionLine) { return; }
+        const lineNumber = inputCaptureElm.group.block.locateLine(instructionLine);
+        const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(focusOffset);
+        const editable = instructionLine.getEditableFromIndex(closestEditableIndex);
+        let position: EditorCursorPositionAbsolute;
+        if (editable) { // verify editable exists
+            const editableCharIndex = instructionLine.getCharIndexOfEditable(editable);
+            const editableLength = editable.getValue().length;
+            position = {
+                group: inputCaptureElm.group,
+                line: lineNumber,
+                char: focusOffset < editableCharIndex ? 0 : (
+                    focusOffset > editableCharIndex + editableLength ? editableLength :
+                        focusOffset - editableCharIndex
+                ),
+                editable: closestEditableIndex
+            };
+        } else {
+            position = {
+                group: inputCaptureElm.group,
+                line: lineNumber,
+                char: 0,
+                editable: 0
+            };
+        }
+        return position;
     }
 }
 
@@ -276,10 +293,10 @@ class InputCaptureElm extends Elm<"pre"> {
             this.lineMap.set(elm.getHTMLElement(), line);
         }
 
-        if (this.group == this.parent.lastPosition?.group) {
+        if (this.group == this.parent.lastPositionStart?.group && this.parent.lastPositionEnd) {
             this.parent.setPosition(
-                clampPosition(this.parent.lastPosition),
-                clampPosition(this.parent.lastPosition)
+                clampPosition(this.parent.lastPositionStart),
+                clampPosition(this.parent.lastPositionEnd)
             );
         }
 
