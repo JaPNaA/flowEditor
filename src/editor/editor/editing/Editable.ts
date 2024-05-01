@@ -2,7 +2,6 @@ import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent } from "./UserInputEvents";
 import { InstructionLine } from "../instruction/instructionTypes";
 import { EditableEditAction } from "./actions";
-import { DOMSelection } from "./DOMSelection";
 
 export class Editable extends Elm<"span"> {
     public onChange = new EventBus<string>();
@@ -51,23 +50,6 @@ export class Editable extends Elm<"span"> {
         if (event.added.includes("\n")) {
             event.reject();
         }
-    }
-
-    public getCharacterOffset(selection: DOMSelection) {
-        let curr: ChildNode | undefined | null = this.elm.firstChild;
-        let count = 0;
-        while (curr && curr !== selection.anchorNode) {
-            if (curr instanceof Text) {
-                count += curr.textContent ? curr.textContent.length : 0;
-            }
-            curr = curr?.nextSibling;
-        }
-
-        count += selection.focusOffset;
-        if (count > this._value.length) {
-            return this._value.length;
-        }
-        return count;
     }
 
     public update() {

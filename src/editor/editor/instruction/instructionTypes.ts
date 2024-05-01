@@ -1,11 +1,9 @@
 import { appHooks } from "../../index";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
-import { getAncestorWhich } from "../../utils";
 import { Editable } from "../editing/Editable";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
 import { BranchTargetChangeAction } from "../editing/actions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
-import { DOMSelection } from "../editing/DOMSelection";
 
 export abstract class Instruction {
     /** Block containing the instruction's lines. Only to be used by InstructionBlock and this class. */
