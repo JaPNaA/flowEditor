@@ -176,3 +176,133 @@ export function singleDiffWithCursor(lastValue: string, lastCursor: number, curr
         };
     }
 }
+
+/**
+ * Given the areas and a change the user has made to a line, finds the new
+ * values editables should take.
+ * 
+ * Note: assumes noneditable regions are all or nothing. That is, no partial
+ * noneditable regions appear in currentValue.
+ * 
+ * @param areas A list of areas -- strings represent parts of the string the
+ * user cannot modify. Objects represent editable regions. Areas MUST contain
+ * strings and editables in alternating order -- there must never be two
+ * strings or two editables in a row.
+ * @param lastValue Old string
+ * @param lastCursor Previous cursor position (leftmost index if is a range)
+ * @param currentValue New string
+ * @param currentCursor New cursor position (leftmost index if is a range)
+ * @returns A list of values for each editable as specified in areas.
+ * Additionally, if any nonEditable regions were detected to be changed.
+ */
+export function findEditableValuesInChangedString(
+    areas: (string | { getValue(): string })[],
+    lastValue: string, lastCursor: number,
+    currentValue: string, currentCursor: number
+): { values: string[], changedNonEditable: boolean } {
+    const diff = singleDiffWithCursor(lastValue, lastCursor, currentValue, currentCursor);
+    const values: string[] = [];
+    let changedNonEditable = false;
+
+    // case: no differences
+    if (!diff) {
+        for (const area of areas) {
+            if (typeof area !== 'string') {
+                values.push(area.getValue());
+            }
+        }
+        return { values, changedNonEditable };
+    }
+
+    // phase: before change
+    let charIndex = 0;
+    let areaIndex = 0;
+    for (const area of areas) {
+        if (typeof area === 'string') {
+            if (charIndex + area.length <= diff.index) {
+                charIndex += area.length;
+            } else {
+                break;
+            }
+        } else {
+            const val = area.getValue();
+            if (charIndex + val.length <= diff.index) {
+                values.push(val);
+                charIndex += val.length;
+            } else {
+                break;
+            }
+        }
+        areaIndex++;
+    }
+
+    const endModifiedIndex = diff.index + diff.added.length;
+
+    // determine index of last area that's outside modified region
+    let lastUnmodifiedAreaCharIndex = currentValue.length;
+    let lastUnmodifiedArea = areas.length;
+    for (let i = areas.length - 1; i >= 0; i--) {
+        const area = areas[i];
+        const areaLen = typeof area === 'string' ? area.length : area.getValue().length;
+        if (lastUnmodifiedAreaCharIndex - areaLen < endModifiedIndex) {
+            break;
+        }
+        lastUnmodifiedAreaCharIndex -= areaLen;
+        lastUnmodifiedArea = i;
+    }
+
+    let unaccountedDeltaLength = -diff.removed.length + diff.added.length;
+
+    // phase: changed part
+    while (charIndex <= endModifiedIndex && areaIndex < lastUnmodifiedArea) {
+        const area = areas[areaIndex];
+
+        if (typeof area === 'string') {
+            const areaPosition = currentValue.indexOf(area, charIndex);
+            if (areaPosition >= 0 && areaPosition <= lastUnmodifiedAreaCharIndex) {
+                if (values.length > 0) {
+                    values[values.length - 1] += currentValue.slice(charIndex, areaPosition);
+                    unaccountedDeltaLength += areaPosition - charIndex;
+                } else {
+                    changedNonEditable = true;
+                }
+                charIndex = areaPosition + area.length;
+            } else {
+                if (area.length + unaccountedDeltaLength < 0) {
+                    unaccountedDeltaLength += area.length;
+                } else {
+                    charIndex += area.length + unaccountedDeltaLength;
+                    unaccountedDeltaLength = 0;
+                }
+                changedNonEditable = true;
+            }
+            areaIndex++;
+        } else { // area is editable
+            if (areaIndex + 1 < lastUnmodifiedArea) { // has next area
+                values.push("");
+                unaccountedDeltaLength -= area.getValue().length;
+                areaIndex++;
+            } else { // ending editable
+                values.push(currentValue.slice(charIndex, lastUnmodifiedAreaCharIndex));
+                charIndex = lastUnmodifiedAreaCharIndex;
+                areaIndex++;
+            }
+        }
+    }
+
+    if (values.length > 0 && typeof areas[areaIndex - 1] !== 'string') {
+        values[values.length - 1] += currentValue.slice(charIndex, lastUnmodifiedAreaCharIndex);
+    } else if (charIndex < lastUnmodifiedAreaCharIndex) {
+        changedNonEditable = true;
+    }
+
+    // phase: after change
+    for (; areaIndex < areas.length; areaIndex++) {
+        const area = areas[areaIndex];
+        if (typeof area !== 'string') {
+            values.push(area.getValue());
+        }
+    }
+
+    return { values, changedNonEditable };
+}

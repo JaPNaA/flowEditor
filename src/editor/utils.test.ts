@@ -1,4 +1,4 @@
-import { TwoWayMap, singleDiffWithCursor } from "./utils";
+import { TwoWayMap, findEditableValuesInChangedString, singleDiffWithCursor } from "./utils";
 
 //#region TwoWayMap
 
@@ -107,4 +107,206 @@ test('singleDiffWithCursor: real-world test', () => {
         .toMatchObject({ index: 22, added: ' ', removed: '' });
     expect(singleDiffWithCursor('Tekitou says: ""pasted""', 23, 'Tekitou says: ""pasted" "', 24))
         .toMatchObject({ index: 23, added: ' ', removed: '' });
+});
+
+//#region findEditableValuesInChangedString
+
+function editable(x: string) { return { getValue() { return x; } } }
+
+test('findEditableValuesInChangedString: no changes', () => {
+    expect(findEditableValuesInChangedString(
+        [editable('a'), ' says: "', editable('test'), '"'],
+        'a says : "test"', 0,
+        'a says : "test"', 0
+    )).toEqual({ values: ['a', 'test'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: single editable edit', () => {
+    expect(findEditableValuesInChangedString(
+        [editable('a')],
+        'a', 0,
+        'b', 0
+    )).toEqual({ values: ['b'], changedNonEditable: false });
+
+    expect(findEditableValuesInChangedString(
+        [editable('c')],
+        'c', 0,
+        'bcd', 0
+    )).toEqual({ values: ['bcd'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: starting editable edit', () => {
+    expect(findEditableValuesInChangedString(
+        [editable('b'), 'aa'],
+        'baa', 0,
+        'caa', 0
+    )).toEqual({ values: ['c'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        [editable('b'), 'aa'],
+        'baa', 0,
+        'cdeaa', 0
+    )).toEqual({ values: ['cde'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: ending editable edit', () => {
+    expect(findEditableValuesInChangedString(
+        ['aa', editable('c')],
+        'aab', 0,
+        'aac', 0
+    )).toEqual({ values: ['c'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['aa', editable('c')],
+        'aab', 0,
+        'aacde', 0
+    )).toEqual({ values: ['cde'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: editable edit (with other unchanged editable)', () => {
+    expect(findEditableValuesInChangedString(
+        [editable('a'), ' says: "', editable('test'), '"'],
+        'a says: "test"', 0,
+        'b says: "test"', 0
+    )).toEqual({ values: ['b', 'test'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        [editable('a'), ' says: "', editable('test'), '"'],
+        'a says: "test"', 0,
+        'a says: "toast"', 0
+    )).toEqual({ values: ['a', 'toast'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        [editable('a'), ' says: "', editable('test')],
+        'a says: "test', 0,
+        'b says: "test', 0
+    )).toEqual({ values: ['b', 'test'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        [editable('a'), ' says: "', editable('test')],
+        'a says: "test', 0,
+        'a says: "toast', 0
+    )).toEqual({ values: ['a', 'toast'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: multiple editable edits', () => {
+    expect(findEditableValuesInChangedString(
+        [editable('a'), ' says: "', editable('test'), '"'],
+        'a says: "test"', 0,
+        'bread says: "toast"', 0
+    )).toEqual({ values: ['bread', 'toast'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If c <= d, goto...', 0
+    )).toEqual({ values: ['c', '<=', 'd'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: simple deletion', () => {
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If  > b, goto...', 0
+    )).toEqual({ values: ['', '>', 'b'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If a  b, goto...', 0
+    )).toEqual({ values: ['a', '', 'b'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If a > , goto...', 0
+    )).toEqual({ values: ['a', '>', ''], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        [editable('a'), ' says: "', editable('test')],
+        'a says: "test', 0,
+        'a says: "', 0
+    )).toEqual({ values: ['a', ''], changedNonEditable: false });
+});
+
+
+test('findEditableValuesInChangedString: multiple simple deletion', () => {
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If   b, goto...', 0
+    )).toEqual({ values: ['', '', 'b'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If a  , goto...', 0
+    )).toEqual({ values: ['a', '', ''], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If   , goto...', 0
+    )).toEqual({ values: ['', '', ''], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: unmodifiable area deletion', () => {
+    // with noneditable
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something'), '"'],
+        'They says: "something"', 11,
+        'They says: something"', 11
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something'), '"'],
+        'They says: "something"', 12,
+        'They s: "something"', 12
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
+
+    // no ending noneditable
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something')],
+        'They says: "something', 11,
+        'They says: something', 11
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something')],
+        'They says: "something', 12,
+        'They s: "something', 12
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
+});
+
+test('findEditableValuesInChangedString: multiple unmodifiable area deletion', () => {
+    // note: we expect unmodifiable areas to be there or not (no partial unmodifiable areas)
+
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 0,
+        'If , goto...', 0
+    )).toEqual({ values: ['', '', ''], changedNonEditable: true });
+
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something'), '"'],
+        'They says: "something"', 12,
+        'They', 12
+    )).toEqual({ values: ['They', ''], changedNonEditable: true });
+});
+
+test('findEditableValuesInChangedString: confusing editable values', () => {
+    // sanity check
+    expect(singleDiffWithCursor('They says: "something"', 21, 'They says: "something"a"', 23))
+        .toMatchObject({ index: 21, added: '"a', removed: "" });
+
+    // the user inserts a quote inside the editable -- this should work
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something'), '"'],
+        'They says: "something"', 21,
+        'They says: "something""', 22
+    )).toEqual({ values: ['They', 'something"'], changedNonEditable: false });
+
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something'), '"'],
+        'They says: "something"', 21,
+        'They says: "something"a"', 23
+    )).toEqual({ values: ['They', 'something"a'], changedNonEditable: false });
+
+    // sanity check
+    expect(singleDiffWithCursor('They says: "something"', 22, 'They says: "something"a"', 24))
+        .toMatchObject({ index: 22, added: 'a"', removed: "" });
+
+    // the user inserts a quote outside the editable -- we should identify this as a noneditable edit
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something'), '"'],
+        'They says: "something"', 22,
+        'They says: "something"a"', 24
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
 });
