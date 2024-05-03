@@ -181,8 +181,10 @@ export function singleDiffWithCursor(lastValue: string, lastCursor: number, curr
  * Given the areas and a change the user has made to a line, finds the new
  * values editables should take.
  * 
- * Note: assumes noneditable regions are all or nothing. That is, no partial
- * noneditable regions appear in currentValue.
+ * Note: assumes
+ *   - noneditable regions are all or nothing. That is, no partial
+ *     noneditable regions appear in currentValue.
+ *   - OR there is only one partial noneditable region.
  * 
  * @param areas A list of areas -- strings represent parts of the string the
  * user cannot modify. Objects represent editable regions. Areas MUST contain
