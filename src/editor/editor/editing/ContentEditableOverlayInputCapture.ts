@@ -105,6 +105,9 @@ export class ContentEditableOverlayInputCapture {
         if (!inputCapture) { return; }
         this.inputCaptureElmToHTMLElm.deleteK(inputCapture);
         inputCapture.remove();
+
+        if (this.lastPositionStart?.group === group) { this.lastPositionStart = undefined; }
+        if (this.lastPositionEnd?.group === group) { this.lastPositionEnd = undefined; }
     }
 
     public setPosition(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
@@ -312,11 +315,9 @@ class InputCaptureElm extends Elm<"pre"> {
     private mutationHandler(mutations: MutationRecord[]) {
         this.observer.disconnect();
 
-        console.log(mutations);
-
         // Sometimes Chrome inserts multiple records of mutations for one node, which
-        // we don't want. This variable checks to make sure characterData mutations
-        // are only checked once per mutation.
+        // we don't want. This variable checks to make sure each line is only
+        // checked once per mutation.
         const checkedElements = new Set<HTMLDivElement>();
 
         for (const mutation of mutations) {
