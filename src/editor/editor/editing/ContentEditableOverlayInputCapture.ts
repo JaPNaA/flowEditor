@@ -2,7 +2,7 @@ import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroupEditor } from "../InstructionGroupEditor";
-import { TwoWayMap, getAncestorWhich, singleDiffWithCursor } from "../../utils";
+import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich, singleDiffWithCursor } from "../../utils";
 import { InstructionLine } from "../instruction/instructionTypes";
 import { Editable } from "./Editable";
 import { AddInstructionAction, EditableEditAction, RemoveInstructionAction, UndoableAction } from "./actions";
@@ -337,49 +337,41 @@ class InputCaptureElm extends Elm<"pre"> {
 
         const oldValue = this.lines[lineIndex].str;
         const deltaLength = newValue.length - oldValue.length;
-        const diff = singleDiffWithCursor( // note: potential bug: mutation event happens before selectionChange event
-            oldValue, this.parent._lastSelection?.anchorOffset || 0,
-            newValue, this.parent._currentSelection?.anchorOffset || 0);
-        if (!diff) { return; }
+        // note: potential bug: mutation event happens before selectionChange event
+        const lastCursor = this.parent._lastSelection?.anchorOffset || 0;
+        const newCursor = this.parent._currentSelection?.anchorOffset || 0;
 
-        const position = this.getPositionFromLineElmAndOffset(line, diff.index);
-        if (position) {
-            const line = this.group.block.getLine(position.line);
-            const editable = line.getEditableFromIndex(position.editable);
-            const editableFirstCharIndex = line.getCharIndexOfEditable(editable);
+        const areas = instructionLine._getAreas();
 
-            const newContent = newValue.slice(editableFirstCharIndex, editableFirstCharIndex + editable.getValue().length + deltaLength);
-            const editEvent = new UserInputEvent(diff.added, diff.removed, newContent);
-            console.log(editEvent);
-            editable.checkInput(editEvent);
-            this.parent.inputHandler?.(editEvent);
-            if (editEvent.isRejected()) {
-                // reject
-                this.resetContext();
+        const newEditableValues = findEditableValuesInChangedString(areas, oldValue, lastCursor, newValue, newCursor);
+        const editables = instructionLine.getEditables();
+
+        let shouldReset = newEditableValues.changedNonEditable;
+
+        for (let i = 0; i < editables.length; i++) {
+            const editable = editables[i];
+            const newValue = newEditableValues.values[i];
+            const oldValue = editable.getValue();
+            if (oldValue === newValue) { continue; }
+
+            const event = new UserInputEvent(newValue, oldValue, newValue); // todo
+            editable.checkInput(event);
+            this.parent.inputHandler?.(event);
+            if (event.isRejected()) {
+                shouldReset = true;
             } else {
                 // set variables so we can ignore context updates caused by this event
-                this.activeEditable = editable;
-                this.activeEditableValue = newContent;
+                this.activeEditable = editables[i];
+                this.activeEditableValue = newValue;
 
-                editable.setValue(newContent);
+                editable.setValue(newValue);
                 this.lines[lineIndex].str = newValue;
-                this.parent.afterInputHandler?.(editEvent);
+                this.parent.afterInputHandler?.(event);
             }
         }
-    }
 
-    private getPositionFromLineElmAndOffset(lineElm: HTMLDivElement, offset: number): EditorCursorPositionAbsolute | undefined {
-        const line = this.lineMap.getV(lineElm);
-        if (!line) { return; }
-
-        const linePosition = line.getEditableAndOffsetFromCharIndex(offset);
-        if (linePosition) {
-            return {
-                group: this.group,
-                char: linePosition.offset,
-                editable: linePosition.editableIndex,
-                line: this.group.block.locateLine(line)
-            };
+        if (shouldReset) {
+            this.resetContext();
         }
     }
 

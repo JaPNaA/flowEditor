@@ -171,6 +171,10 @@ export abstract class InstructionLine extends Component {
         return this.editables[this.editables.length - 1].getValue().length;
     }
 
+    public _getAreas() {
+        return this.areas;
+    }
+
     protected setAreas(...elements: (string | Editable)[]) {
         this.areas = elements;
         for (const element of elements) {
