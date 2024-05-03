@@ -130,7 +130,9 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     private splitAfterIfNeeded(group: InstructionGroupEditor, thisIndex: number, thisIsAlwaysJump: boolean) {
         const nextInstruction = group.block.children[thisIndex + 1];
 
-        if (nextInstruction.instruction && (thisIsAlwaysJump || !nextInstruction.instruction.isBranch())) {
+        if (nextInstruction && nextInstruction.instruction &&
+            (thisIsAlwaysJump || !nextInstruction.instruction.isBranch())
+        ) {
             group.splitAtInstruction(thisIndex + 1);
         }
     }
