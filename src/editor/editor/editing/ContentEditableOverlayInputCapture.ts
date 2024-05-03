@@ -317,7 +317,7 @@ class InputCaptureElm extends Elm<"pre"> {
         this.lines.length = 0;
         this.clear();
         for (const line of this.group.block.lineIter()) {
-            const strContent = line.elm.getHTMLElement().innerText;
+            const strContent = areasToString(line._getAreasForInputCapture());
             const elm = new Elm().class("instructionLine").append(strContent).appendTo(this);
             this.lines.push({ str: strContent, line, elm });
             this.lineMap.set(elm.getHTMLElement(), line);
@@ -395,10 +395,10 @@ class InputCaptureElm extends Elm<"pre"> {
         const lastCursor = this.parent._lastSelection?.anchorOffset || 0;
         const newCursor = this.parent._currentSelection?.anchorOffset || 0;
 
-        const areas = instructionLine._getAreas();
+        const areas = instructionLine._getAreasForInputCapture();
 
         const newEditableValues = findEditableValuesInChangedString(areas, oldValue, lastCursor, newValue, newCursor);
-        const editables = instructionLine.getEditables();
+        const editables = areas.filter(x => typeof x !== 'string') as Editable[];
 
         if (newEditableValues.changedNonEditable) {
             this.shouldReset = true;
@@ -421,7 +421,7 @@ class InputCaptureElm extends Elm<"pre"> {
                 this.activeEditableValue = newValue;
 
                 editable.setValue(newValue);
-                this.lines[lineIndex].str = line.innerText;
+                this.lines[lineIndex].str = areasToString(areas);
                 this.parent.afterInputHandler?.(event);
             }
         }
@@ -469,6 +469,10 @@ function clampPosition(position: EditorCursorPositionAbsolute): EditorCursorPosi
     }
 
     return position;
+}
+
+function areasToString(areas: (Editable | string)[]): string {
+    return areas.map(x => typeof x === "string" ? x : x.getValue()).join("");
 }
 
 /**

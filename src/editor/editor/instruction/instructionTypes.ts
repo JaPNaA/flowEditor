@@ -61,6 +61,12 @@ export abstract class InstructionLine extends Component {
     public preferredStartingCharOffset = 0;
     public parentBlock!: InstructionBlock;
 
+    /**
+     * Instruction areas.
+     * 
+     * Each instruction MUST contain at least one editable. There must be
+     * no two consecutive strings or two consecutive editables.
+     */
     private areas: (Editable | string)[] = [];
     private spanToEditable = new Map<HTMLSpanElement, Editable>();
     private editables: Editable[] = [];
@@ -171,10 +177,26 @@ export abstract class InstructionLine extends Component {
         return this.editables[this.editables.length - 1].getValue().length;
     }
 
-    public _getAreas() {
+    public _getAreasForInputCapture() {
+        // Remove the last noneditable from input capture's areas
+        // The tail noneditable does not affect editing. Removing the last
+        // noneditable also prevents cursor flashing (one frame of the cursor
+        // in an invalid position) when clicking at the end of the line in
+        // input captures dependent on document.getSelection
+        if (this.areas.length > 0 && typeof this.areas[this.areas.length - 1] === 'string') {
+            return this.areas.slice(0, -1);
+        }
         return this.areas;
     }
 
+    /**
+     * Set areas for the instruction.
+     * 
+     * Each area is either a noneditable string, or an editable.
+     * 
+     * Each instruction MUST contain at least one editable. There must be
+     * no two consecutive strings or two consecutive editables.
+     */
     protected setAreas(...elements: (string | Editable)[]) {
         this.areas = elements;
         for (const element of elements) {
