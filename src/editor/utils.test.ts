@@ -281,7 +281,7 @@ test('findEditableValuesInChangedString: multiple unmodifiable area deletion', (
     )).toEqual({ values: ['They', ''], changedNonEditable: true });
 });
 
-test('findEditableValuesInChangedString: confusing editable values', () => {
+test('findEditableValuesInChangedString: confusing editable value insertion', () => {
     // sanity check
     expect(singleDiffWithCursor('They says: "something"', 21, 'They says: "something"a"', 23))
         .toMatchObject({ index: 21, added: '"a', removed: "" });
@@ -321,4 +321,31 @@ test('findEditableValuesInChangedString: confusing editable values', () => {
         'If a > b, goto...', 5,
         'If a  > b, goto...', 6,
     )).toEqual({ values: ['a', ' >', 'b'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: confusing editable value deletion', () => {
+    // the user deletes a quote inside the editable -- this should work
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something"'), '"'],
+        'They says: "something""', 22,
+        'They says: "something"', 21
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: false });
+
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something"a'), '"'],
+        'They says: "something"a"', 23,
+        'They says: "something"', 21
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: false });
+
+    // the user should be able to delete a space in the editable
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a '), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a  > b, goto...', 5,
+        'If a > b, goto...', 4,
+    )).toEqual({ values: ['a', '>', 'b'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable(' >'), ' ', editable('b'), ', goto...'],
+        'If a  > b, goto...', 6,
+        'If a > b, goto...', 5,
+    )).toEqual({ values: ['a', '>', 'b'], changedNonEditable: false });
 });
