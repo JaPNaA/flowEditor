@@ -58,8 +58,20 @@ export class AutoComplete extends Component {
         this.engine = engine;
     }
 
-    public updatePosition(cursor: EditorCursor) {
-        const boundingRect = cursor.getHTMLElement().getBoundingClientRect();
+    /**
+     * Updates the position of the AutoComplete popup using the current
+     * document cursor position (`document.getSelection()`)
+     */
+    public updatePosition() {
+        const selection = document.getSelection();
+        if (!selection || !selection.focusNode) { return; }
+        const range = document.createRange();
+        range.setStart(selection.focusNode, selection.focusOffset);
+        range.collapse(true);
+
+        const boundingRect = range.getBoundingClientRect();
+        range.detach();
+
         const pos = this.engine.camera.canvasToWorldPos(
             this.engine.sizer.screenPosToCanvasPos(
                 new Vec2M(boundingRect.x, boundingRect.y + boundingRect.height)

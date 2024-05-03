@@ -307,7 +307,7 @@ export class EditorCursor extends Elm<"span"> {
         lastActiveEditable?.update();
         editable.update();
         if (this.allowAutocomplete) {
-            this.autocomplete.updatePosition(this);
+            this.autocomplete.updatePosition();
             this.autocomplete.showSuggestions(editable);
         }
 
