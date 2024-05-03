@@ -309,4 +309,16 @@ test('findEditableValuesInChangedString: confusing editable values', () => {
         'They says: "something"', 22,
         'They says: "something"a"', 24
     )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
+
+    // the user should be able to insert a space anywhere
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 4,
+        'If a  > b, goto...', 5,
+    )).toEqual({ values: ['a ', '>', 'b'], changedNonEditable: false });
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
+        'If a > b, goto...', 5,
+        'If a  > b, goto...', 6,
+    )).toEqual({ values: ['a', ' >', 'b'], changedNonEditable: false });
 });

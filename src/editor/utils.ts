@@ -245,9 +245,17 @@ export function findEditableValuesInChangedString(
     let lastUnmodifiedArea = areas.length;
     for (let i = areas.length - 1; i >= 0; i--) {
         const area = areas[i];
-        const areaLen = typeof area === 'string' ? area.length : area.getValue().length;
-        if (lastUnmodifiedAreaCharIndex - areaLen < endModifiedIndex) {
-            break;
+        let areaLen;
+        if (typeof area === 'string') {
+            areaLen = area.length;
+            if (lastUnmodifiedAreaCharIndex - areaLen < endModifiedIndex) {
+                break;
+            }
+        } else {
+            areaLen = area.getValue().length;
+            if (lastUnmodifiedAreaCharIndex - areaLen <= endModifiedIndex) {
+                break;
+            }
         }
         lastUnmodifiedAreaCharIndex -= areaLen;
         lastUnmodifiedArea = i;
