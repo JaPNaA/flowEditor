@@ -58,7 +58,16 @@ export class ContentEditableOverlayInputCapture {
     public lastPositionStart?: EditorCursorPositionAbsolute;
     public lastPositionEnd?: EditorCursorPositionAbsolute;
 
+    /**
+     * Ignore document selection change events? Set to prevent infinite recursion
+     * when changing the document selection.
+     */
     private freezeSelectionEvents = false;
+
+    /**
+     * Ignore calls to setPosition. Set during InputCaptureElm's mutation handlers.
+     */
+    public _freezeSelectionSets = false;
 
     constructor() {
         document.addEventListener("selectionchange", ev => {
@@ -85,8 +94,6 @@ export class ContentEditableOverlayInputCapture {
                 }
             }
             this.setPosition(positionStart, positionEnd);
-            this.lastPositionStart = positionStart;
-            this.lastPositionEnd = positionEnd;
         });
     }
 
@@ -115,6 +122,11 @@ export class ContentEditableOverlayInputCapture {
 
         const groupElm = this.inputCaptureElmToEditor.getK(positionStart.group);
         if (!groupElm) { throw new Error("Trying to set position in group that is not registered"); }
+
+        this.lastPositionStart = positionStart;
+        this.lastPositionEnd = positionEnd;
+
+        if (this._freezeSelectionSets) { return; }
 
         const startLine = positionStart.group.block.getLine(positionStart.line);
         const startEditableOffset = startLine.getCharIndexOfEditable(startLine.getEditableFromIndex(positionStart.editable));
@@ -257,6 +269,15 @@ class InputCaptureElm extends Elm<"pre"> {
 
     private activeEditable?: Editable;
     private activeEditableValue?: string;
+    /**
+     * Should prevent external actions from having an effect on the element?
+     * Set true when running mutation handler.
+     */
+    private freezeExternalActions: boolean = false;
+    /**
+     * Should reset after a mutation handler finishes execution?
+     */
+    private shouldReset: boolean = false;
 
     constructor(private parent: ContentEditableOverlayInputCapture, public group: InstructionGroupEditor) {
         super("pre");
@@ -280,11 +301,17 @@ class InputCaptureElm extends Elm<"pre"> {
             return;
         }
 
-        this.resetContext();
+        if (this.freezeExternalActions) {
+            this.shouldReset = true;
+        } else {
+            this.resetContext();
+        }
     }
 
     private resetContext(): void {
         this.observer.disconnect();
+
+        this.shouldReset = false;
 
         this.lineMap.clear();
         this.lines.length = 0;
@@ -314,6 +341,8 @@ class InputCaptureElm extends Elm<"pre"> {
 
     private mutationHandler(mutations: MutationRecord[]) {
         this.observer.disconnect();
+        this.freezeExternalActions = true;
+        this.parent._freezeSelectionSets = true;
 
         // Sometimes Chrome inserts multiple records of mutations for one node, which
         // we don't want. This variable checks to make sure each line is only
@@ -328,6 +357,13 @@ class InputCaptureElm extends Elm<"pre"> {
             this.onMutateLineContent(lineElm);
         }
 
+        this.freezeExternalActions = false;
+        this.parent._freezeSelectionSets = false;
+
+        if (this.shouldReset) {
+            this.resetContext();
+        }
+
         this.observer.observe(this.elm, InputCaptureElm.observerOptions);
     }
 
@@ -339,10 +375,21 @@ class InputCaptureElm extends Elm<"pre"> {
         // Potential bug: the first '\n' may not be the '\n' caused by
         // the <br>, which could cause bugs related to newlines.
         const newValue = line.children[0]?.tagName === 'BR' ? innerText.replace('\n', "") : innerText;
+
         const instructionLine = this.lineMap.getV(line);
         if (!instructionLine) { throw new Error("Line not registered"); }
-        const lineIndex = this.group.block.locateLine(instructionLine);
 
+        if (newValue === '') {
+            // line deleted
+            const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
+            this.parent.lineDeleteHandler?.(lineOpEvent);
+            if (lineOpEvent.isRejected()) {
+                this.shouldReset = true;
+            }
+            return;
+        }
+
+        const lineIndex = this.group.block.locateLine(instructionLine);
         const oldValue = this.lines[lineIndex].str;
         // note: potential bug: mutation event happens before selectionChange event
         const lastCursor = this.parent._lastSelection?.anchorOffset || 0;
@@ -353,7 +400,9 @@ class InputCaptureElm extends Elm<"pre"> {
         const newEditableValues = findEditableValuesInChangedString(areas, oldValue, lastCursor, newValue, newCursor);
         const editables = instructionLine.getEditables();
 
-        let shouldReset = newEditableValues.changedNonEditable;
+        if (newEditableValues.changedNonEditable) {
+            this.shouldReset = true;
+        }
 
         for (let i = 0; i < editables.length; i++) {
             const editable = editables[i];
@@ -365,7 +414,7 @@ class InputCaptureElm extends Elm<"pre"> {
             editable.checkInput(event);
             this.parent.inputHandler?.(event);
             if (event.isRejected()) {
-                shouldReset = true;
+                this.shouldReset = true;
             } else {
                 // set variables so we can ignore context updates caused by this event
                 this.activeEditable = editables[i];
@@ -375,10 +424,6 @@ class InputCaptureElm extends Elm<"pre"> {
                 this.lines[lineIndex].str = line.innerText;
                 this.parent.afterInputHandler?.(event);
             }
-        }
-
-        if (shouldReset) {
-            this.resetContext();
         }
     }
 
