@@ -294,10 +294,11 @@ class InputCaptureElm extends Elm<"pre"> {
         }
 
         if (this.group == this.parent.lastPositionStart?.group && this.parent.lastPositionEnd) {
-            this.parent.setPosition(
-                clampPosition(this.parent.lastPositionStart),
-                clampPosition(this.parent.lastPositionEnd)
-            );
+            const startPos = clampPosition(this.parent.lastPositionStart);
+            const endPos = clampPosition(this.parent.lastPositionEnd);
+            if (startPos && endPos) {
+                this.parent.setPosition(startPos, endPos);
+            }
         }
 
         this.observer.observe(this.elm, InputCaptureElm.observerOptions);
@@ -330,13 +331,18 @@ class InputCaptureElm extends Elm<"pre"> {
     }
 
     private onMutateLineContent(line: HTMLDivElement) {
-        const newValue = line.innerText;
+        const innerText = line.innerText;
+        // Chrome inserts <br> in place of empty lines, which causes empty
+        // lines to have innerText = '\n'. We detect this to correctly detect
+        // empty lines.
+        // Potential bug: the first '\n' may not be the '\n' caused by
+        // the <br>, which could cause bugs related to newlines.
+        const newValue = line.children[0]?.tagName === 'BR' ? innerText.replace('\n', "") : innerText;
         const instructionLine = this.lineMap.getV(line);
         if (!instructionLine) { throw new Error("Line not registered"); }
         const lineIndex = this.group.block.locateLine(instructionLine);
 
         const oldValue = this.lines[lineIndex].str;
-        const deltaLength = newValue.length - oldValue.length;
         // note: potential bug: mutation event happens before selectionChange event
         const lastCursor = this.parent._lastSelection?.anchorOffset || 0;
         const newCursor = this.parent._currentSelection?.anchorOffset || 0;
@@ -365,7 +371,7 @@ class InputCaptureElm extends Elm<"pre"> {
                 this.activeEditableValue = newValue;
 
                 editable.setValue(newValue);
-                this.lines[lineIndex].str = newValue;
+                this.lines[lineIndex].str = line.innerText;
                 this.parent.afterInputHandler?.(event);
             }
         }
@@ -380,8 +386,12 @@ class InputCaptureElm extends Elm<"pre"> {
     }
 }
 
-function clampPosition(position: EditorCursorPositionAbsolute): EditorCursorPositionAbsolute {
+function clampPosition(position: EditorCursorPositionAbsolute): EditorCursorPositionAbsolute | undefined {
     const block = position.group.block;
+    if (block.numLines <= 0) {
+        return;
+    }
+
     if (position.line >= block.numLines) {
         const lastLine = block.getLine(block.numLines - 1);
         return {
