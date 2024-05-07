@@ -38,44 +38,9 @@
     user-select: auto;
 }
 
-/* .instructionElm.active {
-    pointer-events: all;
-} */
-
 .instructionGroup {
     caret-color: #6086f0;
 }
-
-/* .instructionGroup .editable .cursor {
-    display: inline;
-    background-color: #3665ffa2;
-}
-
-.instructionGroup .editable .cursor.hidden {
-    background-color: #6b6b6ba2;
-}
-
-.instructionGroup .editable .cursor {
-    margin-right: -2px;
-    border-width: 0px;
-    border-color: #6086f0;
-    border-style: solid;
-    border-right-width: 2px;
-}
-
-.instructionGroup .editable .cursor.backwards {
-    margin-left: -2px;
-    margin-right: 0;
-    border-left-width: 2px;
-    border-right-width: 0;
-}
-
-.instructionGroup .editable .cursor.hidden {
-    margin-left: 0;
-    margin-right: 0;
-    border-left-width: 0;
-    border-right-width: 0;
-} */
 
 .instructionGroup .inputCapture {
     position: absolute;
@@ -89,18 +54,7 @@
     padding: 0;
     box-sizing: border-box;
     resize: none;
-
-    /** Prevent wrapping */
-    /* white-space: pre;
-    overflow-wrap: normal;
-    overflow-x: scroll; */
 }
-
-/* .instructionGroup .inputCapture ::selection {
-    color: transparent;
-    background-color: #82ffc16b;
-    background-blend-mode: lighten;
-} */
 
 .instructionGroup .inputCapture .instructionLine {
     color: transparent;
