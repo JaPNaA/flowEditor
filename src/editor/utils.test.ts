@@ -239,7 +239,7 @@ test('findEditableValuesInChangedString: multiple simple deletion', () => {
     )).toEqual({ values: ['', '', ''], changedNonEditable: false });
 });
 
-test('findEditableValuesInChangedString: unmodifiable area deletion', () => {
+test('findEditableValuesInChangedString: single partial noneditable area deletion', () => {
     // with noneditable
     expect(findEditableValuesInChangedString(
         [editable('They'), ' says: "', editable('something'), '"'],
@@ -265,8 +265,22 @@ test('findEditableValuesInChangedString: unmodifiable area deletion', () => {
     )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
 });
 
-test('findEditableValuesInChangedString: multiple unmodifiable area deletion', () => {
-    // note: we expect unmodifiable areas to be there or not (no partial unmodifiable areas)
+test('findEditableValuesInChangedString: single complete noneditable deletion', () => {
+    expect(findEditableValuesInChangedString(
+        [editable('They'), ' says: "', editable('something')],
+        'They says: "something', 12,
+        'Theysomething', 4
+    )).toEqual({ values: ['They', 'something'], changedNonEditable: true });
+
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('choice'), ' ', editable('='), ' ', editable('2')],
+        'If choice = 2', 10,
+        'If choice= 2', 9
+    )).toEqual({ values: ['choice', '=', '2'], changedNonEditable: true });
+});
+
+test('findEditableValuesInChangedString: multiple noneditable area deletion', () => {
+    // note: we expect noneditable areas to be there or not (no partial noneditable areas)
 
     expect(findEditableValuesInChangedString(
         ['If ', editable('a'), ' ', editable('>'), ' ', editable('b'), ', goto...'],
@@ -348,4 +362,12 @@ test('findEditableValuesInChangedString: confusing editable value deletion', () 
         'If a  > b, goto...', 6,
         'If a > b, goto...', 5,
     )).toEqual({ values: ['a', '>', 'b'], changedNonEditable: false });
+});
+
+test('findEditableValuesInChangedString: confusing noneditable deletion', () => {
+    expect(findEditableValuesInChangedString(
+        ['If ', editable('choice'), ' ', editable(''), ' ', editable('2')],
+        'If choice  2', 10,
+        'If choice 2', 9
+    )).toEqual({ values: ['choice', '', '2'], changedNonEditable: true });
 });

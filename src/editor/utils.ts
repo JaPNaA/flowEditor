@@ -269,7 +269,7 @@ export function findEditableValuesInChangedString(
 
         if (typeof area === 'string') {
             const areaPosition = currentValue.indexOf(area, charIndex);
-            if (areaPosition >= 0 && areaPosition <= lastUnmodifiedAreaCharIndex) {
+            if (areaPosition >= 0 && areaPosition < lastUnmodifiedAreaCharIndex) {
                 if (values.length > 0) {
                     values[values.length - 1] += currentValue.slice(charIndex, areaPosition);
                     unaccountedDeltaLength += areaPosition - charIndex;
@@ -302,7 +302,7 @@ export function findEditableValuesInChangedString(
 
     if (values.length > 0 && typeof areas[areaIndex - 1] !== 'string') {
         values[values.length - 1] += currentValue.slice(charIndex, lastUnmodifiedAreaCharIndex);
-    } else if (charIndex < lastUnmodifiedAreaCharIndex) {
+    } else if (charIndex !== lastUnmodifiedAreaCharIndex) {
         changedNonEditable = true;
     }
 

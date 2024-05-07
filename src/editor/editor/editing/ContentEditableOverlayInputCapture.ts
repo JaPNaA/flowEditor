@@ -53,8 +53,8 @@ export class ContentEditableOverlayInputCapture {
     /** Fired when no editables are in focus */
     public unfocusHandler?: () => void;
 
-    public _lastSelection?: Selection;
-    public _currentSelection?: Selection;
+    public _lastSelectionAnchor?: Node;
+    public _lastSelectionOffset?: number;
     public lastPositionStart?: EditorCursorPositionAbsolute;
     public lastPositionEnd?: EditorCursorPositionAbsolute;
 
@@ -74,8 +74,10 @@ export class ContentEditableOverlayInputCapture {
             if (!ev.isTrusted) { return; }
             if (this.freezeSelectionEvents) { return; }
             const selection = getSelection();
-            this._lastSelection = this._currentSelection;
-            this._currentSelection = selection || undefined;
+            if (selection) {
+                this._lastSelectionAnchor = selection.anchorNode || undefined;
+                this._lastSelectionOffset = selection.focusOffset;
+            }
 
             if (!selection || !selection.focusNode || !selection.anchorNode) { return; }
             const positionStart = this.domSelectionToPosition(selection.anchorNode, selection.anchorOffset);
@@ -391,9 +393,9 @@ class InputCaptureElm extends Elm<"pre"> {
 
         const lineIndex = this.group.block.locateLine(instructionLine);
         const oldValue = this.lines[lineIndex].str;
-        // note: potential bug: mutation event happens before selectionChange event
-        const lastCursor = this.parent._lastSelection?.anchorOffset || 0;
-        const newCursor = this.parent._currentSelection?.anchorOffset || 0;
+        const lastCursor = this.parent._lastSelectionOffset || 0;
+        const newCursor = getSelection()?.anchorOffset || lastCursor;
+        this.parent._lastSelectionOffset = newCursor;
 
         const areas = instructionLine._getAreasForInputCapture();
 
