@@ -69,14 +69,39 @@ export class ContentEditableOverlayInputCapture {
      */
     public _freezeSelectionSets = false;
 
+    /**
+     * The direction the cursor is moving. Forward is when the previous index is
+     * smaller than the current. Backwards when previous index is larger than
+     * the current.
+     * 
+     * Used to decide to place the cursor in the left or right editable when the
+     * cursor is in a noneditable.
+     */
+    private cursorMovingBackwards = false;
+
     constructor() {
         document.addEventListener("selectionchange", ev => {
             if (!ev.isTrusted) { return; }
             if (this.freezeSelectionEvents) { return; }
             const selection = getSelection();
-            if (selection) {
-                this._lastSelectionAnchor = selection.anchorNode || undefined;
-                this._lastSelectionOffset = selection.focusOffset;
+
+            if (selection && selection.anchorNode) {
+                // set this.cursorMovingBackwards
+                if (this._lastSelectionAnchor) {
+                    const compared = selection.anchorNode.compareDocumentPosition(this._lastSelectionAnchor);
+                    if (compared & Node.DOCUMENT_POSITION_FOLLOWING) {
+                        this.cursorMovingBackwards = false;
+                    } else if (compared & Node.DOCUMENT_POSITION_PRECEDING) {
+                        this.cursorMovingBackwards = true;
+                    } else if (this._lastSelectionOffset! < selection.anchorOffset) {
+                        this.cursorMovingBackwards = false;
+                    } else if (this._lastSelectionOffset! > selection.anchorOffset) {
+                        this.cursorMovingBackwards = true;
+                    }
+                }
+
+                this._lastSelectionAnchor = selection.anchorNode;
+                this._lastSelectionOffset = selection.anchorOffset;
             }
 
             if (!selection || !selection.focusNode || !selection.anchorNode) { return; }
@@ -218,7 +243,7 @@ export class ContentEditableOverlayInputCapture {
         const instructionLine = inputCaptureElm.lineMap.getV(parentInstructionLine);
         if (!instructionLine) { return; }
         const lineNumber = inputCaptureElm.group.block.locateLine(instructionLine);
-        const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(focusOffset);
+        const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(focusOffset, this.cursorMovingBackwards);
         const editable = instructionLine.getEditableFromIndex(closestEditableIndex);
         let position: EditorCursorPositionAbsolute;
         if (editable) { // verify editable exists

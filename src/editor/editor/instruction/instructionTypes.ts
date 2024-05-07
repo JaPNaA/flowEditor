@@ -132,16 +132,20 @@ export abstract class InstructionLine extends Component {
     }
 
     /**
-     * Find the editable "closest" to a character index. The function will find
-     * the closest editable to the left first. If there is no editable to the
-     * left, will find the closest editable to the right.
+     * Find the editable "closest" to a character index.
+     * 
+     * If `backwardsFirst`, finds the closest editable to the left first, then
+     * the closest to the right.
+     * If not `backwardsFirst`, finds the closest editable to the right first,
+     * then the closest to the left.
      * 
      * Used for repositioning the cursor after a user clicks to move the
      * cursor.
      * 
      * @param charIndex Character index on this line
+     * @param backwardsFirst Check closest editable to the left first?
      */
-    public getClosestEditableIndexToCharIndex(charIndex: number): number {
+    public getClosestEditableIndexToCharIndex(charIndex: number, backwardsFirst: boolean): number {
         let editableIndex = 0;
         for (const area of this.areas) {
             if (typeof area === 'string') {
@@ -158,7 +162,11 @@ export abstract class InstructionLine extends Component {
                 editableIndex++;
             }
         }
-        return editableIndex - 1;
+        if (backwardsFirst) {
+            return editableIndex - 1;
+        } else {
+            return editableIndex;
+        }
     }
 
     public getEditables(): ReadonlyArray<Editable> {
