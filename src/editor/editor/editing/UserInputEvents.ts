@@ -17,8 +17,7 @@ export abstract class RejectableEvent {
 
 export class UserInputEvent extends RejectableEvent {
     constructor(
-        public readonly added: string,
-        public readonly removed: string,
+        public readonly oldContent: string,
         public readonly newContent: string
     ) { super(); }
 }

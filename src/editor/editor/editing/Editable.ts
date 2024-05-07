@@ -47,7 +47,7 @@ export class Editable extends Elm<"span"> {
 
     /** Called by ContentEditableOverlayInputCapture to verify validity of input */
     public checkInput(event: UserInputEvent) {
-        if (event.added.includes("\n")) {
+        if (event.newContent.includes("\n")) {
             event.reject();
         }
     }

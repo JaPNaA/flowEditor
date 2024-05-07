@@ -34,7 +34,7 @@ class JSONLineEditable extends Editable {
     }
 
     public checkInput(event: UserInputEvent): void {
-        if (event.added.includes("\n")) {
+        if (event.newContent.includes("\n")) {
             const value = this.getValue();
             // support for multiline paste only if JSONLine is a string + is not newline at end of line
             if (value[0] === '"' && value[value.length - 1] === '"' && event.newContent[event.newContent.length - 1] !== "\n") {

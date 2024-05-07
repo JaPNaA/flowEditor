@@ -412,7 +412,7 @@ class InputCaptureElm extends Elm<"pre"> {
             const oldValue = editable.getValue();
             if (oldValue === newValue) { continue; }
 
-            const event = new UserInputEvent(newValue, oldValue, newValue); // todo
+            const event = new UserInputEvent(oldValue, newValue);
             editable.checkInput(event);
             this.parent.inputHandler?.(event);
             if (event.isRejected()) {

@@ -91,7 +91,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
     public onCursorInput(position: EditorCursorPositionAbsolute, ev: UserInputEvent) {
         if (ev.isRejected()) {
-            if (ev.added.includes("\n")) {
+            if (ev.newContent.includes("\n")) {
                 if (position.editable === 0 && position.char === 0) {
                     this.insertLineAndUpdateCursor(position.line);
                 } else {
