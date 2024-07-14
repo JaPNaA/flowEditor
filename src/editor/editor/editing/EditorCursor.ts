@@ -214,6 +214,7 @@ export class EditorCursor extends Elm<"span"> {
         const lastActiveEditable = this.activeEditable;
         if (lastActiveEditable) {
             lastActiveEditable.placeholder = false;
+            lastActiveEditable.update(); // some editables like in NewInstruction use update to enable/disable their keydown intercepter
         }
 
         const editable = this.getEditableFromPosition(position);
@@ -223,6 +224,7 @@ export class EditorCursor extends Elm<"span"> {
             this.autocomplete.updatePosition();
             this.autocomplete.showSuggestions(editable);
         }
+        editable.update(); // some editables like in NewInstruction use update to enable/disable their keydown intercepter
     }
 
     private getEditableFromPosition(position: Readonly<EditorCursorPositionAbsolute>) {
