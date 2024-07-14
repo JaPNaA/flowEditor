@@ -185,9 +185,9 @@ export class AutoComplete extends Component {
         if (!instructionParent) { return; }
         const currInstructionIndex = instructionParent.children.indexOf(currEditable.parentLine.parentBlock);
         if (currInstructionIndex > 0) {
-            instructionParent.children[
+            return instructionParent.children[
                 currInstructionIndex - 1
-            ]?.getLine(0).getEditables().find(editable => editable.autoCompleteType === type)?.getValue()
+            ]?.getLine(0).getEditables().find(editable => editable.autoCompleteType === type)?.getValue();
         }
     }
 
