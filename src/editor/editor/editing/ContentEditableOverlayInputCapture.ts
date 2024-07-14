@@ -415,6 +415,7 @@ class InputCaptureElm extends Elm<"pre"> {
         if (newValue === '') {
             // line deleted
             const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
+            instructionLine.parentBlock.getGroupEditor()?.editor.onLineDelete(lineOpEvent);
             if (lineOpEvent.isRejected()) {
                 this.shouldReset = true;
             }
@@ -459,10 +460,11 @@ class InputCaptureElm extends Elm<"pre"> {
             }
         }
 
-        this.parent.firePositionChangeHandler(
-            this.parent.domSelectionToPosition(line, newCursor)!, // todo -- should check for null
-            this.parent.domSelectionToPosition(line, newCursor)!,
-        );
+        const position = this.parent.domSelectionToPosition(line, newCursor);
+        if (position) {
+            this.parent.lastPositionStart = this.parent.lastPositionEnd = position;
+            this.parent.firePositionChangeHandler(position, position);
+        }
 
         for (const editable of changedEditables) {
             editable.afterChangeApply();

@@ -190,8 +190,9 @@ export class EditorCursor extends Elm<"span"> {
             this.inputCapture.setPosition(posStart, posEnd);
             this.afterCursorMove(posStart);
         } else {
-            this.inputCapture.setPosition(this.positionStart!, this.positionStart!);
-            this.afterCursorMove(this.positionStart!);
+            this.positionStart = position;
+            this.inputCapture.setPosition(this.positionStart, this.positionStart);
+            this.afterCursorMove(this.positionStart);
         }
 
         this.inputCapture.focus();
