@@ -59,6 +59,16 @@ export class ContentEditableOverlayInputCapture {
     public lastPositionEnd?: EditorCursorPositionAbsolute;
 
     /**
+     * The direction the cursor is moving. Forward is when the previous index is
+     * smaller than the current. Backwards when previous index is larger than
+     * the current.
+     * 
+     * Used to decide to place the cursor in the left or right editable when the
+     * cursor is in a noneditable.
+     */
+    public cursorMovingBackwards = false;
+
+    /**
      * Ignore document selection change events? Set to prevent infinite recursion
      * when changing the document selection.
      */
@@ -68,16 +78,6 @@ export class ContentEditableOverlayInputCapture {
      * Ignore calls to setPosition. Set during InputCaptureElm's mutation handlers.
      */
     public _freezeSelectionSets = false;
-
-    /**
-     * The direction the cursor is moving. Forward is when the previous index is
-     * smaller than the current. Backwards when previous index is larger than
-     * the current.
-     * 
-     * Used to decide to place the cursor in the left or right editable when the
-     * cursor is in a noneditable.
-     */
-    private cursorMovingBackwards = false;
 
     constructor() {
         document.addEventListener("selectionchange", ev => {
@@ -428,6 +428,16 @@ class InputCaptureElm extends Elm<"pre"> {
         const newCursor = getSelection()?.anchorOffset || lastCursor;
         this.parent._lastSelectionOffset = newCursor;
 
+        if (lastCursor !== newCursor) {
+            this.parent.cursorMovingBackwards = newCursor < lastCursor;
+        }
+
+        const position = this.parent.domSelectionToPosition(line, newCursor);
+        if (position) {
+            this.parent.lastPositionStart = this.parent.lastPositionEnd = position;
+            this.parent.firePositionChangeHandler(position, position);
+        }
+
         const areas = instructionLine._getAreasForInputCapture();
 
         const newEditableValues = findEditableValuesInChangedString(areas, oldValue, lastCursor, newValue, newCursor);
@@ -458,12 +468,6 @@ class InputCaptureElm extends Elm<"pre"> {
                 this.lines[lineIndex].str = areasToString(areas);
                 changedEditables.push(editable);
             }
-        }
-
-        const position = this.parent.domSelectionToPosition(line, newCursor);
-        if (position) {
-            this.parent.lastPositionStart = this.parent.lastPositionEnd = position;
-            this.parent.firePositionChangeHandler(position, position);
         }
 
         for (const editable of changedEditables) {
