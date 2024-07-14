@@ -383,11 +383,28 @@ class InputCaptureElm extends Elm<"pre"> {
         const checkedElements = new Set<HTMLDivElement>();
 
         for (const mutation of mutations) {
-            const lineElm = this.parentLineElement(mutation.target);
-            if (!lineElm) { continue; }
-            if (checkedElements.has(lineElm)) { continue; }
-            checkedElements.add(lineElm);
-            this.onMutateLineContent(lineElm);
+            if (mutation.type === "childList" && mutation.addedNodes.length === 0) {
+                for (const removedNode of mutation.removedNodes) {
+                    // line removal
+                    const lineElm = this.findParentLineElement(removedNode);
+                    if (!lineElm) { continue; }
+                    const instructionLine = this.lineMap.getV(lineElm);
+                    if (instructionLine) {
+                        const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
+                        instructionLine.parentBlock.getGroupEditor()?.editor.onLineDelete(lineOpEvent);
+                        if (lineOpEvent.isRejected()) {
+                            this.shouldReset = true;
+                        }
+                    }
+                }
+            } else {
+                // editable change
+                const lineElm = this.findParentLineElement(mutation.target);
+                if (!lineElm) { continue; }
+                if (checkedElements.has(lineElm)) { continue; }
+                checkedElements.add(lineElm);
+                this.onMutateLineContent(lineElm);
+            }
         }
 
         this.freezeExternalActions = false;
@@ -411,16 +428,6 @@ class InputCaptureElm extends Elm<"pre"> {
 
         const instructionLine = this.lineMap.getV(line);
         if (!instructionLine) { throw new Error("Line not registered"); }
-
-        if (newValue === '') {
-            // line deleted
-            const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
-            instructionLine.parentBlock.getGroupEditor()?.editor.onLineDelete(lineOpEvent);
-            if (lineOpEvent.isRejected()) {
-                this.shouldReset = true;
-            }
-            return;
-        }
 
         const lineIndex = this.group.block.locateLine(instructionLine);
         const oldValue = this.lines[lineIndex].str;
@@ -475,7 +482,7 @@ class InputCaptureElm extends Elm<"pre"> {
         }
     }
 
-    private parentLineElement(node: Node): HTMLDivElement | null {
+    private findParentLineElement(node: Node): HTMLDivElement | null {
         return getAncestorWhich(node, (node) => node instanceof HTMLDivElement && node.classList.contains("instructionLine")) as HTMLDivElement;
     }
 }
