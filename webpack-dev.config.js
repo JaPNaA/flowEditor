@@ -5,6 +5,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const webpackConfig = {
     mode: "development",
     watch: true, // <- watch files in dev mode
+    devtool: "source-map", // <- generate source map in dev mode
     resolve: {
         symlinks: false,
         extensions: [".ts", ".tsx", ".js"],
