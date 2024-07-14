@@ -109,12 +109,7 @@ export class ContentEditableOverlayInputCapture {
             const positionEnd = this.domSelectionToPosition(selection.focusNode, selection.focusOffset);
             if (!positionStart || !positionEnd) { return; }
 
-            if (
-                !this.lastPositionStart || compareAbsoluteCursorPositions(this.lastPositionStart, positionStart) !== 0 ||
-                !this.lastPositionEnd || compareAbsoluteCursorPositions(this.lastPositionEnd, positionEnd) !== 0
-            ) {
-                this.firePositionChangeHandler(positionStart, positionEnd);
-            }
+            this.firePositionChangeHandlerIfChanged(positionStart, positionEnd);
             this.setPosition(positionStart, positionEnd);
         });
     }
@@ -266,12 +261,17 @@ export class ContentEditableOverlayInputCapture {
     }
 
     // todo: should be private
-    public firePositionChangeHandler(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
-        const diff = compareAbsoluteCursorPositions(positionStart, positionEnd);
-        if (diff && diff > 0) {
-            this.positionChangeHandler?.(positionEnd, positionStart, true);
-        } else {
-            this.positionChangeHandler?.(positionStart, positionEnd, false);
+    public firePositionChangeHandlerIfChanged(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
+        if (
+            !this.lastPositionStart || compareAbsoluteCursorPositions(this.lastPositionStart, positionStart) !== 0 ||
+            !this.lastPositionEnd || compareAbsoluteCursorPositions(this.lastPositionEnd, positionEnd) !== 0
+        ) {
+            const diff = compareAbsoluteCursorPositions(positionStart, positionEnd);
+            if (diff && diff > 0) {
+                this.positionChangeHandler?.(positionEnd, positionStart, true);
+            } else {
+                this.positionChangeHandler?.(positionStart, positionEnd, false);
+            }
         }
     }
 }
@@ -442,7 +442,7 @@ class InputCaptureElm extends Elm<"pre"> {
         const position = this.parent.domSelectionToPosition(line, newCursor);
         if (position) {
             this.parent.lastPositionStart = this.parent.lastPositionEnd = position;
-            this.parent.firePositionChangeHandler(position, position);
+            this.parent.firePositionChangeHandlerIfChanged(position, position);
         }
 
         const areas = instructionLine._getAreasForInputCapture();
