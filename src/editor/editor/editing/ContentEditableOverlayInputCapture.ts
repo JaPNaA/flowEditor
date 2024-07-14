@@ -33,17 +33,17 @@ export class ContentEditableOverlayInputCapture {
     private inputCaptureElmToEditor = new TwoWayMap<InputCaptureElm, InstructionGroupEditor>();
     private inputCaptureElmToHTMLElm = new TwoWayMap<InputCaptureElm, HTMLPreElement>();
 
-    /** Fired when the cursor position changes. Expect posStart < posEnd */
+    /**
+     * Fired when the user changes the cursor position. Will not fire if user
+     * sets cursor position to the same position (when the user clicks the
+     * cursor).
+     * 
+     * Precondition: posStart < posEnd.
+     */
     public positionChangeHandler?: (posStart: EditorCursorPositionAbsolute, posEnd: EditorCursorPositionAbsolute, selectBackwards: boolean) => void;
 
     /** Fired when an editable is edited */
     public inputHandler?: (userInputEvent: UserInputEvent) => void;
-
-    /** Fired when an editable is edited, and it's new value is applied */
-    public afterInputHandler?: (userInputEvent: UserInputEvent) => void;
-
-    /** Fired when a line deletion is requested by the user. Event handlers must setup the input capture again, unless the event is rejected. */
-    public lineDeleteHandler?: (lineOp: LineOperationEvent) => void;
 
     /** Fired on keydown, before changing the textarea. Can preventDefault here. Return 'true' to cancel change check. */
     public keydownIntercepter?: (event: KeyboardEvent) => boolean | undefined;
@@ -113,12 +113,7 @@ export class ContentEditableOverlayInputCapture {
                 !this.lastPositionStart || compareAbsoluteCursorPositions(this.lastPositionStart, positionStart) !== 0 ||
                 !this.lastPositionEnd || compareAbsoluteCursorPositions(this.lastPositionEnd, positionEnd) !== 0
             ) {
-                const diff = compareAbsoluteCursorPositions(positionStart, positionEnd);
-                if (diff && diff > 0) {
-                    this.positionChangeHandler?.(positionEnd, positionStart, true);
-                } else {
-                    this.positionChangeHandler?.(positionStart, positionEnd, false);
-                }
+                this.firePositionChangeHandler(positionStart, positionEnd);
             }
             this.setPosition(positionStart, positionEnd);
         });
@@ -227,7 +222,8 @@ export class ContentEditableOverlayInputCapture {
      * @param anchorNode Selection anchor node
      * @param focusOffset Selection focus offset
      */
-    private domSelectionToPosition(anchorNode: Node, focusOffset: number) {
+    // todo: should be private
+    public domSelectionToPosition(anchorNode: Node, focusOffset: number) {
         const parentInstructionLine =
             getAncestorWhich(
                 anchorNode,
@@ -267,6 +263,16 @@ export class ContentEditableOverlayInputCapture {
             };
         }
         return position;
+    }
+
+    // todo: should be private
+    public firePositionChangeHandler(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
+        const diff = compareAbsoluteCursorPositions(positionStart, positionEnd);
+        if (diff && diff > 0) {
+            this.positionChangeHandler?.(positionEnd, positionStart, true);
+        } else {
+            this.positionChangeHandler?.(positionStart, positionEnd, false);
+        }
     }
 }
 
@@ -409,7 +415,6 @@ class InputCaptureElm extends Elm<"pre"> {
         if (newValue === '') {
             // line deleted
             const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
-            this.parent.lineDeleteHandler?.(lineOpEvent);
             if (lineOpEvent.isRejected()) {
                 this.shouldReset = true;
             }
@@ -431,6 +436,7 @@ class InputCaptureElm extends Elm<"pre"> {
             this.shouldReset = true;
         }
 
+        const changedEditables: Editable[] = [];
         for (let i = 0; i < editables.length; i++) {
             const editable = editables[i];
             const newValue = newEditableValues.values[i];
@@ -449,8 +455,17 @@ class InputCaptureElm extends Elm<"pre"> {
 
                 editable.setValue(newValue);
                 this.lines[lineIndex].str = areasToString(areas);
-                this.parent.afterInputHandler?.(event);
+                changedEditables.push(editable);
             }
+        }
+
+        this.parent.firePositionChangeHandler(
+            this.parent.domSelectionToPosition(line, newCursor)!, // todo -- should check for null
+            this.parent.domSelectionToPosition(line, newCursor)!,
+        );
+
+        for (const editable of changedEditables) {
+            editable.afterChangeApply();
         }
     }
 
