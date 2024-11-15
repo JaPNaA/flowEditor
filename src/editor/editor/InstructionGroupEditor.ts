@@ -53,8 +53,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.graphicHitbox = new Hitbox(this.graphicRect, this);
 
         this.elm = new Elm().class("instructionGroup");
-        this.elm.attribute("tabindex", "-1");
-        this.elm.on("input", () => this.updateHeight());
 
         this.elm.on("keydown", ev => {
             if (ev.code === "Escape") {
@@ -63,6 +61,11 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         });
     }
 
+    /**
+     * Updates the graphic rectangles for this instruction group.
+     * 
+     * (Graphic rectangles are used by japnaaEngine2d to cull WorldElms.)
+     */
     public updateAfterMove() {
         this.updateAfterMoveNoParentPropagation();
         for (const parent of this._parentGroups) {

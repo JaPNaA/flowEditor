@@ -185,15 +185,7 @@ export abstract class InstructionLine extends Component {
         return this.editables[this.editables.length - 1].getValue().length;
     }
 
-    public _getAreasForInputCapture() {
-        // Remove the last noneditable from input capture's areas
-        // The tail noneditable does not affect editing. Removing the last
-        // noneditable also prevents cursor flashing (one frame of the cursor
-        // in an invalid position) when clicking at the end of the line in
-        // input captures dependent on document.getSelection
-        if (this.areas.length > 0 && typeof this.areas[this.areas.length - 1] === 'string') {
-            return this.areas.slice(0, -1);
-        }
+    public getAreas() {
         return this.areas;
     }
 

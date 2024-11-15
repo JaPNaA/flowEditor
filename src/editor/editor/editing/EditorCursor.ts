@@ -65,6 +65,13 @@ export class EditorCursor extends Elm<"span"> {
             this.positionStart.group.onCursorInput(this.positionStart, input);
         };
 
+        this.inputCapture.afterInputHandler = events => {
+            const groups = new Set(events.map(x => x.editable.parentLine.parentBlock.getGroupEditor()));
+            for (const group of groups) {
+                group?.editor.updateHeight();
+            }
+        };
+
         this.inputCapture.keydownIntercepter = e => {
             if (e.ctrlKey && !["ArrowLeft", "ArrowRight", "Delete", "Backspace", "C", "c", "V", "v", "X", "x"].includes(e.key)) {
                 this.onKeyboardShortcutPress.send(e);

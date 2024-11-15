@@ -45,6 +45,9 @@ export class ContentEditableOverlayInputCapture {
     /** Fired when an editable is edited */
     public inputHandler?: (userInputEvent: UserInputEvent) => void;
 
+    /** Fired after a editables are edited and the changes are applied */
+    public afterInputHandler?: (userInputEvents: UserInputEvent[]) => void;
+
     /** Fired on keydown, before changing the textarea. Can preventDefault here. Return 'true' to cancel change check. */
     public keydownIntercepter?: (event: KeyboardEvent) => boolean | undefined;
 
@@ -350,7 +353,7 @@ class InputCaptureElm extends Elm<"pre"> {
         this.lines.length = 0;
         this.clear();
         for (const line of this.group.block.lineIter()) {
-            const strContent = areasToString(line._getAreasForInputCapture());
+            const strContent = areasToString(line.getAreas());
             const elm = new Elm().class("instructionLine").append(strContent).appendTo(this);
             this.lines.push({ str: strContent, line, elm });
             this.lineMap.set(elm.getHTMLElement(), line);
@@ -445,24 +448,26 @@ class InputCaptureElm extends Elm<"pre"> {
             this.parent.firePositionChangeHandlerIfChanged(position, position);
         }
 
-        const areas = instructionLine._getAreasForInputCapture();
+        const areas = instructionLine.getAreas();
 
         const newEditableValues = findEditableValuesInChangedString(areas, oldValue, lastCursor, newValue, newCursor);
-        const editables = areas.filter(x => typeof x !== 'string') as Editable[];
+        const editables = instructionLine.getEditables();
 
         if (newEditableValues.changedNonEditable) {
             this.shouldReset = true;
         }
 
         const changedEditables: Editable[] = [];
+        const changeEvents: UserInputEvent[] = [];
         for (let i = 0; i < editables.length; i++) {
             const editable = editables[i];
             const newValue = newEditableValues.values[i];
             const oldValue = editable.getValue();
             if (oldValue === newValue) { continue; }
 
-            const event = new UserInputEvent(oldValue, newValue);
+            const event = new UserInputEvent(editable, oldValue, newValue);
             editable.checkInput(event);
+            editable.afterChangeApply
             this.parent.inputHandler?.(event);
             if (event.isRejected()) {
                 this.shouldReset = true;
@@ -475,11 +480,14 @@ class InputCaptureElm extends Elm<"pre"> {
                 this.lines[lineIndex].str = areasToString(areas);
                 changedEditables.push(editable);
             }
+            changeEvents.push(event);
         }
 
         for (const editable of changedEditables) {
             editable.afterChangeApply();
         }
+
+        this.parent.afterInputHandler?.(changeEvents);
     }
 
     private findParentLineElement(node: Node): HTMLDivElement | null {
