@@ -1,5 +1,5 @@
 import { ControlItem } from "../../FlowRunner";
-import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEditor";
+import { InstructionGroup } from "../../editor/editor/InstructionGroup";
 import { globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete";
 import { Editable } from "../../editor/editor/editing/Editable";
 import { InstructionBlueprintMin, InstructionBlueprintRegistery } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
@@ -783,15 +783,15 @@ class ChoiceBranchMacro extends Instruction {
         return true;
     }
 
-    public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
-        const targets: (InstructionGroupEditor | null)[] = [];
+    public getBranchTargets(): (InstructionGroup | null)[] | null {
+        const targets: (InstructionGroup | null)[] = [];
         for (const line of this.choiceLines) {
             targets.push(line.getBranchTarget());
         }
         return targets;
     }
 
-    public setBranchTargets(targets: (InstructionGroupEditor | null)[] | null): void {
+    public setBranchTargets(targets: (InstructionGroup | null)[] | null): void {
         if (!targets) {
             for (const line of this.choiceLines) {
                 line.setBranchTarget(null);
@@ -808,7 +808,7 @@ class ChoiceBranchMacro extends Instruction {
     }
 
     public removeLine(line: InstructionLine): boolean {
-        const group = this.block.getGroupEditor();
+        const group = this.block.getGroup();
         if (!group) { return false; }
 
         if (line instanceof ChoiceBranchMacroLineOption) {
@@ -823,7 +823,7 @@ class ChoiceBranchMacro extends Instruction {
     }
 
     public insertLine(index: number): boolean {
-        const group = this.block.getGroupEditor();
+        const group = this.block.getGroup();
         if (!group) { return false; }
 
         const choiceNumber = index - 1;

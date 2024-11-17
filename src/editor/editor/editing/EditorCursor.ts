@@ -1,5 +1,5 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { InstructionGroup } from "../InstructionGroup";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
 import { ContentEditableOverlayInputCapture } from "./ContentEditableOverlayInputCapture";
@@ -9,8 +9,8 @@ export class EditorCursor extends Elm<"span"> {
     public autocomplete = new AutoComplete();
     public activeEditable?: Editable;
 
-    public onFocusChangeGroup = new EventBus<InstructionGroupEditor>();
-    public onClickGroup = new EventBus<InstructionGroupEditor>();
+    public onFocusChangeGroup = new EventBus<InstructionGroup>();
+    public onClickGroup = new EventBus<InstructionGroup>();
     public onKeyboardShortcutPress = new EventBus<KeyboardEvent>();
     public onKeydownIntercept = new EventBus<KeyboardEvent>();
     public onInput = new EventBus();
@@ -62,13 +62,13 @@ export class EditorCursor extends Elm<"span"> {
             this.allowAutocomplete = true;
             justInputted = true;
             this.onInput.send();
-            this.positionStart.group.onCursorInput(this.positionStart, input);
+            this.positionStart.group.editor.onCursorInput(this.positionStart, input);
         };
 
         this.inputCapture.afterInputHandler = events => {
-            const groups = new Set(events.map(x => x.editable.parentLine.parentBlock.getGroupEditor()));
+            const groups = new Set(events.map(x => x.editable.parentLine.parentBlock.getGroup()));
             for (const group of groups) {
-                group?.editor.updateHeight();
+                group?.group.editor.updateHeight();
             }
         };
 
@@ -152,12 +152,12 @@ export class EditorCursor extends Elm<"span"> {
     }
 
     /** Register a group editor. Called by InstructionGroupEditor when entering edit mode */
-    public registerGroupEditor(group: InstructionGroupEditor) {
+    public registerGroupEditor(group: InstructionGroup) {
         this.inputCapture.registerGroup(group);
     }
 
     /** Unregister a group editor. Called by InstructionGroupEditor when exiting edit mode */
-    public unregisterGroupEditor(group: InstructionGroupEditor) {
+    public unregisterGroupEditor(group: InstructionGroup) {
         this.inputCapture.unregisterGroup(group);
     }
 
@@ -242,7 +242,7 @@ export class EditorCursor extends Elm<"span"> {
 }
 
 export interface EditorCursorPositionAbsolute {
-    group: InstructionGroupEditor;
+    group: InstructionGroup;
     line: number;
     editable: number;
     char: number;

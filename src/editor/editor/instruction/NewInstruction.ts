@@ -4,7 +4,7 @@ import { UserInputEvent } from "../editing/UserInputEvents";
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { InstructionGroup } from "../InstructionGroup";
 import { EditorCursor } from "../editing/EditorCursor";
 
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
@@ -15,7 +15,7 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
         if (blueprintRegistery) {
             this.getBlueprintRegistery = () => blueprintRegistery;
         } else {
-            this.getBlueprintRegistery = () => this.block.getGroupEditor()?.editor.parentEditor.blueprintRegistery;
+            this.getBlueprintRegistery = () => this.block.getGroup()?.group.parentEditor.blueprintRegistery;
         }
     }
 
@@ -76,9 +76,9 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 
     public splitGroupHere() {
-        const groupBlock = this.parentBlock.getGroupEditor();
+        const groupBlock = this.parentBlock.getGroup();
         if (!groupBlock) { throw new Error("No editor attached"); }
-        const group = groupBlock.editor;
+        const group = groupBlock.group;
         group.parentEditor.undoLog.startGroup();
         const index = group.block.children.indexOf(this.parentBlock);
         this.parentBlock.parent?.removeBlock(this.parentBlock);
@@ -104,9 +104,9 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             }
         }
 
-        const groupBlock = this.parentBlock.getGroupEditor();
+        const groupBlock = this.parentBlock.getGroup();
         if (!groupBlock) { throw new Error("Editor not attached"); }
-        const group = groupBlock.editor;
+        const group = groupBlock.group;
         const parentBlock = this.parentBlock.parent;
         if (!parentBlock) { throw new Error("No parent block"); }
 
@@ -131,7 +131,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         group.parentEditor.undoLog.endGroup();
     }
 
-    private splitAfterIfNeeded(group: InstructionGroupEditor, thisIndex: number, thisIsAlwaysJump: boolean) {
+    private splitAfterIfNeeded(group: InstructionGroup, thisIndex: number, thisIsAlwaysJump: boolean) {
         const nextInstruction = group.block.children[thisIndex + 1];
 
         if (nextInstruction && nextInstruction.instruction &&
@@ -161,9 +161,9 @@ export class NewInstructionEditable extends Editable {
 
     public update() {
         super.update();
-        const group = this.parentLine.parentBlock.getGroupEditor();
+        const group = this.parentLine.parentBlock.getGroup();
         if (group) {
-            const cursor = group.editor.parentEditor.cursor;
+            const cursor = group.group.parentEditor.cursor;
             if (cursor.activeEditable === this) {
                 if (!this.isActive) {
                     cursor.onKeydownIntercept.subscribe(this.intercepter);

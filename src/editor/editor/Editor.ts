@@ -1,4 +1,4 @@
-import { InstructionGroupEditor } from "./InstructionGroupEditor";
+import { InstructionGroup } from "./InstructionGroup";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
 import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorCursor } from "./editing/EditorCursor";
@@ -14,6 +14,7 @@ import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructio
 import { TextOpDialogue } from "../modals/TextOpDialogue";
 import { EditorSaveData } from "./EditorSaveData";
 import { newInstructionData } from "./toolchain/flowToInstructionData";
+import { InstructionGroupEditor } from "./ui/InstructionGroupEditor";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
@@ -26,11 +27,11 @@ export class Editor extends WorldElmWithComponents {
     private nonGroupEditorChildren = this.addComponent(new ParentComponent());
 
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _groupEditors: InstructionGroupEditor[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
+    public _groupEditors: InstructionGroup[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _children = this.addComponent(new QuadtreeParentComponent());
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _startGroup?: InstructionGroupEditor;
+    public _startGroup?: InstructionGroup;
 
 
     /**
@@ -55,13 +56,13 @@ export class Editor extends WorldElmWithComponents {
      * If user is holding space and dragging anywhere, they move the camera.
      */
     private editMode = false;
-    private selectedGroups = new Set<InstructionGroupEditor>();
+    private selectedGroups = new Set<InstructionGroup>();
     private movingGroups = false;
-    private tempEditModeGroup?: InstructionGroupEditor;
+    private tempEditModeGroup?: InstructionGroup;
 
     private selectRectangle = new SelectRectangle();
 
-    private requestedInstructionGroupSelectHandlers: ((group: InstructionGroupEditor | null) => any)[] = [];
+    private requestedInstructionGroupSelectHandlers: ((group: InstructionGroup | null) => any)[] = [];
 
     constructor() {
         super();
@@ -83,7 +84,7 @@ export class Editor extends WorldElmWithComponents {
         this.undoLog.onAfterAllActionsPerformed.subscribe(() => this.engine.ticker.requestTick());
     }
 
-    public getGroups(): ReadonlyArray<InstructionGroupEditor> {
+    public getGroups(): ReadonlyArray<InstructionGroup> {
         return this._groupEditors;
     }
 
@@ -135,7 +136,7 @@ export class Editor extends WorldElmWithComponents {
         let clickedGroup = null;
 
         for (const collision of collisions) {
-            if (collision.elm instanceof InstructionGroupEditor) {
+            if (collision.elm instanceof InstructionGroup) {
                 clickedGroup = collision.elm;
                 break;
             }
@@ -145,7 +146,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     private handleClickGroup(
-        group: InstructionGroupEditor | null,
+        group: InstructionGroup | null,
         keyboard: { ctrlKey: boolean, shiftKey: boolean } = { ctrlKey: false, shiftKey: false }
     ) {
         // handle select handlers
@@ -200,37 +201,37 @@ export class Editor extends WorldElmWithComponents {
         this.engine.ticker.requestTick();
     }
 
-    public getSelectedGroups(): ReadonlySet<InstructionGroupEditor> {
+    public getSelectedGroups(): ReadonlySet<InstructionGroup> {
         return this.selectedGroups;
     }
 
-    public selectGroup(group: InstructionGroupEditor) {
+    public selectGroup(group: InstructionGroup) {
         this.selectedGroups.add(group);
-        group.setSelected();
+        group.editor.setSelected();
     }
 
-    public deselectGroup(group: InstructionGroupEditor) {
+    public deselectGroup(group: InstructionGroup) {
         this.selectedGroups.delete(group);
-        group.unsetSelected();
+        group.editor.unsetSelected();
     }
 
-    public moveCameraToGroup(group: InstructionGroupEditor) {
-        this.smoothCamera.moveToCenterOn(group.rect);
+    public moveCameraToGroup(group: InstructionGroup) {
+        this.smoothCamera.moveToCenterOn(group.editor.rect);
     }
 
     public clearSelection() {
-        for (const group of this.selectedGroups) { group.unsetSelected(); }
+        for (const group of this.selectedGroups) { group.editor.unsetSelected(); }
         this.selectedGroups.clear();
         this.unsetTempEditMode();
     }
 
-    private setTempEditMode(group: InstructionGroupEditor) {
+    private setTempEditMode(group: InstructionGroup) {
         if (this.editMode) { return; }
         if (this.tempEditModeGroup) {
             this.unsetTempEditMode();
         }
         this.tempEditModeGroup = group;
-        group.setEditMode();
+        group.editor.setEditMode();
         if (this.cursor.getPosition()?.group !== group) {
             // focus selected group
             this.cursor.setPosition({
@@ -246,7 +247,7 @@ export class Editor extends WorldElmWithComponents {
     private unsetTempEditMode() {
         if (this.tempEditModeGroup) {
             if (!this.editMode) {
-                this.tempEditModeGroup.unsetEditMode();
+                this.tempEditModeGroup.editor.unsetEditMode();
                 this.cursor.unfocus();
             }
             this.tempEditModeGroup = undefined;
@@ -274,7 +275,7 @@ export class Editor extends WorldElmWithComponents {
         if (this.editMode) { return; }
         this.cursor.focus();
         for (const group of this._groupEditors) {
-            group.setEditMode();
+            group.editor.setEditMode();
         }
         this.editMode = true;
         if (this.tempEditModeGroup) {
@@ -293,7 +294,7 @@ export class Editor extends WorldElmWithComponents {
         this.unsetTempEditMode();
         if (!this.editMode) { return; }
         for (const group of this._groupEditors) {
-            group.unsetEditMode();
+            group.editor.unsetEditMode();
         }
         this.editMode = false;
     }
@@ -308,9 +309,10 @@ export class Editor extends WorldElmWithComponents {
             if (this.movingGroups) {
                 // drag selected
                 for (const group of this.selectedGroups) {
-                    group.rect.x += ev.movementX / scale;
-                    group.rect.y += ev.movementY / scale;
-                    group.updateAfterMove();
+                    const groupEditor = group.editor;
+                    groupEditor.rect.x += ev.movementX / scale;
+                    groupEditor.rect.y += ev.movementY / scale;
+                    groupEditor.updateAfterMove();
                 }
                 this.engine.ticker.requestTick();
             } else {
@@ -320,10 +322,10 @@ export class Editor extends WorldElmWithComponents {
 
                 const touchingElms = this.engine.collisions.getCollisionsWith(this.selectRectangle.getCollisionRect());
                 for (const { elm } of touchingElms) {
-                    if (elm instanceof InstructionGroupEditor) {
+                    if (elm instanceof InstructionGroup) {
                         if (!this.selectedGroups.has(elm)) {
                             this.selectedGroups.add(elm);
-                            elm.setSelected();
+                            elm.editor.setSelected();
                         }
                     }
                 }
@@ -346,10 +348,10 @@ export class Editor extends WorldElmWithComponents {
             newData.y = this.engine.mouse.worldPos.y - 16;
         }
         this.undoLog.startGroup();
-        const newEditor = new InstructionGroupEditor(this, newData);
+        const newEditor = new InstructionGroup(this, newData);
         this.addGroup(newEditor);
         this.setEditMode();
-        newEditor.showElm(); // show so that it can be focused
+        newEditor.editor.showElm(); // show so that it can be focused
         newEditor.setupConstruct();
         newEditor.requestNewLine(0);
         this.cursor.setPosition({
@@ -384,7 +386,7 @@ export class Editor extends WorldElmWithComponents {
         this.undoLog.endGroup();
     }
 
-    public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
+    public requestSelectInstructionGroup(): Promise<InstructionGroup | null> {
         return new Promise(res => {
             this.requestedInstructionGroupSelectHandlers.push(res);
         });
@@ -393,7 +395,7 @@ export class Editor extends WorldElmWithComponents {
     public deserialize(data: EditorSaveData) {
         this.undoLog.freeze();
 
-        const idElmMap = new Map<number, InstructionGroupEditor>();
+        const idElmMap = new Map<number, InstructionGroup>();
         for (const elmData of data.elms) {
             const instructionData = newInstructionData();
             instructionData.instructions = elmData.instructions;
@@ -404,7 +406,7 @@ export class Editor extends WorldElmWithComponents {
             instructionData.x = elmData.x;
             instructionData.y = elmData.y;
 
-            const elm = new InstructionGroupEditor(this, instructionData);
+            const elm = new InstructionGroup(this, instructionData);
             idElmMap.set(elmData.id, elm);
             this.addGroup(elm);
         }
@@ -455,26 +457,26 @@ export class Editor extends WorldElmWithComponents {
         }, 20);
     }
 
-    public addGroup(group: InstructionGroupEditor) {
+    public addGroup(group: InstructionGroup) {
         this.undoLog.startGroup();
         this.undoLog.perform(new AddGroupAction(group, this));
         this.undoLog.endGroup();
 
         if (this.editMode) {
-            group.setEditMode();
+            group.editor.setEditMode();
         }
     }
 
-    public removeGroup(group: InstructionGroupEditor) {
+    public removeGroup(group: InstructionGroup) {
         this.undoLog.startGroup();
-        group.unsetSelected();
+        group.editor.unsetSelected();
         this.selectedGroups.delete(group);
         group.relinkParentsToFinalBranch();
         this.undoLog.perform(new RemoveGroupAction(group, this));
         this.undoLog.endGroup();
     }
 
-    public markGroupAsStart(group: InstructionGroupEditor) {
+    public markGroupAsStart(group: InstructionGroup) {
         this.undoLog.startGroup();
         this.undoLog.perform(new MarkGroupAsStartAction(group, this));
         this.undoLog.endGroup();
@@ -494,7 +496,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public compile() {
-        const startIndicies = new Map<InstructionGroupEditor, number>();
+        const startIndicies = new Map<InstructionGroup, number>();
 
         const compiled: any[] = pluginHooks.getFlowHeader();
         const groupInstructions: Instruction[][] = [];

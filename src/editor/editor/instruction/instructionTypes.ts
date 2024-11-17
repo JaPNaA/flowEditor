@@ -1,7 +1,7 @@
 import { appHooks } from "../../index";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { Editable } from "../editing/Editable";
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { InstructionGroup } from "../InstructionGroup";
 import { BranchTargetChangeAction } from "../editing/actions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
 
@@ -25,10 +25,10 @@ export abstract class Instruction {
      */
     public abstract insertLine(index: number): boolean;
 
-    public requestSelectInstructionGroup(): Promise<InstructionGroupEditor | null> {
-        const group = this.block.getGroupEditor();
+    public requestSelectInstructionGroup(): Promise<InstructionGroup | null> {
+        const group = this.block.getGroup();
         if (group) {
-            return group.editor.parentEditor.requestSelectInstructionGroup();
+            return group.group.parentEditor.requestSelectInstructionGroup();
         }
         return Promise.resolve(null);
     }
@@ -46,11 +46,11 @@ export abstract class Instruction {
         return false;
     }
 
-    public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
+    public getBranchTargets(): (InstructionGroup | null)[] | null {
         return null;
     }
 
-    public setBranchTargets(_targets: (InstructionGroupEditor | null)[] | null) { }
+    public setBranchTargets(_targets: (InstructionGroup | null)[] | null) { }
 
     public setBranchOffsets(_offsets: (number | null)[]) {
         return;
@@ -243,7 +243,7 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
         this.block._insertLine(0, line);
     }
 
-    public getBranchTargets(): (InstructionGroupEditor | null)[] | null {
+    public getBranchTargets(): (InstructionGroup | null)[] | null {
         if (this.line instanceof BranchInstructionLine) {
             const branchTarget = this.line.getBranchTarget();
             if (branchTarget) {
@@ -255,7 +255,7 @@ export class InstructionOneLine<T extends OneLineInstruction> extends Instructio
         return null;
     }
 
-    public setBranchTargets(targets: (InstructionGroupEditor | null)[] | null): void {
+    public setBranchTargets(targets: (InstructionGroup | null)[] | null): void {
         if (this.line instanceof BranchInstructionLine) {
             this.line.setBranchTarget(targets && targets[0]);
         } else {
@@ -340,13 +340,13 @@ export abstract class InstructionComposite<T extends InstructionLine> extends In
 }
 
 export abstract class BranchInstructionLine extends InstructionLine {
-    public branchTarget: InstructionGroupEditor | null = null;
+    public branchTarget: InstructionGroup | null = null;
     public branchOffset: number = 0;
 
     private branchConnectElm = new Elm()
         .class("branchConnect").attribute("contenteditable", "false")
         .on("click", () => {
-            this.parentBlock.getGroupEditor()?.editor.unsetEditMode();
+            this.parentBlock.getGroup()?.group.editor.unsetEditMode();
             appHooks.focusEditor();
             this.requestUserToSetBranchTarget();
         });
@@ -385,8 +385,8 @@ export abstract class BranchInstructionLine extends InstructionLine {
         this.branchOffset = branchOffset;
     }
 
-    public setBranchTarget(target: InstructionGroupEditor | null) {
-        const editor = this.parentBlock.getGroupEditor()?.editor.parentEditor;
+    public setBranchTarget(target: InstructionGroup | null) {
+        const editor = this.parentBlock.getGroup()?.group.parentEditor;
         if (!editor) { throw new Error("No editor attached"); }
         editor.undoLog.startGroup();
         editor.undoLog.perform(

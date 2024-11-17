@@ -1,4 +1,4 @@
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { InstructionGroup } from "../InstructionGroup";
 import { AddInstructionAction, RemoveInstructionAction } from "../editing/actions";
 import { Instruction, InstructionLine } from "./instructionTypes";
 
@@ -23,7 +23,7 @@ export interface InstructionBlock {
     instruction?: Instruction;
 
     /** Traverse up to the root group editor, if one exists. */
-    getGroupEditor(): InstructionGroupEditorBlock | undefined;
+    getGroup(): InstructionGroupBlock | undefined;
 
     /** Get a line by index inside this block. */
     getLine(index: number): InstructionLine;
@@ -67,9 +67,9 @@ export class SingleInstructionBlock implements InstructionBlock {
         }
     }
 
-    public getGroupEditor(): InstructionGroupEditorBlock | undefined {
+    public getGroup(): InstructionGroupBlock | undefined {
         if (!this.parent) { return; }
-        return this.parent.getGroupEditor();
+        return this.parent.getGroup();
     }
 
     public parentInstruction(): Instruction | undefined {
@@ -88,9 +88,9 @@ export class SingleInstructionBlock implements InstructionBlock {
             curr = curr.parent;
         }
 
-        const group = this.getGroupEditor();
+        const group = this.getGroup();
         if (group) {
-            group.editor._insertInstructionLine(group.locateLine(line) + 1, line);
+            group.group.editor._insertInstructionLine(group.locateLine(line) + 1, line);
         }
     }
 
@@ -109,9 +109,9 @@ export class SingleInstructionBlock implements InstructionBlock {
             curr = curr.parent;
         }
 
-        const group = this.getGroupEditor();
+        const group = this.getGroup();
         if (group) {
-            group.editor._removeInstructionLine(removedLine[0]);
+            group.group.editor._removeInstructionLine(removedLine[0]);
         }
     }
 }
@@ -158,9 +158,9 @@ export class CompositeInstructionBlock implements InstructionBlock {
         }
     }
 
-    public getGroupEditor(): InstructionGroupEditorBlock | undefined {
+    public getGroup(): InstructionGroupBlock | undefined {
         if (!this.parent) { return; }
-        return this.parent.getGroupEditor();
+        return this.parent.getGroup();
     }
 
     public parentInstruction(): Instruction | undefined {
@@ -170,13 +170,13 @@ export class CompositeInstructionBlock implements InstructionBlock {
 
     /** Performs an UndoableAction to insert a block */
     public insertBlock(index: number, block: InstructionBlock) {
-        const editor = this.getGroupEditor();
+        const editor = this.getGroup();
         if (!editor) { throw new Error("No editor attached"); }
-        editor.editor.parentEditor.undoLog.startGroup();
-        editor.editor.parentEditor.undoLog.perform(
+        editor.group.parentEditor.undoLog.startGroup();
+        editor.group.parentEditor.undoLog.perform(
             new AddInstructionAction(block, index, this)
         );
-        editor.editor.parentEditor.undoLog.endGroup();
+        editor.group.parentEditor.undoLog.endGroup();
     }
 
     /** Performs an UndoableAction to append a block */
@@ -194,9 +194,9 @@ export class CompositeInstructionBlock implements InstructionBlock {
             if (index < 0) { throw new Error("Cannot remove block that is not child"); }
         }
 
-        const editor = this.getGroupEditor();
+        const editor = this.getGroup();
         if (!editor) { throw new Error("No editor attached"); }
-        editor.editor.parentEditor.undoLog.perform(
+        editor.group.parentEditor.undoLog.perform(
             new RemoveInstructionAction(index, this)
         );
     }
@@ -238,10 +238,10 @@ export class CompositeInstructionBlock implements InstructionBlock {
     }
 }
 
-export class InstructionGroupEditorBlock extends CompositeInstructionBlock {
-    constructor(public editor: InstructionGroupEditor) { super(); }
+export class InstructionGroupBlock extends CompositeInstructionBlock {
+    constructor(public group: InstructionGroup) { super(); }
 
-    public getGroupEditor(): InstructionGroupEditorBlock {
+    public getGroup(): InstructionGroupBlock {
         return this;
     }
 

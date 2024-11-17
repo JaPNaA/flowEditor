@@ -1,6 +1,7 @@
 import { PluginRenderer } from "../../editor/EditorPlugin";
-import { InstructionGroupEditor } from "../../editor/editor/InstructionGroupEditor";
+import { InstructionGroup } from "../../editor/editor/InstructionGroup";
 import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
+import { InstructionGroupEditor } from "../../editor/editor/ui/InstructionGroupEditor";
 import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel";
@@ -18,7 +19,7 @@ export class VisualNovelRenderer implements PluginRenderer {
         this.engine = engine;
     }
 
-    public renderGroup(group: InstructionGroupEditor): void {
+    public renderGroup(group: InstructionGroup): void {
         const X = this.engine.canvas.X;
         X.globalAlpha = 0.1;
 
@@ -73,22 +74,24 @@ export class VisualNovelRenderer implements PluginRenderer {
         context: VNInstructionContext,
         startY: number,
         endY: number,
-        group: InstructionGroupEditor,
+        group: InstructionGroup,
         X: CanvasRenderingContext2D
     ) {
+        const editor = group.editor;
+
         if (context.backgroundSrc) {
             const fillHeight = endY - startY;
             const image = this.getImage(context.backgroundSrc);
 
             if (image.width > 0 && image.height > 0) {
-                const scale = InstructionGroupEditor.defaultWidth / image.width;
+                const scale = editor.rect.width / image.width;
                 const imageDrawHeight = scale * image.height;
                 if (fillHeight < imageDrawHeight) {
                     // draw centered
                     X.drawImage(
                         image,
                         0, (imageDrawHeight - fillHeight) / 2 / scale, image.width, fillHeight / scale,
-                        group.rect.x, group.rect.y + startY,
+                        editor.rect.x, editor.rect.y + startY,
                         InstructionGroupEditor.defaultWidth, fillHeight
                     );
                 } else {
@@ -99,14 +102,14 @@ export class VisualNovelRenderer implements PluginRenderer {
                         X.drawImage(
                             image,
                             0, 0, image.width, srcDrawTo,
-                            group.rect.x, group.rect.y + startY + y, InstructionGroupEditor.defaultWidth, dstDrawTo
+                            editor.rect.x, editor.rect.y + startY + y, editor.rect.width, dstDrawTo
                         );
                     }
                 }
             }
         } else if (context.backgroundColor) {
             X.fillStyle = context.backgroundColor;
-            X.fillRect(group.rect.x, group.rect.y + startY, group.rect.width, endY - startY);
+            X.fillRect(editor.rect.x, editor.rect.y + startY, editor.rect.width, endY - startY);
         }
     }
 

@@ -52,9 +52,9 @@ class JSONLineEditable extends Editable {
         const lines = this.getValue()
             .slice(1, -1)
             .split("\n");
-        const groupBlock = this.parentLine.parentBlock.getGroupEditor();
+        const groupBlock = this.parentLine.parentBlock.getGroup();
         if (!groupBlock) { return; }
-        const group = groupBlock.editor;
+        const group = groupBlock.group;
 
         group.parentEditor.undoLog.startGroup();
         this.setValue(JSON.stringify(lines[0]));

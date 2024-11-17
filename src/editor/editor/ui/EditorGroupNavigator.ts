@@ -1,6 +1,6 @@
 import { JaPNaAEngine2d, SubscriptionsComponent } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { Editor } from "../Editor";
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { InstructionGroup } from "../InstructionGroup";
 
 /*
 
@@ -28,8 +28,8 @@ modifiers
 export class EditorGroupNavigator {
     private engine!: JaPNaAEngine2d;
 
-    private focusGroup?: InstructionGroupEditor;
-    private siblings?: InstructionGroupEditor[];
+    private focusGroup?: InstructionGroup;
+    private siblings?: InstructionGroup[];
 
     constructor(private subscriptions: SubscriptionsComponent, private parent: Editor) { }
 
@@ -116,7 +116,7 @@ export class EditorGroupNavigator {
         }
     }
 
-    private focus(group?: InstructionGroupEditor) {
+    private focus(group?: InstructionGroup) {
         this.focusGroup = group;
         if (!this.focusGroup) { return; }
         this.parent.clearSelection();

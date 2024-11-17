@@ -33,9 +33,9 @@ export class Editable extends Elm<"span"> {
 
     public setValue(value: string) {
         if (this._value === value) { return; }
-        const groupBlock = this.parentLine.parentBlock.getGroupEditor();
+        const groupBlock = this.parentLine.parentBlock.getGroup();
         if (!groupBlock) { return; }
-        const group = groupBlock.editor;
+        const group = groupBlock.group;
         this.onChange.send(value);
         group.parentEditor.undoLog.perform(
             new EditableEditAction(this, value)

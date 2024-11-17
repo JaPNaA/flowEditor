@@ -6,7 +6,7 @@ import { UILayout } from "./UILayout";
 import { Editor } from "./editor/Editor";
 import { EditorContainer } from "./editor/EditorContainer";
 import { EditorSaveData } from "./editor/EditorSaveData";
-import { InstructionGroupEditor } from "./editor/InstructionGroupEditor";
+import { InstructionGroup } from "./editor/InstructionGroup";
 import { UndoableAction } from "./editor/editing/actions";
 import { ExecuterContainer } from "./executer/ExecuterContainer";
 import { ModalContainer } from "./modals/ModalContainer";
@@ -71,7 +71,7 @@ export const pluginHooks = {
         return visualNovelPlugin.executer.stop();
     },
 
-    renderGroup(group: InstructionGroupEditor) {
+    renderGroup(group: InstructionGroup) {
         return visualNovelPlugin.renderer.renderGroup(group);
     },
 

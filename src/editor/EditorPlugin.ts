@@ -1,5 +1,5 @@
 import { Editor } from "./editor/Editor";
-import { InstructionGroupEditor } from "./editor/InstructionGroupEditor";
+import { InstructionGroup } from "./editor/InstructionGroup";
 import { AutoCompleteSuggester } from "./editor/editing/AutoComplete";
 import { UndoableAction } from "./editor/editing/actions";
 import { InstructionBlueprintMin } from "./editor/instruction/InstructionBlueprintRegistery";
@@ -32,7 +32,7 @@ export interface PluginExecuter {
 }
 
 export interface PluginRenderer {
-    renderGroup(group: InstructionGroupEditor, engine: JaPNaAEngine2d): void;
+    renderGroup(group: InstructionGroup, engine: JaPNaAEngine2d): void;
 }
 
 export interface PluginAnalyser {

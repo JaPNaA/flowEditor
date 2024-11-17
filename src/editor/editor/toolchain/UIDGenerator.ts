@@ -1,4 +1,9 @@
-
+/**
+ * Generates a unique ID for for objects in this instance of the
+ * flowEditor.
+ * 
+ * The same object will return the same ID in subsequent calls.
+ */
 export class UIDGenerator {
     private count = 0;
     private map = new WeakMap();

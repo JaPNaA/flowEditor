@@ -1,7 +1,7 @@
 import { pluginHooks } from "../../index";
 import { removeElmFromArray } from "../../../japnaaEngine2d/util/removeElmFromArray";
 import { Editor } from "../Editor";
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { InstructionGroup } from "../InstructionGroup";
 import { BranchInstructionLine, Instruction } from "../instruction/instructionTypes";
 import { Editable } from "./Editable";
 import { CompositeInstructionBlock, InstructionBlock } from "../instruction/InstructionBlock";
@@ -72,11 +72,11 @@ export interface UndoableAction {
 }
 
 export class AddGroupAction implements UndoableAction {
-    constructor(public group: InstructionGroupEditor, public editor: Editor) { }
+    constructor(public group: InstructionGroup, public editor: Editor) { }
 
     public perform(): void {
         this.editor._groupEditors.push(this.group);
-        this.editor._children.addChild(this.group);
+        this.editor._children.addChild(this.group.editor);
         this.editor.cursor.registerGroupEditor(this.group);
 
         // add parent-child relations
@@ -94,11 +94,11 @@ export class AddGroupAction implements UndoableAction {
 }
 
 export class RemoveGroupAction implements UndoableAction {
-    constructor(public group: InstructionGroupEditor, public editor: Editor) { }
+    constructor(public group: InstructionGroup, public editor: Editor) { }
 
     public perform(): void {
         removeElmFromArray(this.group, this.editor._groupEditors);
-        this.editor._children.removeChild(this.group);
+        this.editor._children.removeChild(this.group.editor);
         this.editor.cursor.unregisterGroupEditor(this.group);
 
         // remove parent-child relations
@@ -116,9 +116,9 @@ export class RemoveGroupAction implements UndoableAction {
 }
 
 export class MarkGroupAsStartAction implements UndoableAction {
-    public previousStartGroup?: InstructionGroupEditor;
+    public previousStartGroup?: InstructionGroup;
 
-    constructor(public group: InstructionGroupEditor | undefined, public editor: Editor) { }
+    constructor(public group: InstructionGroup | undefined, public editor: Editor) { }
 
     public perform(): void {
         this.previousStartGroup = this.editor._startGroup;
@@ -140,7 +140,7 @@ export class AddInstructionAction implements UndoableAction {
     constructor(public block: InstructionBlock, public relativeIndex: number, public parentBlock: CompositeInstructionBlock) { }
 
     public perform(): void {
-        const group = this.parentBlock.getGroupEditor();
+        const group = this.parentBlock.getGroup();
         this.parentBlock._insertBlock(this.relativeIndex, this.block);
 
         if (group) {
@@ -151,22 +151,22 @@ export class AddInstructionAction implements UndoableAction {
                 const nextLineElm = group.getLine(nextLineIndex).elm.getHTMLElement();
 
                 for (const line of this.block.lineIter()) {
-                    group.editor.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
+                    group.group.editor.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
                 }
             } else {
                 for (const line of this.block.lineIter()) {
-                    group.editor.elm.append(line);
+                    group.group.editor.elm.append(line);
                 }
             }
 
             for (const line of this.block.lineIter()) {
-                group.editor._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
+                group.group.editor._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
                 for (const editable of line.getEditables()) {
-                    group.editor.parentEditor.cursor.autocomplete.enteredValue(editable);
+                    group.group.parentEditor.cursor.autocomplete.enteredValue(editable);
                 }
             }
 
-            group.editor.updateHeight();
+            group.group.editor.updateHeight();
         }
 
     }
@@ -187,16 +187,16 @@ export class RemoveInstructionAction implements UndoableAction {
 
         this.block._removeBlock(this.relativeIndex);
 
-        const group = this.block.getGroupEditor();
+        const group = this.block.getGroup();
 
         if (group) {
             for (const line of instruction.lineIter()) {
-                group.editor._removeInstructionLine(line);
+                group.group.editor._removeInstructionLine(line);
                 for (const editable of line.getEditables()) {
-                    group.editor.parentEditor.cursor.autocomplete.removedValue(editable);
+                    group.group.parentEditor.cursor.autocomplete.removedValue(editable);
                 }
             }
-            group.editor.updateHeight();
+            group.group.editor.updateHeight();
         }
     }
 
@@ -207,14 +207,14 @@ export class RemoveInstructionAction implements UndoableAction {
 }
 
 export class BranchTargetChangeAction implements UndoableAction {
-    public previousBranchTarget?: InstructionGroupEditor | null;
-    constructor(public branchTarget: InstructionGroupEditor | null, public branchLine: BranchInstructionLine) { }
+    public previousBranchTarget?: InstructionGroup | null;
+    constructor(public branchTarget: InstructionGroup | null, public branchLine: BranchInstructionLine) { }
 
     public perform(): void {
         this.previousBranchTarget = this.branchLine.branchTarget;
-        const groupBlock = this.branchLine.parentBlock.getGroupEditor();
+        const groupBlock = this.branchLine.parentBlock.getGroup();
         if (!groupBlock) { throw new Error("No group editor"); }
-        const group = groupBlock.editor;
+        const group = groupBlock.group;
 
         // remove parent/child relation
         if (this.previousBranchTarget) {
@@ -239,7 +239,7 @@ export class BranchTargetChangeAction implements UndoableAction {
         }
 
         // update render hitboxes
-        group.updateAfterMove();
+        group.editor.updateAfterMove();
     }
 
     public inverse(): UndoableAction {
@@ -252,7 +252,7 @@ export class EditableEditAction implements UndoableAction {
     constructor(public editable: Editable, public newValue: string) { }
 
     public perform(): void {
-        const autocomplete = this.editable.parentLine.parentBlock.getGroupEditor()?.editor.parentEditor.cursor.autocomplete;
+        const autocomplete = this.editable.parentLine.parentBlock.getGroup()?.group.parentEditor.cursor.autocomplete;
 
         if (autocomplete) { autocomplete.removedValue(this.editable); }
         this.previousValue = this.editable._value;

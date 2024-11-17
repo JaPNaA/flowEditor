@@ -1,5 +1,5 @@
 import { Component, Elm } from "../../japnaaEngine2d/JaPNaAEngine2d";
-import { InstructionGroupEditor } from "../editor/InstructionGroupEditor";
+import { InstructionGroup } from "../editor/InstructionGroup";
 import { Editable } from "../editor/editing/Editable";
 import { UndoLog } from "../editor/editing/actions";
 
@@ -24,7 +24,7 @@ export class TextOpDialogue extends Component {
         );
     }
 
-    public setEditablesFromGroups(undoLog: UndoLog, groups: InstructionGroupEditor[]) {
+    public setEditablesFromGroups(undoLog: UndoLog, groups: InstructionGroup[]) {
         const valueEditableMap = new Map<string, Editable[]>();
         this.undoLog = undoLog;
 

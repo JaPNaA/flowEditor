@@ -1,7 +1,7 @@
 import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
-import { InstructionGroupEditor } from "../InstructionGroupEditor";
+import { InstructionGroup } from "../InstructionGroup";
 import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich, singleDiffWithCursor } from "../../utils";
 import { InstructionLine } from "../instruction/instructionTypes";
 import { Editable } from "./Editable";
@@ -30,7 +30,7 @@ import { AddInstructionAction, EditableEditAction, RemoveInstructionAction, Undo
  *     is performed (ex. paste formatted text)
  */
 export class ContentEditableOverlayInputCapture {
-    private inputCaptureElmToEditor = new TwoWayMap<InputCaptureElm, InstructionGroupEditor>();
+    private inputCaptureElmToEditor = new TwoWayMap<InputCaptureElm, InstructionGroup>();
     private inputCaptureElmToHTMLElm = new TwoWayMap<InputCaptureElm, HTMLPreElement>();
 
     /**
@@ -118,15 +118,15 @@ export class ContentEditableOverlayInputCapture {
     }
 
     /** Register an element and watches for edits. */
-    public registerGroup(group: InstructionGroupEditor) {
+    public registerGroup(group: InstructionGroup) {
         const inputCapture = this.createInputCapture(group);
         this.inputCaptureElmToEditor.set(inputCapture, group);
         this.inputCaptureElmToHTMLElm.set(inputCapture, inputCapture.getHTMLElement());
-        group.elm.append(inputCapture);
+        group.editor.elm.append(inputCapture);
     }
 
     /** Unregister an element and stop watching for edits. */
-    public unregisterGroup(group: InstructionGroupEditor) {
+    public unregisterGroup(group: InstructionGroup) {
         const inputCapture = this.inputCaptureElmToEditor.getK(group);
         this.inputCaptureElmToEditor.deleteV(group);
         if (!inputCapture) { return; }
@@ -198,17 +198,17 @@ export class ContentEditableOverlayInputCapture {
         let group;
 
         if (action instanceof EditableEditAction) {
-            group = action.editable.parentLine.parentBlock.getGroupEditor();
+            group = action.editable.parentLine.parentBlock.getGroup();
         } else if (action instanceof AddInstructionAction || action instanceof RemoveInstructionAction) {
-            group = action.block.getGroupEditor();
+            group = action.block.getGroup();
         }
 
         if (!group) { return; }
 
-        this.inputCaptureElmToEditor.getK(group.editor)?.onAction(action);
+        this.inputCaptureElmToEditor.getK(group.group)?.onAction(action);
     }
 
-    private createInputCapture(group: InstructionGroupEditor) {
+    private createInputCapture(group: InstructionGroup) {
         const inputCapture = new InputCaptureElm(this, group);
         inputCapture.on("focus", () => this.focusHandler?.());
         inputCapture.on("blur", () => this.unfocusHandler?.());
@@ -315,7 +315,7 @@ class InputCaptureElm extends Elm<"pre"> {
      */
     private shouldReset: boolean = false;
 
-    constructor(private parent: ContentEditableOverlayInputCapture, public group: InstructionGroupEditor) {
+    constructor(private parent: ContentEditableOverlayInputCapture, public group: InstructionGroup) {
         super("pre");
         this.class("inputCapture");
 
@@ -394,7 +394,7 @@ class InputCaptureElm extends Elm<"pre"> {
                     const instructionLine = this.lineMap.getV(lineElm);
                     if (instructionLine) {
                         const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
-                        instructionLine.parentBlock.getGroupEditor()?.editor.onLineDelete(lineOpEvent);
+                        instructionLine.parentBlock.getGroup()?.group.editor.onLineDelete(lineOpEvent);
                         if (lineOpEvent.isRejected()) {
                             this.shouldReset = true;
                         }
