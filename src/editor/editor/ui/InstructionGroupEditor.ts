@@ -23,7 +23,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     /** DO NOT MUTATE OUTSIDE `UndoableAction` */
     public _htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
 
-    private hitbox = new Hitbox(this.rect, this);
+    private hitbox: Hitbox<InstructionGroupEditor>;
 
     private elmVisible = false;
     private graphicRect = new RectangleM(0, 0, 0, 0);
@@ -33,9 +33,10 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     private selected = false;
     private isEditMode = false;
 
-    constructor(private instructionGroup: InstructionGroup, rect: Rectangle) {
+    constructor(public instructionGroup: InstructionGroup, rect: Rectangle) {
         super();
         this.rect = rect;
+        this.hitbox = new Hitbox(this.rect, this);
         this.graphicRect.copy(rect);
         this.graphicHitbox = new Hitbox(this.graphicRect, this);
 

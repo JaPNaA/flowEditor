@@ -133,16 +133,16 @@ export class Editor extends WorldElmWithComponents {
             new RectangleM(this.engine.mouse.worldPos.x, this.engine.mouse.worldPos.y, 1, 1)
         );
 
-        let clickedGroup = null;
+        let clickedGroup: InstructionGroupEditor | null = null;
 
         for (const collision of collisions) {
-            if (collision.elm instanceof InstructionGroup) {
+            if (collision.elm instanceof InstructionGroupEditor) {
                 clickedGroup = collision.elm;
                 break;
             }
         }
 
-        this.handleClickGroup(clickedGroup, ev);
+        this.handleClickGroup(clickedGroup?.instructionGroup || null, ev);
     }
 
     private handleClickGroup(
