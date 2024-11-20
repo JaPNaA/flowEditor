@@ -20,9 +20,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public collisionType = InstructionGroupEditor.collisionType;
     public graphicHitbox: Hitbox<QuadtreeElmChild>;
 
-    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _htmlInstructionLineToJS = new WeakMap<HTMLDivElement, InstructionLine>();
-
     private hitbox: Hitbox<InstructionGroupEditor>;
 
     private elmVisible = false;
@@ -303,7 +300,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
      */
     public _addInstruction(line: InstructionLine) {
         this.elm.append(line);
-        this._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
     }
 
     /**
@@ -319,7 +315,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
                 this.instructionGroup.block.getLine(lineIndex).elm.getHTMLElement()
             );
         }
-        this._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
     }
 
     /**
@@ -327,7 +322,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
      * DO NOT USE OUTSIDE `InstructionBlock`, `Action` and subclasses.
      */
     public _removeInstructionLine(line: InstructionLine) {
-        this._htmlInstructionLineToJS.delete(line.elm.getHTMLElement());
         line.elm.remove();
     }
 

@@ -79,6 +79,13 @@ export abstract class InstructionLine extends Component {
         this.parentBlock = instruction;
     }
 
+    public reset() {
+        this.elm.clear();
+        for (const element of this.areas) {
+            this.elm.append(element);
+        }
+    }
+
     /**
      * Find the corresponding editable and offset in editable.
      * 
@@ -169,6 +176,38 @@ export abstract class InstructionLine extends Component {
         }
     }
 
+    /**
+     * Take a DOM Node that is a descendant of this line and find the
+     * character index of the node from the start of the line.
+     */
+    public getNodeCharIndex(node: Node) {
+        const parentList = [];
+        let currNode: Node | null = node;
+        while (true) {
+            if (!currNode) { throw new Error("Node is not a descendant of this line"); }
+            if (currNode === this.elm.getHTMLElement()) {
+                break;
+            }
+            parentList.push(currNode);
+            currNode = currNode.parentNode;
+        }
+
+        let charIndex = 0;
+        currNode = this.elm.getHTMLElement().firstChild;
+        let target = parentList.pop();
+        while (target) {
+            if (!currNode) { throw new Error("Traversal failed"); }
+            if (currNode === target) {
+                currNode = currNode.childNodes[0];
+                target = parentList.pop();
+            } else {
+                charIndex += currNode.textContent ? currNode.textContent.length : 0;
+                currNode = currNode.nextSibling;
+            }
+        }
+        return charIndex;
+    }
+
     public getEditables(): ReadonlyArray<Editable> {
         return this.editables;
     }
@@ -199,9 +238,7 @@ export abstract class InstructionLine extends Component {
      */
     protected setAreas(...elements: (string | Editable)[]) {
         this.areas = elements;
-        for (const element of elements) {
-            this.elm.append(element);
-        }
+        this.reset();
     }
 
     protected createEditable(text: string | number): Editable {

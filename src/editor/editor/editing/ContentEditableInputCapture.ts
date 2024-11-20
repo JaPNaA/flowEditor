@@ -8,30 +8,19 @@ import { Editable } from "./Editable";
 import { AddInstructionAction, EditableEditAction, RemoveInstructionAction, UndoableAction } from "./actions";
 
 /**
- * `ContentEditableOverlayInputCapture` uses a hidden contenteditable
- * element in front of displayed `InstructionGroupEditor`s to capture user's
- * text input.
+ * `ContentEditableInputCapture` user the 'contentEditable' attribute to
+ * capture user input.
  * 
- * `BackgroundContentEditableUserInputCapture` is the successor to
- * `ContentEditableInputCapture` and `TextareaUserInputCapture` (which can be
- * found in commit `b4078f7`).
+ * Version history:
  * 
- * This solution combines methods from the former two classes in attempt to
- * solve issues of both methods. The input capture element is similar to a
- * textarea -- plain text without formatting. However, we capture input by
- * watching for mutations to the contentEditable element.
- * 
- * This should the issues with the previous implementations:
- *   - We do not need to scan the entire textarea value to find
- *     the user's change every keystroke, improving performance.
- *   - We can use regular drag selection by having the user select invisible
- *     text overlayed over InstructionGroupEditors.
- *   - We do not need to 'fix' the user's input unless an invalid action
- *     is performed (ex. paste formatted text)
+ * - `ContentEditableInputCapture`
+ * - `ContentEditableOverlayUserInputCapture` (`911365e`)
+ * - `ContentEditableInputCapture`
+ * - `TextareaUserInputCapture` (`b4078f7`)
  */
-export class ContentEditableOverlayInputCapture {
-    private inputCaptureElmToEditor = new TwoWayMap<InputCaptureElm, InstructionGroup>();
-    private inputCaptureElmToHTMLElm = new TwoWayMap<InputCaptureElm, HTMLPreElement>();
+export class ContentEditableInputCapture {
+    private inputCaptureElmToEditor = new TwoWayMap<InputCapture, InstructionGroup>();
+    private inputCaptureElmToHTMLElm = new TwoWayMap<InputCapture, HTMLDivElement>();
 
     /**
      * Fired when the user changes the cursor position. Will not fire if user
@@ -119,10 +108,13 @@ export class ContentEditableOverlayInputCapture {
 
     /** Register an element and watches for edits. */
     public registerGroup(group: InstructionGroup) {
-        const inputCapture = this.createInputCapture(group);
+        if (this.inputCaptureElmToEditor.getK(group)) {
+            throw new Error("Trying to register a group already registered");
+        }
+
+        const inputCapture = this.attachInputCapture(group);
         this.inputCaptureElmToEditor.set(inputCapture, group);
-        this.inputCaptureElmToHTMLElm.set(inputCapture, inputCapture.getHTMLElement());
-        group.editor.elm.append(inputCapture);
+        this.inputCaptureElmToHTMLElm.set(inputCapture, group.editor.elm.getHTMLElement());
     }
 
     /** Unregister an element and stop watching for edits. */
@@ -159,38 +151,40 @@ export class ContentEditableOverlayInputCapture {
         if (!endLineHTMLElm) { return; }
 
         const selection = getSelection();
-        const startRangeNode = startLineHTMLElm.childNodes[0];
-        const startRangeOffset = startEditableOffset + positionStart.char;
-        const endRangeNode = endLineHTMLElm.childNodes[0];
-        const endRangeOffset = endEditableOffset + positionEnd.char;
+        const startPos = startLine.getEditableAndOffsetFromCharIndex(startEditableOffset + positionStart.char);
+        const endPos = endLine.getEditableAndOffsetFromCharIndex(endEditableOffset + positionEnd.char);
+        if (!startPos || !endPos) { return; }
+
+        const startNode = startPos.editable.getHTMLElement().childNodes[0] || startPos.editable.getHTMLElement();
+        const endNode = endPos.editable.getHTMLElement().childNodes[0] || endPos.editable.getHTMLElement();
 
         if (selection) {
             if (selection.rangeCount === 1) {
                 if (
-                    selection.anchorNode == startRangeNode &&
-                    selection.anchorOffset == startRangeOffset &&
-                    selection.focusNode == endRangeNode &&
-                    selection.focusOffset == endRangeOffset
+                    selection.anchorNode == startNode &&
+                    selection.anchorOffset == startPos.offset &&
+                    selection.focusNode == endNode &&
+                    selection.focusOffset == endPos.offset
                 ) {
                     return; // don't need to change
                 }
             }
 
             this.freezeSelectionEvents = true;
-            selection.setBaseAndExtent(startRangeNode, startRangeOffset, endRangeNode, endRangeOffset);
+            selection.setBaseAndExtent(startNode, startPos.offset, endNode, endPos.offset);
             this.freezeSelectionEvents = false;
         }
     }
 
     public focus() {
         if (this.lastPositionStart) {
-            this.inputCaptureElmToEditor.getK(this.lastPositionStart.group)?.getHTMLElement().focus();
+            this.inputCaptureElmToEditor.getK(this.lastPositionStart.group)?.focus();
         }
     }
 
     public unfocus() {
         if (this.lastPositionStart) {
-            this.inputCaptureElmToEditor.getK(this.lastPositionStart.group)?.getHTMLElement().blur();
+            this.inputCaptureElmToEditor.getK(this.lastPositionStart.group)?.blur();
         }
     }
 
@@ -208,10 +202,10 @@ export class ContentEditableOverlayInputCapture {
         this.inputCaptureElmToEditor.getK(group.group)?.onAction(action);
     }
 
-    private createInputCapture(group: InstructionGroup) {
-        const inputCapture = new InputCaptureElm(this, group);
-        inputCapture.on("focus", () => this.focusHandler?.());
-        inputCapture.on("blur", () => this.unfocusHandler?.());
+    private attachInputCapture(group: InstructionGroup) {
+        const inputCapture = new InputCapture(this, group);
+        inputCapture.setFocusHandler(() => this.focusHandler?.());
+        inputCapture.setBlurHandler(() => this.unfocusHandler?.());
         return inputCapture;
     }
 
@@ -223,21 +217,22 @@ export class ContentEditableOverlayInputCapture {
     // todo: should be private
     public domSelectionToPosition(anchorNode: Node, focusOffset: number) {
         const parentInstructionLine =
-            getAncestorWhich(
-                anchorNode,
-                node => node instanceof HTMLDivElement && node.classList.contains("instructionLine")
-            ) as HTMLDivElement;
+        getAncestorWhich(
+            anchorNode,
+            node => node instanceof HTMLDivElement && node.classList.contains("instructionLine")
+        ) as HTMLDivElement;
         const inputCaptureHTMLElm =
-            getAncestorWhich(
-                parentInstructionLine,
-                node => node instanceof HTMLPreElement && node.classList.contains("inputCapture")
-            ) as HTMLPreElement;
+        getAncestorWhich(
+            parentInstructionLine,
+            node => node instanceof HTMLDivElement && node.classList.contains("instructionGroup")
+        ) as HTMLDivElement;
         const inputCaptureElm = this.inputCaptureElmToHTMLElm.getK(inputCaptureHTMLElm);
         if (!inputCaptureElm) { return; }
         const instructionLine = inputCaptureElm.lineMap.getV(parentInstructionLine);
         if (!instructionLine) { return; }
+        const fullFocusOffset = focusOffset + instructionLine.getNodeCharIndex(anchorNode);
         const lineNumber = inputCaptureElm.group.block.locateLine(instructionLine);
-        const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(focusOffset, this.cursorMovingBackwards);
+        const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(fullFocusOffset, this.cursorMovingBackwards);
         const editable = instructionLine.getEditableFromIndex(closestEditableIndex);
         let position: EditorCursorPositionAbsolute;
         if (editable) { // verify editable exists
@@ -246,9 +241,9 @@ export class ContentEditableOverlayInputCapture {
             position = {
                 group: inputCaptureElm.group,
                 line: lineNumber,
-                char: focusOffset < editableCharIndex ? 0 : (
-                    focusOffset > editableCharIndex + editableLength ? editableLength :
-                        focusOffset - editableCharIndex
+                char: fullFocusOffset < editableCharIndex ? 0 : (
+                    fullFocusOffset > editableCharIndex + editableLength ? editableLength :
+                        fullFocusOffset - editableCharIndex
                 ),
                 editable: closestEditableIndex
             };
@@ -280,10 +275,10 @@ export class ContentEditableOverlayInputCapture {
 }
 
 /**
- * This is a <pre> (as opposed to <div>) only because CSS assumes all
- * <div>s inside .instructionGroup are instructionLines
+ * Class attaches to an InstructionGroupEditor, sets the contenteditable
+ * attribute and handles mutations to the InstructionGroupEditor.
  */
-class InputCaptureElm extends Elm<"pre"> {
+class InputCapture {
     public lineMap = new TwoWayMap<HTMLDivElement, InstructionLine>();
 
     private static supportsContentEditablePlaintextOnly = false;
@@ -301,7 +296,12 @@ class InputCaptureElm extends Elm<"pre"> {
     private observer: MutationObserver = new MutationObserver(
         mutations => this.mutationHandler(mutations)
     );
-    private lines: { str: string, line: InstructionLine, elm: Elm }[] = [];
+    private lines: { str: string, line: InstructionLine }[] = [];
+
+    private elm: Elm;
+    private keydownHandler: (ev: KeyboardEvent) => void;
+    private focusHandler?: (ev: Event) => void;
+    private blurHandler?: (ev: Event) => void;
 
     private activeEditable?: Editable;
     private activeEditableValue?: string;
@@ -315,18 +315,37 @@ class InputCaptureElm extends Elm<"pre"> {
      */
     private shouldReset: boolean = false;
 
-    constructor(private parent: ContentEditableOverlayInputCapture, public group: InstructionGroup) {
-        super("pre");
-        this.class("inputCapture");
+    constructor(private parent: ContentEditableInputCapture, public group: InstructionGroup) {
+        this.elm = group.editor.elm;
 
         this.resetContext();
 
-        this.attribute("contenteditable",
-            InputCaptureElm.supportsContentEditablePlaintextOnly ?
-                "plaintext-only" : "true"
-        );
-        this.observer.observe(this.elm, InputCaptureElm.observerOptions);
-        this.on("keydown", ev => this.parent.keydownIntercepter?.(ev));
+        this.elm.attribute("contenteditable",
+            InputCapture.supportsContentEditablePlaintextOnly ?
+                "plaintext-only" : "true");
+        this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+        this.keydownHandler = ev => this.parent.keydownIntercepter?.(ev);
+        this.elm.getHTMLElement().addEventListener("keydown", this.keydownHandler);
+    }
+
+    public focus() {
+        this.elm.getHTMLElement().focus();
+    }
+
+    public blur() {
+        this.elm.getHTMLElement().blur();
+    }
+
+    public setFocusHandler(handler: (ev: Event) => void) {
+        if (this.focusHandler) { throw new Error("Setting focus handler twice"); }
+        this.focusHandler = handler;
+        this.elm.getHTMLElement().addEventListener("focus", this.focusHandler);
+    }
+
+    public setBlurHandler(handler: (ev: Event) => void) {
+        if (this.blurHandler) { throw new Error("Setting blur handler twice"); }
+        this.blurHandler = handler;
+        this.elm.getHTMLElement().addEventListener("blur", this.blurHandler);
     }
 
     public onAction(action: UndoableAction) {
@@ -344,6 +363,18 @@ class InputCaptureElm extends Elm<"pre"> {
         }
     }
 
+    public remove(): void {
+        this.observer.disconnect();
+        this.elm.removeAttribute("contenteditable");
+        this.elm.getHTMLElement().removeEventListener("keydown", this.keydownHandler);
+        if (this.focusHandler) {
+            this.elm.getHTMLElement().removeEventListener("focus", this.focusHandler);
+        }
+        if (this.blurHandler) {
+            this.elm.getHTMLElement().removeEventListener("blur", this.blurHandler);
+        }
+    }
+
     private resetContext(): void {
         this.observer.disconnect();
 
@@ -351,12 +382,13 @@ class InputCaptureElm extends Elm<"pre"> {
 
         this.lineMap.clear();
         this.lines.length = 0;
-        this.clear();
+        this.elm.clear();
         for (const line of this.group.block.lineIter()) {
             const strContent = areasToString(line.getAreas());
-            const elm = new Elm().class("instructionLine").append(strContent).appendTo(this);
-            this.lines.push({ str: strContent, line, elm });
-            this.lineMap.set(elm.getHTMLElement(), line);
+            line.reset();
+            this.elm.append(line);
+            this.lines.push({ str: strContent, line });
+            this.lineMap.set(line.elm.getHTMLElement(), line);
         }
 
         if (this.group == this.parent.lastPositionStart?.group && this.parent.lastPositionEnd) {
@@ -367,12 +399,7 @@ class InputCaptureElm extends Elm<"pre"> {
             }
         }
 
-        this.observer.observe(this.elm, InputCaptureElm.observerOptions);
-    }
-
-    public remove(): void {
-        this.observer.disconnect();
-        super.remove();
+        this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
     }
 
     private mutationHandler(mutations: MutationRecord[]) {
@@ -417,7 +444,7 @@ class InputCaptureElm extends Elm<"pre"> {
             this.resetContext();
         }
 
-        this.observer.observe(this.elm, InputCaptureElm.observerOptions);
+        this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
     }
 
     private onMutateLineContent(line: HTMLDivElement) {

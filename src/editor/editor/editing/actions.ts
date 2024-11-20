@@ -77,7 +77,6 @@ export class AddGroupAction implements UndoableAction {
     public perform(): void {
         this.editor._groupEditors.push(this.group);
         this.editor._children.addChild(this.group.editor);
-        this.editor.cursor.registerGroupEditor(this.group);
 
         // add parent-child relations
         for (const child of this.group._childGroups) {
@@ -160,7 +159,6 @@ export class AddInstructionAction implements UndoableAction {
             }
 
             for (const line of this.block.lineIter()) {
-                group.group.editor._htmlInstructionLineToJS.set(line.elm.getHTMLElement(), line);
                 for (const editable of line.getEditables()) {
                     group.group.parentEditor.cursor.autocomplete.enteredValue(editable);
                 }

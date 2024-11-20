@@ -2,7 +2,7 @@ import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { InstructionGroup } from "../InstructionGroup";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
-import { ContentEditableOverlayInputCapture } from "./ContentEditableOverlayInputCapture";
+import { ContentEditableInputCapture } from "./ContentEditableInputCapture";
 import { UndoableAction } from "./actions";
 
 export class EditorCursor extends Elm<"span"> {
@@ -15,7 +15,7 @@ export class EditorCursor extends Elm<"span"> {
     public onKeydownIntercept = new EventBus<KeyboardEvent>();
     public onInput = new EventBus();
 
-    private inputCapture = new ContentEditableOverlayInputCapture();
+    private inputCapture = new ContentEditableInputCapture();
     private positionStart?: Readonly<EditorCursorPositionAbsolute>;
 
     private allowAutocomplete = false;
