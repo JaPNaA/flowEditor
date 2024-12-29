@@ -404,8 +404,12 @@ export abstract class BranchInstructionLine extends InstructionLine {
 
     constructor() {
         super();
-        this.elm.appendAsFirst(this.branchConnectElm);
         this._updateElmState();
+    }
+
+    public reset(): void {
+        super.reset();
+        this.elm.appendAsFirst(this.branchConnectElm);
     }
 
     public requestUserToSetBranchTarget() {
