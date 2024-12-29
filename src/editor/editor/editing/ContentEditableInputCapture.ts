@@ -481,9 +481,7 @@ class InputCapture {
             if (mutation.type === "childList" && mutation.addedNodes.length === 0) {
                 for (const removedNode of mutation.removedNodes) {
                     // case: complete line removal
-                    const lineElm = this.findParentLineElement(removedNode);
-                    if (!lineElm) { continue; }
-                    const instructionLine = this.lineMap.getV(lineElm);
+                    const instructionLine = this.lineMap.getV(removedNode as HTMLDivElement);
                     if (instructionLine) {
                         const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
                         instructionLine.parentBlock.getGroup()?.group.editor.onLineDelete(lineOpEvent);
@@ -492,21 +490,14 @@ class InputCapture {
                         }
                     }
                 }
-
-                // case: deleting element inside a line
-                const modifiedLine = this.findParentLineElement(mutation.target);
-                if (modifiedLine && !checkedElements.has(modifiedLine)) {
-                    checkedElements.add(modifiedLine);
-                    this.onMutateLineContent(modifiedLine, floatingPosition);
-                }
-            } else {
-                // editable change
-                const lineElm = this.findParentLineElement(mutation.target);
-                if (!lineElm) { continue; }
-                if (checkedElements.has(lineElm)) { continue; }
-                checkedElements.add(lineElm);
-                this.onMutateLineContent(lineElm, floatingPosition);
             }
+
+            // editable change
+            const lineElm = this.findParentLineElement(mutation.target);
+            if (!lineElm) { continue; }
+            if (checkedElements.has(lineElm)) { continue; }
+            checkedElements.add(lineElm);
+            this.onMutateLineContent(lineElm, floatingPosition);
         }
 
         this.freezeExternalActions = false;
