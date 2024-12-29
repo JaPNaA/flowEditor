@@ -62,7 +62,7 @@ export class DefaultPlugin implements EditorPlugin {
             learn() { },
             unlearn() { },
             suggest(editable) {
-                if (editable.getValue() && !editable.placeholder) { return null; }
+                if (editable.getValue() && !editable.isPlaceholder) { return null; }
                 return [{
                     title: "=",
                     fill: "=",

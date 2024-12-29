@@ -66,6 +66,8 @@ export abstract class InstructionLine extends Component {
      * 
      * Each instruction MUST contain at least one editable. There must be
      * no two consecutive strings or two consecutive editables.
+     * 
+     * Strings cannot be empty.
      */
     private areas: (Editable | string)[] = [];
     private spanToEditable = new Map<HTMLSpanElement, Editable>();
@@ -81,8 +83,20 @@ export abstract class InstructionLine extends Component {
 
     public reset() {
         this.elm.clear();
+        let isLineEmpty = true;
+
         for (const element of this.areas) {
             this.elm.append(element);
+            if (typeof element === "string" || element.getValue()) {
+                isLineEmpty = false;
+            }
+        }
+
+        // need a <br> for an empty line so the user can
+        // move the cursor and delete the line in
+        // for ContentEditableInputCapture
+        if (isLineEmpty) {
+            this.elm.append(new Elm("br"));
         }
     }
 

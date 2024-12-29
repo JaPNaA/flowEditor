@@ -192,7 +192,7 @@ export class AutoComplete extends Component {
     }
 
     private defaultSuggester(editable: Editable, type: symbol): AutoCompleteSuggestion[] | null {
-        const value = editable.placeholder ? "" : editable.getValue();
+        const value = editable.isPlaceholder ? "" : editable.getValue();
         const map = this.defaultHandlerPreviousValues.get(type);
         const lastUsed = this.getLastUsed(editable, type);
         if (!map) { return null; }

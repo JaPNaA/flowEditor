@@ -38,7 +38,7 @@ export class EditorCursor extends Elm<"span"> {
                 posStart.line === posEnd.line
             ) {
                 const editable = this.getEditableFromPosition(posStart);
-                if (editable?.placeholder) {
+                if (editable?.isPlaceholder) {
                     posStart.char = 0;
                     posEnd.char = editable.getValue().length;
                 }
@@ -106,7 +106,7 @@ export class EditorCursor extends Elm<"span"> {
                     if (!text) { break; }
                     this.activeEditable.setValue(text);
 
-                    this.activeEditable.placeholder = false;
+                    this.activeEditable.isPlaceholder = false;
                     this.allowAutocomplete = false;
                     const currLine = this.positionStart.group.block.getLine(this.positionStart.line);
                     if (this.positionStart.editable >= currLine.getLastEditableIndex()) {
@@ -180,7 +180,7 @@ export class EditorCursor extends Elm<"span"> {
     // todo: probably obsolete (behaviour same as positionChangeHandler)
     public setPosition(position: EditorCursorPositionAbsolute) {
         const editable = this.getEditableFromPosition(position);
-        if (editable?.placeholder) { // placeholder handling
+        if (editable?.isPlaceholder) { // placeholder handling
             this.allowAutocomplete = true;
             let posStart = {
                 group: position.group,
@@ -220,7 +220,7 @@ export class EditorCursor extends Elm<"span"> {
 
         const lastActiveEditable = this.activeEditable;
         if (lastActiveEditable) {
-            lastActiveEditable.placeholder = false;
+            lastActiveEditable.isPlaceholder = false;
             lastActiveEditable.update(); // some editables like in NewInstruction use update to enable/disable their keydown intercepter
         }
 

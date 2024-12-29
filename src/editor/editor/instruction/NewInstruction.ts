@@ -33,17 +33,14 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
 export class NewInstructionLine extends InstructionLine implements OneLineInstruction {
     public editable: NewInstructionEditable;
     public isBranch: boolean = false;
-    private placeholderText: Elm<'span'> = new Elm('span')
-        .class("placeholder").attribute("contenteditable", "false")
-        .append(`Press shortcut or hold shift and type to search...`);
     private isEmpty = true;
 
     constructor() {
         super();
 
         this.elm.class("newInstructionLine");
-        this.elm.append(this.placeholderText);
         this.setAreas(this.editable = this.registerEditable(new NewInstructionEditable(this)));
+        this.editable.isPlaceholder = true;
 
         this.editable.onCheckInput.subscribe(changes => {
             if (changes.newContent && changes.newContent[0] === "\n") {
@@ -51,13 +48,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 return;
             }
 
-            if (changes.newContent) {
-                this.placeholderText.class("hidden");
-                this.isEmpty = false;
-            } else {
-                this.placeholderText.removeClass("hidden");
-                this.isEmpty = true;
-            }
+            this.isEmpty = Boolean(!changes.newContent);
         });
 
         this.editable.onKeyIntercepted.subscribe(event => {
@@ -73,6 +64,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             }
         });
         this.editable.parentLine = this;
+    }
+
+    public reset(): void {
+        super.reset();
     }
 
     public splitGroupHere() {
@@ -98,8 +93,8 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         // set all instruction's editables to placeholder if undefined
         for (const line of instruction.block.lineIter()) {
             for (const editable of line.getEditables()) {
-                if (editable.placeholder === undefined) {
-                    editable.placeholder = true;
+                if (editable.isPlaceholder === undefined) {
+                    editable.isPlaceholder = true;
                 }
             }
         }
@@ -149,7 +144,7 @@ export class NewInstructionEditable extends Editable {
     private previousCursor?: EditorCursor;
 
     constructor(parentLine: NewInstructionLine) {
-        super("", parentLine);
+        super("Press shortcut or hold shift and type to search...", parentLine);
         this.intercepter = this.intercepter.bind(this);
         this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
     }

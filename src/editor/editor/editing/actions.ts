@@ -255,7 +255,7 @@ export class EditableEditAction implements UndoableAction {
         if (autocomplete) { autocomplete.removedValue(this.editable); }
         this.previousValue = this.editable._value;
         this.editable._value = this.newValue;
-        this.editable.placeholder = false;
+        this.editable.isPlaceholder = false;
         if (autocomplete) { autocomplete.enteredValue(this.editable); }
 
         this.editable.update();

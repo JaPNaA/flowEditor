@@ -15,7 +15,7 @@ export class Editable extends Elm<"span"> {
      * editable will be selected, and autocomplete should treat the editable as
      * empty.
      */
-    public placeholder?: boolean;
+    public isPlaceholder?: boolean;
 
     /** DO NOT MUTATE OUTSIDE OF `UndoableAction` */
     public _value: string;
