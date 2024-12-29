@@ -322,10 +322,10 @@ export class Editor extends WorldElmWithComponents {
 
                 const touchingElms = this.engine.collisions.getCollisionsWith(this.selectRectangle.getCollisionRect());
                 for (const { elm } of touchingElms) {
-                    if (elm instanceof InstructionGroup) {
-                        if (!this.selectedGroups.has(elm)) {
-                            this.selectedGroups.add(elm);
-                            elm.editor.setSelected();
+                    if (elm instanceof InstructionGroupEditor) {
+                        if (!this.selectedGroups.has(elm.instructionGroup)) {
+                            this.selectedGroups.add(elm.instructionGroup);
+                            elm.setSelected();
                         }
                     }
                 }

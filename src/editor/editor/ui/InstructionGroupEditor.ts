@@ -11,7 +11,7 @@ import { InstructionGroup } from "../InstructionGroup";
  * An instruction group editor is a UI component that allows editing
  * {@link InstructionGroup}s
  */
-export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable  {
+export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild, Collidable {
     public static defaultWidth = 720 + 24; // 24 is padding
     private static fontSize = 16;
     private static collisionType = Symbol();
