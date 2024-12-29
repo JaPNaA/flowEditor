@@ -354,7 +354,6 @@ class InputCapture {
     private lines: { str: string, line: InstructionLine }[] = [];
 
     private elm: Elm;
-    private keydownHandler: (ev: KeyboardEvent) => void;
     private focusHandler?: (ev: Event) => void;
     private blurHandler?: (ev: Event) => void;
 
@@ -379,7 +378,7 @@ class InputCapture {
             InputCapture.supportsContentEditablePlaintextOnly ?
                 "plaintext-only" : "true");
         this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
-        this.keydownHandler = ev => this.parent.keydownIntercepter?.(ev);
+        this.keydownHandler = this.keydownHandler.bind(this);
         this.elm.getHTMLElement().addEventListener("keydown", this.keydownHandler);
     }
 
@@ -455,6 +454,26 @@ class InputCapture {
         }
 
         this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+    }
+
+    private keydownHandler(ev: KeyboardEvent) {
+        const shouldCancelHandle = this.parent.keydownIntercepter?.(ev);
+        if (shouldCancelHandle) { return; }
+
+        const lastPosition = this.parent.lastPositionStart;
+        if (!lastPosition) { return; }
+
+        const instructionLine = lastPosition.group.block.getLine(lastPosition.line);
+
+        if (ev.key === "Backspace") {
+            // delete at first possible position
+            if (lastPosition.editable === 0 && lastPosition.char === 0) {
+                // deletion
+                const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
+                lastPosition.group.editor.onLineDelete(lineOpEvent);
+                ev.preventDefault();
+            }
+        }
     }
 
     private mutationHandler(mutations: MutationRecord[]) {
