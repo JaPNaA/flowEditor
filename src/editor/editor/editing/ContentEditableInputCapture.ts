@@ -61,6 +61,13 @@ export class ContentEditableInputCapture {
     public cursorMovingBackwards = false;
 
     /**
+     * Ignores mutation and selection events. Set when in the middle of composition.
+     * We don't want to do anything when compositing otherwise the composition
+     * may be cancelled or duplicated.
+     */
+    public isCompositing = false;
+
+    /**
      * Ignore document selection change events? Set to prevent infinite recursion
      * when changing the document selection.
      */
@@ -71,10 +78,23 @@ export class ContentEditableInputCapture {
      */
     public _freezeSelectionSets = false;
 
+    /**
+     * Flag set true when position is updated.
+     * 
+     * The flag is reset before any editable handlers are called.
+     * If any editable handler sets the position, this flag is set.
+     * 
+     * If the position is never set after handling editable updates,
+     * a default position setter runs that keeps the cursor in an
+     * expected position.
+     */
+    public _wasPositionSet = false;
+
     constructor() {
         document.addEventListener("selectionchange", ev => {
             if (!ev.isTrusted) { return; }
             if (this.freezeSelectionEvents) { return; }
+            if (this.isCompositing) { return; }
             const selection = getSelection();
 
             if (selection && selection.anchorNode) {
@@ -97,13 +117,16 @@ export class ContentEditableInputCapture {
             }
 
             if (!selection || !selection.focusNode || !selection.anchorNode) { return; }
-            const positionStart = this.domSelectionToPosition(selection.anchorNode, selection.anchorOffset);
-            const positionEnd = this.domSelectionToPosition(selection.focusNode, selection.focusOffset);
+            const positionStart = this.domPositionToAbsolute(selection.anchorNode, selection.anchorOffset);
+            const positionEnd = this.domPositionToAbsolute(selection.focusNode, selection.focusOffset);
             if (!positionStart || !positionEnd) { return; }
 
             this.firePositionChangeHandlerIfChanged(positionStart, positionEnd);
             this.setPosition(positionStart, positionEnd);
         });
+
+        document.addEventListener("compositionstart", () => this.isCompositing = true);
+        document.addEventListener("compositionend", () => this.isCompositing = false);
     }
 
     /** Register an element and watches for edits. */
@@ -137,6 +160,7 @@ export class ContentEditableInputCapture {
 
         this.lastPositionStart = positionStart;
         this.lastPositionEnd = positionEnd;
+        this._wasPositionSet = true;
 
         if (this._freezeSelectionSets) { return; }
 
@@ -210,47 +234,78 @@ export class ContentEditableInputCapture {
     }
 
     /**
-     * Gets the EditorCursorPositionAbsolute from an HTML Anchor node and offset
-     * @param anchorNode Selection anchor node
-     * @param focusOffset Selection focus offset
+     * Converts a DOM position to a position absolute.
+     * 
+     * Calls {@link domPositionToFloating} then {@link floatingPositionToAbsolute}.
+     */
+    private domPositionToAbsolute(anchorNode: Node, offset: number) {
+        const floating = this.domPositionToFloating(anchorNode, offset);
+        if (!floating) { return; }
+        return this.floatingPositionToAbsolute(floating);
+    }
+
+    /**
+     * Gets a floating position from an anchor node and offset.
+     * 
+     * A floating position consists of a group, line, and a line offset.
+     * 
+     * Unlike a {@link EditorCursorPositionAbsolute}, this position is not
+     * tied to an editable, so can be positioned in non-editables.
      */
     // todo: should be private
-    public domSelectionToPosition(anchorNode: Node, focusOffset: number) {
+    public domPositionToFloating(anchorNode: Node, offset: number): FloatingPosition | undefined {
         const parentInstructionLine =
-        getAncestorWhich(
-            anchorNode,
-            node => node instanceof HTMLDivElement && node.classList.contains("instructionLine")
-        ) as HTMLDivElement;
+            getAncestorWhich(
+                anchorNode,
+                node => node instanceof HTMLDivElement && node.classList.contains("instructionLine")
+            ) as HTMLDivElement;
         const inputCaptureHTMLElm =
-        getAncestorWhich(
-            parentInstructionLine,
-            node => node instanceof HTMLDivElement && node.classList.contains("instructionGroup")
-        ) as HTMLDivElement;
+            getAncestorWhich(
+                parentInstructionLine,
+                node => node instanceof HTMLDivElement && node.classList.contains("instructionGroup")
+            ) as HTMLDivElement;
         const inputCaptureElm = this.inputCaptureElmToHTMLElm.getK(inputCaptureHTMLElm);
         if (!inputCaptureElm) { return; }
         const instructionLine = inputCaptureElm.lineMap.getV(parentInstructionLine);
         if (!instructionLine) { return; }
-        const fullFocusOffset = focusOffset + instructionLine.getNodeCharIndex(anchorNode);
+        const offsetFromLine = offset + instructionLine.getNodeCharIndex(anchorNode);
         const lineNumber = inputCaptureElm.group.block.locateLine(instructionLine);
-        const closestEditableIndex = instructionLine.getClosestEditableIndexToCharIndex(fullFocusOffset, this.cursorMovingBackwards);
-        const editable = instructionLine.getEditableFromIndex(closestEditableIndex);
+
+        return {
+            group: inputCaptureElm.group,
+            lineNumber,
+            instructionLine,
+            offsetFromLine,
+        };
+    }
+
+    /**
+     * Gets the EditorCursorPositionAbsolute from a floating selection
+     */
+    // todo: should be private
+    public floatingPositionToAbsolute(floating: FloatingPosition) {
+        const closestEditableIndex = floating.instructionLine.getClosestEditableIndexToCharIndex(
+            floating.offsetFromLine, this.cursorMovingBackwards
+        );
+        const editable = floating.instructionLine.getEditableFromIndex(closestEditableIndex);
+
         let position: EditorCursorPositionAbsolute;
         if (editable) { // verify editable exists
-            const editableCharIndex = instructionLine.getCharIndexOfEditable(editable);
+            const editableCharIndex = floating.instructionLine.getCharIndexOfEditable(editable);
             const editableLength = editable.getValue().length;
             position = {
-                group: inputCaptureElm.group,
-                line: lineNumber,
-                char: fullFocusOffset < editableCharIndex ? 0 : (
-                    fullFocusOffset > editableCharIndex + editableLength ? editableLength :
-                        fullFocusOffset - editableCharIndex
+                group: floating.group,
+                line: floating.lineNumber,
+                char: floating.offsetFromLine < editableCharIndex ? 0 : (
+                    floating.offsetFromLine > editableCharIndex + editableLength ? editableLength :
+                        floating.offsetFromLine - editableCharIndex
                 ),
                 editable: closestEditableIndex
             };
         } else {
             position = {
-                group: inputCaptureElm.group,
-                line: lineNumber,
+                group: floating.group,
+                line: floating.lineNumber,
                 char: 0,
                 editable: 0
             };
@@ -403,9 +458,19 @@ class InputCapture {
     }
 
     private mutationHandler(mutations: MutationRecord[]) {
+        if (this.parent.isCompositing) { return; } // frozen when in the middle of IME input
+
         this.observer.disconnect();
         this.freezeExternalActions = true;
         this.parent._freezeSelectionSets = true;
+        this.parent._wasPositionSet = false;
+
+        const selection = getSelection();
+        let floatingPosition: FloatingPosition | undefined;
+        if (selection && selection.anchorNode) {
+            floatingPosition = this.parent.domPositionToFloating(selection.anchorNode, selection.anchorOffset);
+        }
+
 
         // Sometimes Chrome inserts multiple records of mutations for one node, which
         // we don't want. This variable checks to make sure each line is only
@@ -415,7 +480,7 @@ class InputCapture {
         for (const mutation of mutations) {
             if (mutation.type === "childList" && mutation.addedNodes.length === 0) {
                 for (const removedNode of mutation.removedNodes) {
-                    // line removal
+                    // case: complete line removal
                     const lineElm = this.findParentLineElement(removedNode);
                     if (!lineElm) { continue; }
                     const instructionLine = this.lineMap.getV(lineElm);
@@ -427,27 +492,40 @@ class InputCapture {
                         }
                     }
                 }
+
+                // case: deleting element inside a line
+                const modifiedLine = this.findParentLineElement(mutation.target);
+                if (modifiedLine && !checkedElements.has(modifiedLine)) {
+                    checkedElements.add(modifiedLine);
+                    this.onMutateLineContent(modifiedLine, floatingPosition);
+                }
             } else {
                 // editable change
                 const lineElm = this.findParentLineElement(mutation.target);
                 if (!lineElm) { continue; }
                 if (checkedElements.has(lineElm)) { continue; }
                 checkedElements.add(lineElm);
-                this.onMutateLineContent(lineElm);
+                this.onMutateLineContent(lineElm, floatingPosition);
             }
         }
 
         this.freezeExternalActions = false;
         this.parent._freezeSelectionSets = false;
 
-        if (this.shouldReset) {
-            this.resetContext();
+        if (floatingPosition && !this.parent._wasPositionSet) {
+            const position = this.parent.floatingPositionToAbsolute(floatingPosition);
+            this.parent.lastPositionStart = this.parent.lastPositionEnd = position;
+            this.parent.firePositionChangeHandlerIfChanged(position, position);
         }
 
-        this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+        if (this.shouldReset) {
+            this.resetContext(); // resetContext will add observer again
+        } else {
+            this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+        }
     }
 
-    private onMutateLineContent(line: HTMLDivElement) {
+    private onMutateLineContent(line: HTMLDivElement, floatingPosition?: FloatingPosition) {
         const innerText = line.innerText;
         // Chrome inserts <br> in place of empty lines, which causes empty
         // lines to have innerText = '\n'. We detect this to correctly detect
@@ -461,27 +539,45 @@ class InputCapture {
 
         const lineIndex = this.group.block.locateLine(instructionLine);
         const oldValue = this.lines[lineIndex].str;
-        const lastCursor = this.parent._lastSelectionOffset || 0;
-        const newCursor = getSelection()?.anchorOffset || lastCursor;
-        this.parent._lastSelectionOffset = newCursor;
+        const lastLineOffset = this.parent._lastSelectionOffset || 0;
 
-        if (lastCursor !== newCursor) {
-            this.parent.cursorMovingBackwards = newCursor < lastCursor;
-        }
-
-        const position = this.parent.domSelectionToPosition(line, newCursor);
-        if (position) {
-            this.parent.lastPositionStart = this.parent.lastPositionEnd = position;
-            this.parent.firePositionChangeHandlerIfChanged(position, position);
-        }
+        // if (lastCursor !== newCursor) {
+        //     this.parent.cursorMovingBackwards = newCursor < lastCursor;
+        // }
 
         const areas = instructionLine.getAreas();
 
-        const newEditableValues = findEditableValuesInChangedString(areas, oldValue, lastCursor, newValue, newCursor);
+        // fix non-editables
+        let noneditableNodeModified = false;
+        const currentChildNodes = line.childNodes;
+        if (currentChildNodes.length === areas.length) {
+            for (let i = 0; i < areas.length; i++) {
+                if (typeof areas[i] === "string") {
+                    if (currentChildNodes[i].nodeValue !== areas[i]) {
+                        noneditableNodeModified = true;
+                    }
+                } else {
+                    if (!(currentChildNodes[i] instanceof HTMLSpanElement)) {
+                        noneditableNodeModified = true;
+                    }
+                }
+            }
+        } else {
+            // different number of nodes than expected
+            noneditableNodeModified = true;
+        }
+
+        const cursorLineOffset = floatingPosition?.instructionLine === instructionLine ? floatingPosition.offsetFromLine : 0;
+        const newEditableValues = findEditableValuesInChangedString(areas, oldValue, lastLineOffset, newValue, cursorLineOffset);
         const editables = instructionLine.getEditables();
 
         if (newEditableValues.changedNonEditable) {
             this.shouldReset = true;
+        }
+
+        if (noneditableNodeModified) {
+            this.shouldReset = true;
+            instructionLine.reset();
         }
 
         const changedEditables: Editable[] = [];
@@ -494,7 +590,6 @@ class InputCapture {
 
             const event = new UserInputEvent(editable, oldValue, newValue);
             editable.checkInput(event);
-            editable.afterChangeApply
             this.parent.inputHandler?.(event);
             if (event.isRejected()) {
                 this.shouldReset = true;
@@ -580,4 +675,11 @@ function compareAbsoluteCursorPositions(a: EditorCursorPositionAbsolute, b: Edit
     if (a.editable < b.editable) { return -1; } else if (a.editable > b.editable) { return 1; }
     if (a.char < b.char) { return -1; } else if (a.char > b.char) { return 1; }
     return 0;
+}
+
+interface FloatingPosition {
+    group: InstructionGroup;
+    lineNumber: number;
+    instructionLine: InstructionLine;
+    offsetFromLine: number;
 }
