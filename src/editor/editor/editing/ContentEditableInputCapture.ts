@@ -121,7 +121,6 @@ export class ContentEditableInputCapture {
             const positionEnd = this.domPositionToAbsolute(selection.focusNode, selection.focusOffset);
             if (!positionStart || !positionEnd) { return; }
 
-            this.firePositionChangeHandlerIfChanged(positionStart, positionEnd);
             this.setPosition(positionStart, positionEnd);
         });
 
@@ -157,6 +156,8 @@ export class ContentEditableInputCapture {
 
         const groupElm = this.inputCaptureElmToEditor.getK(positionStart.group);
         if (!groupElm) { throw new Error("Trying to set position in group that is not registered"); }
+
+        this.firePositionChangeHandlerIfChanged(positionStart, positionEnd);
 
         this.lastPositionStart = positionStart;
         this.lastPositionEnd = positionEnd;
@@ -313,8 +314,7 @@ export class ContentEditableInputCapture {
         return position;
     }
 
-    // todo: should be private
-    public firePositionChangeHandlerIfChanged(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
+    private firePositionChangeHandlerIfChanged(positionStart: EditorCursorPositionAbsolute, positionEnd: EditorCursorPositionAbsolute) {
         if (
             !this.lastPositionStart || compareAbsoluteCursorPositions(this.lastPositionStart, positionStart) !== 0 ||
             !this.lastPositionEnd || compareAbsoluteCursorPositions(this.lastPositionEnd, positionEnd) !== 0
@@ -524,8 +524,7 @@ class InputCapture {
 
         if (floatingPosition && !this.parent._wasPositionSet) {
             const position = this.parent.floatingPositionToAbsolute(floatingPosition);
-            this.parent.lastPositionStart = this.parent.lastPositionEnd = position;
-            this.parent.firePositionChangeHandlerIfChanged(position, position);
+            this.parent.setPosition(position, position);
         }
 
         if (this.shouldReset) {
