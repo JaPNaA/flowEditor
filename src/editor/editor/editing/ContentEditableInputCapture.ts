@@ -102,9 +102,9 @@ export class ContentEditableInputCapture {
                 if (this._lastSelectionAnchor) {
                     const compared = selection.anchorNode.compareDocumentPosition(this._lastSelectionAnchor);
                     if (compared & Node.DOCUMENT_POSITION_FOLLOWING) {
-                        this.cursorMovingBackwards = false;
-                    } else if (compared & Node.DOCUMENT_POSITION_PRECEDING) {
                         this.cursorMovingBackwards = true;
+                    } else if (compared & Node.DOCUMENT_POSITION_PRECEDING) {
+                        this.cursorMovingBackwards = false;
                     } else if (this._lastSelectionOffset! < selection.anchorOffset) {
                         this.cursorMovingBackwards = false;
                     } else if (this._lastSelectionOffset! > selection.anchorOffset) {

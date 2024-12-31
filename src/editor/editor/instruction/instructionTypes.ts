@@ -173,7 +173,13 @@ export abstract class InstructionLine extends Component {
                 charIndex -= area.length;
                 // not <= to account for the possibility we have the
                 // charIndex at the start (charIndex = 0) of the next Editable
-                if (charIndex < 0) { break; }
+                if (charIndex < 0) { 
+                    if (backwardsFirst) {
+                        return editableIndex - 1;
+                    } else {
+                        return editableIndex;
+                    }
+                }
             } else {
                 const value = area.getValue();
                 if (charIndex <= value.length) {
@@ -183,11 +189,8 @@ export abstract class InstructionLine extends Component {
                 editableIndex++;
             }
         }
-        if (backwardsFirst) {
-            return editableIndex - 1;
-        } else {
-            return editableIndex;
-        }
+
+        return editableIndex - 1;
     }
 
     /**
