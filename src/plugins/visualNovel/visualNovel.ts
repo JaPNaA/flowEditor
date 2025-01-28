@@ -959,7 +959,12 @@ class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpe
     constructor(data: any) {
         super(new CreateGraphicLineOpening(data.name || "unnamed graphic"));
 
-        for (const [key, val] of data.params) {
+        for (const subInstruction of data.params) {
+            if (!Array.isArray(subInstruction) || subInstruction.length !== 2) {
+                continue;
+            }
+            const [key, val] = subInstruction;
+
             let line: CreateGraphicSubInstruction;
             switch (key) {
                 case "src":
@@ -987,7 +992,12 @@ class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpe
             const instruction = block.instruction;
             if (instruction) {
                 const items = instruction.export();
-                for (const [key, val] of items) {
+                for (const item of items) {
+                    if (!Array.isArray(item) || item.length !== 2) {
+                        continue;
+                    }
+                    const [key, val] = item;
+
                     // @ts-ignore
                     graphic[key] = val;
                 }

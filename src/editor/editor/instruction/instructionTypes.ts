@@ -100,6 +100,12 @@ export abstract class InstructionLine extends Component {
         }
     }
 
+    public resetEditables() {
+        for (const editable of this.editables) {
+            editable.update();
+        }
+    }
+
     /**
      * Find the corresponding editable and offset in editable.
      * 

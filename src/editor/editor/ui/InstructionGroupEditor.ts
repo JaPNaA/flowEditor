@@ -77,18 +77,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.updateAfterMove();
     }
 
-    public onCursorInput(position: EditorCursorPositionAbsolute, ev: UserInputEvent) {
-        if (ev.isRejected()) {
-            if (ev.newContent.includes("\n")) {
-                if (position.editable === 0 && position.char === 0) {
-                    this.insertLineAndUpdateCursor(position.line);
-                } else {
-                    this.insertLineAndUpdateCursor(position.line + 1);
-                }
-            }
-        }
-    }
-
     public onLineDelete(lineOp: LineOperationEvent) {
         const editor = this.instructionGroup.parentEditor;
         let targetLine = this.instructionGroup.block.locateLine(lineOp.line);

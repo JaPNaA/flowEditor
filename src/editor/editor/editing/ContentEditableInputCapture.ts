@@ -440,6 +440,7 @@ class InputCapture {
         for (const line of this.group.block.lineIter()) {
             const strContent = areasToString(line.getAreas());
             line.reset();
+            line.resetEditables();
             this.elm.append(line);
             this.lines.push({ str: strContent, line });
             this.lineMap.set(line.elm.getHTMLElement(), line);

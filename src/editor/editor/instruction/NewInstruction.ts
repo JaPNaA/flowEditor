@@ -43,6 +43,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.editable.isPlaceholder = true;
 
         this.editable.onCheckInput.subscribe(changes => {
+            if (changes.newContent.includes("\n")) {
+                changes.reject();
+            }
+
             if (changes.newContent && changes.newContent[0] === "\n") {
                 this.splitGroupHere();
                 return;
@@ -75,6 +79,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         if (!groupBlock) { throw new Error("No editor attached"); }
         const group = groupBlock.group;
         group.parentEditor.undoLog.startGroup();
+        if (group.block.children.length <= 1) {
+            return; // cannot split -- after removing self, block would become empty
+        }
+
         const index = group.block.children.indexOf(this.parentBlock);
         this.parentBlock.parent?.removeBlock(this.parentBlock);
         const newGroup = group.splitAtInstruction(index);

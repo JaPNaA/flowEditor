@@ -57,12 +57,11 @@ export class EditorCursor extends Elm<"span"> {
 
         this.inputCapture.positionChangeHandler = positionChangeHandler;
 
-        this.inputCapture.inputHandler = input => {
+        this.inputCapture.inputHandler = () => {
             if (!this.positionStart) { return; }
             this.allowAutocomplete = true;
             justInputted = true;
             this.onInput.send();
-            this.positionStart.group.editor.onCursorInput(this.positionStart, input);
         };
 
         this.inputCapture.afterInputHandler = events => {
