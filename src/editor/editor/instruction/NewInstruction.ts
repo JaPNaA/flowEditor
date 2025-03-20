@@ -1,6 +1,5 @@
-import { Editable } from "../editing/Editable";
+import { Editable, EditableEditAction } from "../editing/Editable";
 import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } from "./instructionTypes";
-import { UserInputEvent } from "../editing/UserInputEvents";
 import { EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
@@ -42,18 +41,21 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.setAreas(this.editable = this.registerEditable(new NewInstructionEditable(this)));
         this.editable.isPlaceholder = true;
 
-        this.editable.onCheckInput.subscribe(changes => {
-            if (changes.newContent.includes("\n")) {
-                changes.reject();
+        this.editable.onCheckInput = (changes) => {
+            let reject = false;
+
+            if (changes.newValue.includes("\n")) {
+                reject = true;
             }
 
-            if (changes.newContent && changes.newContent[0] === "\n") {
+            if (changes.newValue && changes.newValue[0] === "\n") {
                 this.splitGroupHere();
-                return;
+            } else {
+                this.isEmpty = Boolean(!changes.newValue);
             }
 
-            this.isEmpty = Boolean(!changes.newContent);
-        });
+            return reject;
+        };
 
         this.editable.onKeyIntercepted.subscribe(event => {
             if (!this.isEmpty) { return; }
@@ -146,7 +148,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 }
 
 export class NewInstructionEditable extends Editable {
-    public onCheckInput = new EventBus<UserInputEvent>();
+    public onCheckInput?: (action: EditableEditAction) => boolean;
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
     private isActive = false;
     private previousCursor?: EditorCursor;
@@ -157,9 +159,9 @@ export class NewInstructionEditable extends Editable {
         this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
     }
 
-    public checkInput(event: UserInputEvent): void {
+    public checkInput(action: EditableEditAction): boolean {
         // allow all
-        this.onCheckInput.send(event);
+        return this.onCheckInput?.(action) ?? false;
     }
 
     public update() {

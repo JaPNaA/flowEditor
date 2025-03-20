@@ -1,5 +1,4 @@
 import { EventBus } from "../../../../japnaaEngine2d/JaPNaAEngine2d";
-import { ActionBusDispatchable } from "./ActionBus";
 import { UndoableAction } from "./UndoableAction";
 
 export class UndoLog {
@@ -24,7 +23,10 @@ export class UndoLog {
         let log;
         while (log = logs.pop()) {
             const action = log.inverse();
-            action.getTarget().dispatch(action);
+            const result = action.getTarget().dispatch(action);
+            if (result.rejected) {
+                console.warn("Undo action was rejected", action);
+            }
         }
         this.onAfterAllActionsPerformed.send();
     }
@@ -51,9 +53,12 @@ export class UndoLog {
     }
 
     public perform(action: UndoableAction) {
-        if (!this.frozen) { this.currLogGroup.push(action); }
-        action.getTarget().dispatch(action);
+        const result = action.getTarget().dispatch(action);
+        if (!this.frozen && !result.rejected) {
+            this.currLogGroup.push(action);
+        }
         this.onAfterAllActionsPerformed.send();
+        return result;
     }
 
     private flushLogGroup() {

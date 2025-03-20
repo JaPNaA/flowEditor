@@ -1,6 +1,5 @@
-import { Editable } from "../editing/Editable";
+import { Editable, EditableEditAction } from "../editing/Editable";
 import { InstructionLine, OneLineInstruction, InstructionOneLine } from "./instructionTypes";
-import { UserInputEvent } from "../editing/UserInputEvents";
 
 export class JSONInstruction extends InstructionOneLine<JSONLine> {
     constructor(data: any) {
@@ -33,16 +32,17 @@ class JSONLineEditable extends Editable {
         this.parentLine = parentLine;
     }
 
-    public checkInput(event: UserInputEvent): void {
-        if (event.newContent.includes("\n")) {
+    public checkInput(event: EditableEditAction): boolean {
+        if (event.newValue.includes("\n")) {
             const value = this.getValue();
             // support for multiline paste only if JSONLine is a string + is not newline at end of line
-            if (value[0] === '"' && value[value.length - 1] === '"' && event.newContent[event.newContent.length - 1] !== "\n") {
+            if (value[0] === '"' && value[value.length - 1] === '"' && event.newValue[event.newValue.length - 1] !== "\n") {
                 this.newlineDetected = true;
             } else {
-                event.reject();
+                return false;
             }
         }
+        return true;
     }
 
     public afterChangeApply(): void {

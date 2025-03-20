@@ -1,5 +1,5 @@
 import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
+import { LineOperationEvent } from "./UserInputEvents";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroup } from "../InstructionGroup";
 import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "../../utils";
@@ -32,10 +32,10 @@ export class ContentEditableInputCapture {
     public positionChangeHandler?: (posStart: EditorCursorPositionAbsolute, posEnd: EditorCursorPositionAbsolute, selectBackwards: boolean) => void;
 
     /** Fired when an editable is edited */
-    public inputHandler?: (userInputEvent: UserInputEvent) => void;
+    public inputHandler?: (userInputEvent: EditableEditAction) => void;
 
     /** Fired after a editables are edited and the changes are applied */
-    public afterInputHandler?: (userInputEvents: UserInputEvent[]) => void;
+    public afterInputHandler?: (userInputEvents: EditableEditAction[]) => void;
 
     /** Fired on keydown, before changing the textarea. Can preventDefault here. Return 'true' to cancel change check. */
     public keydownIntercepter?: (event: KeyboardEvent) => boolean | undefined;
@@ -350,8 +350,6 @@ class InputCapture {
     private focusHandler?: (ev: Event) => void;
     private blurHandler?: (ev: Event) => void;
 
-    private activeEditable?: Editable;
-    private activeEditableValue?: string;
     /**
      * Should prevent external actions from having an effect on the element?
      * Set true when running mutation handler.
@@ -395,16 +393,7 @@ class InputCapture {
         this.elm.getHTMLElement().addEventListener("blur", this.blurHandler);
     }
 
-    public onAction(action: ActionInstance) {
-        // ignore edit events caused by us
-        // todo: this if statement might be useless, since EditableEditActions are not
-        // propagated here
-        if (action instanceof EditableEditAction &&
-            action.editable === this.activeEditable &&
-            action.newValue == this.activeEditableValue) {
-            return;
-        }
-
+    public onAction() {
         if (this.freezeExternalActions) {
             this.shouldReset = true;
         } else {
@@ -586,28 +575,30 @@ class InputCapture {
         }
 
         const changedEditables: Editable[] = [];
-        const changeEvents: UserInputEvent[] = [];
+        const changeEvents: EditableEditAction[] = [];
         for (let i = 0; i < editables.length; i++) {
             const editable = editables[i];
             const newValue = newEditableValues.values[i];
             const oldValue = editable.getValue();
             if (oldValue === newValue) { continue; }
 
-            const event = new UserInputEvent(editable, oldValue, newValue);
-            editable.checkInput(event);
-            this.parent.inputHandler?.(event);
-            if (event.isRejected()) {
-                this.shouldReset = true;
-            } else {
-                // set variables so we can ignore context updates caused by this event
-                this.activeEditable = editables[i];
-                this.activeEditableValue = newValue;
+            const result = editable.setValue(newValue);
+            if (result) {
+                changeEvents.push(result.action);
 
-                editable.setValue(newValue);
-                this.lines[lineIndex].str = areasToString(areas);
-                changedEditables.push(editable);
+                if (result.result.accepted) {
+                    this.lines[lineIndex].str = areasToString(areas);
+                    changedEditables.push(editable);
+                } else {
+                    this.shouldReset = true;
+                }
             }
-            changeEvents.push(event);
+            // editable.checkInput(event);
+            // this.parent.inputHandler?.(event);
+            // if (event.isRejected()) {
+            //     this.shouldReset = true;
+            // } else {
+            // }
         }
 
         for (const editable of changedEditables) {

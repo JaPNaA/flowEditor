@@ -1,5 +1,4 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { UserInputEvent } from "./UserInputEvents";
 import { InstructionLine } from "../instruction/instructionTypes";
 import { UndoableAction } from "./actions/UndoableAction";
 import { ActionBusDispatchable } from "./actions/ActionBus";
@@ -28,7 +27,12 @@ export class Editable extends Elm<"span"> {
         this.append(initialText);
         this.value = initialText;
 
-        this.actionBus.subscribe(EditableEditAction, action => {
+        this.actionBus.subscribe(EditableEditAction, (action, controls) => {
+            if (!this.checkInput(action)) {
+                controls.rejected = true;
+                return;
+            }
+
             const autocomplete = action.editable.parentLine.parentBlock.getGroup()?.group.parentEditor.cursor.autocomplete;
 
             if (autocomplete) { autocomplete.removedValue(action.editable); }
@@ -38,6 +42,7 @@ export class Editable extends Elm<"span"> {
             if (autocomplete) { autocomplete.enteredValue(action.editable); }
 
             action.editable.update();
+            controls.accepted = true;
         });
     }
 
@@ -51,19 +56,25 @@ export class Editable extends Elm<"span"> {
         if (!groupBlock) { return; }
         const group = groupBlock.group;
         this.onChange.send(value);
-        group.parentEditor.undoLog.perform(
-            new EditableEditAction(this, value, this.value)
-        );
+
+        const action = new EditableEditAction(this, value, this.value);
+        return {
+            action,
+            result: group.parentEditor.undoLog.perform(
+                new EditableEditAction(this, value, this.value)
+            )
+        };
     }
 
     /** Called by ContentEditableOverlayInputCapture after setting a new value for the editable and moving the cursor. */
     public afterChangeApply() { }
 
     /** Called by ContentEditableOverlayInputCapture to verify validity of input */
-    public checkInput(event: UserInputEvent) {
-        if (event.newContent.includes("\n")) {
-            event.reject();
+    public checkInput(event: EditableEditAction): boolean {
+        if (event.newValue.includes("\n")) {
+            return false;
         }
+        return true;
     }
 
     public update() {

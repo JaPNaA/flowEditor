@@ -275,6 +275,7 @@ export abstract class InstructionLine extends Component {
     protected registerEditable<T extends Editable>(editable: T): T {
         this.spanToEditable.set(editable.getHTMLElement(), editable);
         this.editables.push(editable);
+        editable.actionBus.getParentBus = () => this.parentBlock.getGroup()?.actionBus;
         return editable;
     }
 }

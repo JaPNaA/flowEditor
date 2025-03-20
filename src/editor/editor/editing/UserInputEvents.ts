@@ -13,14 +13,6 @@ export abstract class RejectableEvent {
     }
 }
 
-export class UserInputEvent extends RejectableEvent {
-    constructor(
-        public readonly editable: Editable,
-        public readonly oldContent: string,
-        public readonly newContent: string
-    ) { super(); }
-}
-
 export class LineOperationEvent extends RejectableEvent {
     constructor(
         public readonly line: InstructionLine,

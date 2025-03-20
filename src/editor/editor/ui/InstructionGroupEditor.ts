@@ -1,8 +1,7 @@
 import { Elm } from "../../../japnaaEngine2d/elements";
 import { Collidable, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, Rectangle, RectangleM, WorldElm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { pluginHooks } from "../../index";
-import { EditorCursorPositionAbsolute } from "../editing/EditorCursor";
-import { UserInputEvent, LineOperationEvent } from "../editing/UserInputEvents";
+import { LineOperationEvent } from "../editing/UserInputEvents";
 import { BranchInstructionLine, InstructionLine } from "../instruction/instructionTypes";
 import { NewInstruction } from "../instruction/NewInstruction";
 import { InstructionGroup } from "../InstructionGroup";
