@@ -22,8 +22,7 @@ import { UndoLog } from "./editing/actions/UndoLog";
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
     public actionBus = new ActionBusDispatchable();
-    public allActionBus = new ActionBusDispatchable();
-    public undoLog = new UndoLog(this.allActionBus);
+    public undoLog = new UndoLog();
     public smoothCamera = new SmoothCamera();
     public blueprintRegistery = new InstructionBlueprintRegistery();
     public deserializer = new InstructionDeserializer();
@@ -118,7 +117,6 @@ export class Editor extends WorldElmWithComponents {
             }
         });
 
-        this.allActionBus.subscribeAllActions(action => this.cursor.onAction(action));
         this.undoLog.onAfterAllActionsPerformed.subscribe(() => this.engine.ticker.requestTick());
     }
 

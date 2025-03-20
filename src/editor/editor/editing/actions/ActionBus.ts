@@ -1,3 +1,5 @@
+import { removeElmFromArray } from "../../../../japnaaEngine2d/util/removeElmFromArray";
+
 /**
  * ActionBus propagates Actions through the system.
  */
@@ -21,9 +23,11 @@ export class ActionBusDispatchable implements ActionBus {
     public unsubscribe<T extends ActionInstance>(action: ActionClass<T>, handler: (action: T) => void) {
         const existing = this.actionHandlers.get(action.key);
         if (!existing) { throw new Error("Trying to unsubscribe a handler that's not subscribed (never had handler for action)"); }
-        const index = existing.indexOf(handler);
-        if (index < 0) { throw new Error("Trying to unsubscribe a handler that's not subscribed"); }
-        existing.splice(index, 1);
+        removeElmFromArray(handler, existing);
+    }
+
+    public unsubscribeAllActions(handler: (action: ActionInstance) => void) {
+        removeElmFromArray(handler, this.allHandlers);
     }
 
     public dispatch(action: ActionInstance) {

@@ -146,10 +146,6 @@ export class EditorCursor extends Elm<"span"> {
         };
     }
 
-    public onAction(action: ActionInstance) {
-        this.inputCapture.onAction(action);
-    }
-
     /** Register a group editor. Called by InstructionGroupEditor when entering edit mode */
     public registerGroupEditor(group: InstructionGroup) {
         this.inputCapture.registerGroup(group);

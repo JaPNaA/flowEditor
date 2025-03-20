@@ -15,10 +15,7 @@ export class UndoLog {
      */
     public onAfterAllActionsPerformed = new EventBus();
 
-    public constructor(
-        /** Action bus that recieves all actions */
-        private actionBus: ActionBusDispatchable
-    ) { }
+    public constructor() { }
 
     public undo() {
         this.flushLogGroup();
@@ -28,7 +25,6 @@ export class UndoLog {
         while (log = logs.pop()) {
             const action = log.inverse();
             action.getTarget().dispatch(action);
-            this.actionBus.dispatch(action);
         }
         this.onAfterAllActionsPerformed.send();
     }
@@ -57,7 +53,6 @@ export class UndoLog {
     public perform(action: UndoableAction) {
         if (!this.frozen) { this.currLogGroup.push(action); }
         action.getTarget().dispatch(action);
-        this.actionBus.dispatch(action);
         this.onAfterAllActionsPerformed.send();
     }
 

@@ -6,7 +6,6 @@ import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "
 import { InstructionLine } from "../instruction/instructionTypes";
 import { Editable, EditableEditAction } from "./Editable";
 import { ActionInstance } from "./actions/ActionBus";
-import { AddInstructionAction, RemoveInstructionAction } from "../instruction/InstructionBlock";
 
 /**
  * `ContentEditableInputCapture` user the 'contentEditable' attribute to
@@ -145,6 +144,7 @@ export class ContentEditableInputCapture {
         const inputCapture = this.inputCaptureElmToEditor.getK(group);
         this.inputCaptureElmToEditor.deleteV(group);
         if (!inputCapture) { return; }
+        this.detachInputCapture(inputCapture);
         this.inputCaptureElmToHTMLElm.deleteK(inputCapture);
         inputCapture.remove();
 
@@ -214,25 +214,16 @@ export class ContentEditableInputCapture {
         }
     }
 
-    public onAction(action: ActionInstance) {
-        let group;
-
-        if (action instanceof EditableEditAction) {
-            group = action.editable.parentLine.parentBlock.getGroup();
-        } else if (action instanceof AddInstructionAction || action instanceof RemoveInstructionAction) {
-            group = action.block.getGroup();
-        }
-
-        if (!group) { return; }
-
-        this.inputCaptureElmToEditor.getK(group.group)?.onAction(action);
-    }
-
     private attachInputCapture(group: InstructionGroup) {
         const inputCapture = new InputCapture(this, group);
         inputCapture.setFocusHandler(() => this.focusHandler?.());
         inputCapture.setBlurHandler(() => this.unfocusHandler?.());
+        group.block.actionBus.subscribeAllActions(inputCapture.onActionHandlerBound);
         return inputCapture;
+    }
+
+    private detachInputCapture(inputCapture: InputCapture) {
+        inputCapture.group.block.actionBus.unsubscribeAllActions(inputCapture.onActionHandlerBound);
     }
 
     /**
@@ -336,6 +327,7 @@ export class ContentEditableInputCapture {
  */
 class InputCapture {
     public lineMap = new TwoWayMap<HTMLDivElement, InstructionLine>();
+    public onActionHandlerBound = this.onAction.bind(this);
 
     private static supportsContentEditablePlaintextOnly = false;
     static {
@@ -405,6 +397,8 @@ class InputCapture {
 
     public onAction(action: ActionInstance) {
         // ignore edit events caused by us
+        // todo: this if statement might be useless, since EditableEditActions are not
+        // propagated here
         if (action instanceof EditableEditAction &&
             action.editable === this.activeEditable &&
             action.newValue == this.activeEditableValue) {
