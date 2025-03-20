@@ -1,7 +1,7 @@
 import { Editable } from "../editing/Editable";
 import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } from "./instructionTypes";
 import { UserInputEvent } from "../editing/UserInputEvents";
-import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
+import { EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
 import { InstructionGroup } from "../InstructionGroup";

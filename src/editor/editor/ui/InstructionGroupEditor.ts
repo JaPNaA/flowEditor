@@ -64,7 +64,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
      */
     public updateAfterMove() {
         this.updateAfterMoveNoParentPropagation();
-        for (const parent of this.instructionGroup._parentGroups) {
+        for (const parent of this.instructionGroup.parentGroups) {
             parent.editor.updateAfterMoveNoParentPropagation();
         }
     }
@@ -319,7 +319,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         let xEnd = this.rect.rightX();
         let yEnd = this.rect.bottomY();
 
-        for (const child of this.instructionGroup._childGroups) {
+        for (const child of this.instructionGroup.childGroups) {
             const childEditor = child.editor;
             if (childEditor.rect.x < xStart) {
                 xStart = childEditor.rect.x;

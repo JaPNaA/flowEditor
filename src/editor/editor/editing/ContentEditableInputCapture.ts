@@ -2,10 +2,11 @@ import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent, LineOperationEvent } from "./UserInputEvents";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroup } from "../InstructionGroup";
-import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich, singleDiffWithCursor } from "../../utils";
+import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "../../utils";
 import { InstructionLine } from "../instruction/instructionTypes";
 import { Editable } from "./Editable";
-import { AddInstructionAction, EditableEditAction, RemoveInstructionAction, UndoableAction } from "./actions";
+import { AddInstructionAction, EditableEditAction, RemoveInstructionAction } from "./actions/undoableActions";
+import { ActionInstance } from "./actions/ActionBus";
 
 /**
  * `ContentEditableInputCapture` user the 'contentEditable' attribute to
@@ -213,7 +214,7 @@ export class ContentEditableInputCapture {
         }
     }
 
-    public onAction(action: UndoableAction) {
+    public onAction(action: ActionInstance) {
         let group;
 
         if (action instanceof EditableEditAction) {
@@ -402,7 +403,7 @@ class InputCapture {
         this.elm.getHTMLElement().addEventListener("blur", this.blurHandler);
     }
 
-    public onAction(action: UndoableAction) {
+    public onAction(action: ActionInstance) {
         // ignore edit events caused by us
         if (action instanceof EditableEditAction &&
             action.editable === this.activeEditable &&

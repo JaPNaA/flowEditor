@@ -1,7 +1,7 @@
 import { Component, Elm } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { InstructionGroup } from "../editor/InstructionGroup";
 import { Editable } from "../editor/editing/Editable";
-import { UndoLog } from "../editor/editing/actions";
+import { UndoLog } from "../editor/editing/actions/UndoLog";
 
 export class TextOpDialogue extends Component {
     private textarea = new Elm("textarea")

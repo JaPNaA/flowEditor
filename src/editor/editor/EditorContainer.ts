@@ -112,7 +112,7 @@ export class EditorContainer extends Component {
         this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
         this.editor.deserializer.registerDeserializer(plugin.parse);
         if (plugin.analyser) {
-            this.editor.undoLog.onActionPerformed.subscribe(
+            this.editor.actionBus.subscribeAllActions(
                 plugin.analyser.onActionPerformed.bind(plugin.analyser)
             );
         }

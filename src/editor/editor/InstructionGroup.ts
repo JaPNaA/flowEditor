@@ -19,8 +19,8 @@ export class InstructionGroup {
     public readonly block = new InstructionGroupBlock(this);
     /** UI editor for this instruction group. */
     public readonly editor: InstructionGroupEditor;
-    public readonly _childGroups: InstructionGroup[] = [];
-    public readonly _parentGroups: InstructionGroup[] = [];
+    public readonly childGroups: InstructionGroup[] = [];
+    public readonly parentGroups: InstructionGroup[] = [];
 
     public _isStartGroup = false;
 
@@ -39,15 +39,15 @@ export class InstructionGroup {
 
     public relinkParentsToFinalBranch() {
         let newTarget: InstructionGroup | null = null;
-        for (let i = this._childGroups.length - 1; i >= 0; i--) {
-            if (this._childGroups[i] !== this) {
-                newTarget = this._childGroups[i];
+        for (let i = this.childGroups.length - 1; i >= 0; i--) {
+            if (this.childGroups[i] !== this) {
+                newTarget = this.childGroups[i];
             }
         }
 
         // loop backwards since we're removing our parents
-        for (let i = this._parentGroups.length - 1; i >= 0; i--) {
-            const parent = this._parentGroups[i];
+        for (let i = this.parentGroups.length - 1; i >= 0; i--) {
+            const parent = this.parentGroups[i];
             for (const block of parent.block.children) {
                 const instruction = block.instruction;
                 if (!instruction || !instruction.isBranch()) { continue; }

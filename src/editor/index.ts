@@ -7,7 +7,7 @@ import { Editor } from "./editor/Editor";
 import { EditorContainer } from "./editor/EditorContainer";
 import { EditorSaveData } from "./editor/EditorSaveData";
 import { InstructionGroup } from "./editor/InstructionGroup";
-import { UndoableAction } from "./editor/editing/actions";
+import { UndoableAction } from "./editor/editing/actions/undoableActions";
 import { ExecuterContainer } from "./executer/ExecuterContainer";
 import { ModalContainer } from "./modals/ModalContainer";
 import { NullProject } from "./project/NullProject";

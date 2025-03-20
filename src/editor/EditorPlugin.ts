@@ -1,12 +1,13 @@
 import { Editor } from "./editor/Editor";
 import { InstructionGroup } from "./editor/InstructionGroup";
 import { AutoCompleteSuggester } from "./editor/editing/AutoComplete";
-import { UndoableAction } from "./editor/editing/actions";
+import { UndoableAction } from "./editor/editing/actions/undoableActions";
 import { InstructionBlueprintMin } from "./editor/instruction/InstructionBlueprintRegistery";
 import { Instruction } from "./editor/instruction/instructionTypes";
 import { Project } from "./project/Project";
 import { JaPNaAEngine2d } from "../japnaaEngine2d/JaPNaAEngine2d";
 import { Executer } from "../executer/Executer";
+import { ActionInstance } from "./editor/editing/actions/ActionBus";
 
 
 export interface EditorPlugin {
@@ -37,6 +38,6 @@ export interface PluginRenderer {
 
 export interface PluginAnalyser {
     onFlowLoad(editor: Editor): void;
-    onActionPerformed(action: UndoableAction): void;
+    onActionPerformed(action: ActionInstance): void;
     dispose(): void;
 }

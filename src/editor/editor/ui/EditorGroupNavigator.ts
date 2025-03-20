@@ -47,7 +47,7 @@ export class EditorGroupNavigator {
         this.ensureFocusGroup();
         if (!this.focusGroup) { return; }
 
-        const children = this.focusGroup._childGroups;
+        const children = this.focusGroup.childGroups;
 
         if (children.length) {
             this.siblings = children;
@@ -60,7 +60,7 @@ export class EditorGroupNavigator {
         this.ensureFocusGroup();
         if (!this.focusGroup) { return; }
 
-        const parentsArr = this.focusGroup._parentGroups;
+        const parentsArr = this.focusGroup.parentGroups;
 
         if (parentsArr.length) {
             this.siblings = parentsArr;
@@ -90,7 +90,7 @@ export class EditorGroupNavigator {
     }
 
     private homeHandler(event: KeyboardEvent) {
-        this.focus(this.parent._startGroup);
+        this.focus(this.parent.getStartGroup());
     }
 
     private endHandler(event: KeyboardEvent) {

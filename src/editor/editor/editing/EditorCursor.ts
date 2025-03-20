@@ -3,7 +3,7 @@ import { InstructionGroup } from "../InstructionGroup";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
 import { ContentEditableInputCapture } from "./ContentEditableInputCapture";
-import { UndoableAction } from "./actions";
+import { ActionInstance } from "./actions/ActionBus";
 
 export class EditorCursor extends Elm<"span"> {
     public autocomplete = new AutoComplete();
@@ -146,7 +146,7 @@ export class EditorCursor extends Elm<"span"> {
         };
     }
 
-    public onAction(action: UndoableAction) {
+    public onAction(action: ActionInstance) {
         this.inputCapture.onAction(action);
     }
 

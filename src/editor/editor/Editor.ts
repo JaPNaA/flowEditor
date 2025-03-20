@@ -2,7 +2,7 @@ import { InstructionGroup } from "./InstructionGroup";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
 import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorCursor } from "./editing/EditorCursor";
-import { AddGroupAction, MarkGroupAsStartAction, RemoveGroupAction, UndoLog } from "./editing/actions";
+import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, MarkGroupAsStartAction, RemoveGroupAction, RemoveInstructionAction } from "./editing/actions/undoableActions";
 import { GridBackground } from "./ui/GridBackground";
 import { EditorGroupNavigator } from "./ui/EditorGroupNavigator";
 import { appHooks, pluginHooks } from "../index";
@@ -15,10 +15,14 @@ import { TextOpDialogue } from "../modals/TextOpDialogue";
 import { EditorSaveData } from "./EditorSaveData";
 import { newInstructionData } from "./toolchain/flowToInstructionData";
 import { InstructionGroupEditor } from "./ui/InstructionGroupEditor";
+import { ActionBusDispatchable } from "./editing/actions/ActionBus";
+import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray";
+import { UndoLog } from "./editing/actions/UndoLog";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
-    public undoLog = new UndoLog();
+    public actionBus = new ActionBusDispatchable();
+    public undoLog = new UndoLog(this.actionBus);
     public smoothCamera = new SmoothCamera();
     public blueprintRegistery = new InstructionBlueprintRegistery();
     public deserializer = new InstructionDeserializer();
@@ -26,12 +30,9 @@ export class Editor extends WorldElmWithComponents {
 
     private nonGroupEditorChildren = this.addComponent(new ParentComponent());
 
-    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _groupEditors: InstructionGroup[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
-    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _children = this.addComponent(new QuadtreeParentComponent());
-    /** DO NOT MUTATE OUTSIDE `UndoableAction` */
-    public _startGroup?: InstructionGroup;
+    private groupEditors: InstructionGroup[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
+    private children = this.addComponent(new QuadtreeParentComponent());
+    private startGroup?: InstructionGroup;
 
 
     /**
@@ -79,13 +80,140 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.cursor.onClickGroup, group => this.handleClickGroup(group));
         this.subscriptions.subscribe(this.cursor.onInput, () => this.dirty = true);
 
+        this.actionBus.subscribe(AddGroupAction, action => {
+            this.groupEditors.push(action.group);
+            this.children.addChild(action.group.editor);
 
-        this.undoLog.onActionPerformed.subscribe(action => this.cursor.onAction(action));
+            // add parent-child relations
+            for (const child of action.group.childGroups) {
+                child.parentGroups.push(action.group);
+            }
+            for (const parent of action.group.parentGroups) {
+                parent.childGroups.push(action.group);
+            }
+        });
+
+        this.actionBus.subscribe(RemoveGroupAction, action => {
+            removeElmFromArray(action.group, this.groupEditors);
+            this.children.removeChild(action.group.editor);
+            this.cursor.unregisterGroupEditor(action.group);
+
+            // remove parent-child relations
+            for (const child of action.group.childGroups) {
+                removeElmFromArray(action.group, child.parentGroups);
+            }
+            for (const parent of action.group.parentGroups) {
+                removeElmFromArray(action.group, parent.childGroups);
+            }
+        });
+
+        this.actionBus.subscribe(MarkGroupAsStartAction, action => {
+            if (this.startGroup) {
+                this.startGroup._isStartGroup = false;
+            }
+            this.startGroup = action.group;
+            if (this.startGroup) {
+                this.startGroup._isStartGroup = true;
+            }
+        });
+
+        this.actionBus.subscribe(AddInstructionAction, action => {
+            const group = action.parentBlock.getGroup();
+            action.parentBlock._insertBlock(action.relativeIndex, action.block);
+
+            if (group) {
+                const nextLineIndex = group.locateLine(action.block.getLine(action.block.numLines - 1)) + 1;
+
+                // insert into html
+                if (nextLineIndex < group.numLines) {
+                    const nextLineElm = group.getLine(nextLineIndex).elm.getHTMLElement();
+
+                    for (const line of action.block.lineIter()) {
+                        group.group.editor.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
+                    }
+                } else {
+                    for (const line of action.block.lineIter()) {
+                        group.group.editor.elm.append(line);
+                    }
+                }
+
+                for (const line of action.block.lineIter()) {
+                    for (const editable of line.getEditables()) {
+                        group.group.parentEditor.cursor.autocomplete.enteredValue(editable);
+                    }
+                }
+
+                group.group.editor.updateHeight();
+            }
+        });
+
+        this.actionBus.subscribe(RemoveInstructionAction, action => {
+            const instruction = action.block.children[action.relativeIndex];
+
+            action.block._removeBlock(action.relativeIndex);
+
+            const group = action.block.getGroup();
+
+            if (group) {
+                for (const line of instruction.lineIter()) {
+                    group.group.editor._removeInstructionLine(line);
+                    for (const editable of line.getEditables()) {
+                        group.group.parentEditor.cursor.autocomplete.removedValue(editable);
+                    }
+                }
+                group.group.editor.updateHeight();
+            }
+        });
+
+        this.actionBus.subscribe(BranchTargetChangeAction, action => {
+            const groupBlock = action.branchLine.parentBlock.getGroup();
+            if (!groupBlock) { throw new Error("No group editor"); }
+            const group = groupBlock.group;
+
+            // remove parent/child relation
+            if (action.previousBranchTarget) {
+                removeElmFromArray(
+                    action.previousBranchTarget,
+                    group.childGroups
+                );
+                removeElmFromArray(
+                    group,
+                    action.previousBranchTarget.parentGroups
+                );
+            }
+
+            // update instruction
+            action.branchLine.branchTarget = action.branchTarget;
+            action.branchLine._updateElmState();
+
+            // update parent/child relations
+            if (action.branchTarget) {
+                action.branchTarget.parentGroups.push(group);
+                group.childGroups.push(action.branchTarget);
+            }
+
+            // update render hitboxes
+            group.editor.updateAfterMove();
+        });
+
+        this.actionBus.subscribe(EditableEditAction, action => {
+            const autocomplete = action.editable.parentLine.parentBlock.getGroup()?.group.parentEditor.cursor.autocomplete;
+
+            if (autocomplete) { autocomplete.removedValue(action.editable); }
+            action.previousValue = action.editable._value;
+            action.editable._value = action.newValue;
+            action.editable.isPlaceholder = false;
+            if (autocomplete) { autocomplete.enteredValue(action.editable); }
+
+            action.editable.update();
+        });
+
+        this.actionBus.subscribeAllActions(action => this.cursor.onAction(action));
         this.undoLog.onAfterAllActionsPerformed.subscribe(() => this.engine.ticker.requestTick());
     }
 
     public getGroups(): ReadonlyArray<InstructionGroup> {
-        return this._groupEditors;
+        return this.groupEditors;
     }
 
     public _setEngine(engine: JaPNaAEngine2d): void {
@@ -274,7 +402,7 @@ export class Editor extends WorldElmWithComponents {
     public setEditMode() {
         if (this.editMode) { return; }
         this.cursor.focus();
-        for (const group of this._groupEditors) {
+        for (const group of this.groupEditors) {
             group.editor.setEditMode();
         }
         this.editMode = true;
@@ -293,7 +421,7 @@ export class Editor extends WorldElmWithComponents {
         this.cursor.unfocus();
         this.unsetTempEditMode();
         if (!this.editMode) { return; }
-        for (const group of this._groupEditors) {
+        for (const group of this.groupEditors) {
             group.editor.unsetEditMode();
         }
         this.editMode = false;
@@ -340,7 +468,7 @@ export class Editor extends WorldElmWithComponents {
 
     private addGroupHandler() {
         const newData = newInstructionData();
-        if (this._groupEditors.length === 0) {
+        if (this.groupEditors.length === 0) {
             newData.x = 8;
             newData.y = 24;
         } else {
@@ -361,8 +489,8 @@ export class Editor extends WorldElmWithComponents {
             char: 0
         });
 
-        if (this._groupEditors.length === 1) {
-            this.markGroupAsStart(this._groupEditors[0]);
+        if (this.groupEditors.length === 1) {
+            this.markGroupAsStart(this.groupEditors[0]);
         }
         this.handleClickGroup(newEditor);
         this.undoLog.endGroup();
@@ -445,7 +573,7 @@ export class Editor extends WorldElmWithComponents {
         // todo: make this better
         // wait for render()
         setTimeout(() => {
-            for (const group of this._groupEditors) {
+            for (const group of this.groupEditors) {
                 for (const line of group.block.lineIter()) {
                     for (const editable of line.getEditables()) {
                         if (editable.autoCompleteType) {
@@ -478,20 +606,24 @@ export class Editor extends WorldElmWithComponents {
 
     public markGroupAsStart(group: InstructionGroup) {
         this.undoLog.startGroup();
-        this.undoLog.perform(new MarkGroupAsStartAction(group, this));
+        this.undoLog.perform(new MarkGroupAsStartAction(group, this.startGroup, this));
         this.undoLog.endGroup();
         this.engine.ticker.requestTick();
+    }
+
+    public getStartGroup(): InstructionGroup | undefined {
+        return this.startGroup;
     }
 
     public serialize(): EditorSaveData {
         const uidGen = new UIDGenerator();
         const elms = [];
-        for (const groupEditor of this._groupEditors) {
+        for (const groupEditor of this.groupEditors) {
             elms.push(groupEditor.serialize(uidGen));
         }
         return {
             elms: elms,
-            startGroup: this._startGroup && uidGen.getId(this._startGroup)
+            startGroup: this.startGroup && uidGen.getId(this.startGroup)
         };
     }
 
@@ -502,11 +634,11 @@ export class Editor extends WorldElmWithComponents {
         const groupInstructions: Instruction[][] = [];
         let index = 0;
 
-        if (!this._startGroup) { throw new Error("No start group specified."); }
+        if (!this.startGroup) { throw new Error("No start group specified."); }
 
-        const groupEditors = [this._startGroup];
-        for (const editor of this._groupEditors) {
-            if (editor !== this._startGroup) {
+        const groupEditors = [this.startGroup];
+        for (const editor of this.groupEditors) {
+            if (editor !== this.startGroup) {
                 groupEditors.push(editor);
             }
         }
@@ -559,7 +691,7 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public openTextOp() {
-        this.textOpDialogue.setEditablesFromGroups(this.undoLog, this._groupEditors);
+        this.textOpDialogue.setEditablesFromGroups(this.undoLog, this.groupEditors);
         appHooks.showModal(this.textOpDialogue);
     }
 }

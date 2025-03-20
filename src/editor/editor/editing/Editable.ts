@@ -1,7 +1,7 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent } from "./UserInputEvents";
 import { InstructionLine } from "../instruction/instructionTypes";
-import { EditableEditAction } from "./actions";
+import { EditableEditAction } from "./actions/undoableActions";
 
 export class Editable extends Elm<"span"> {
     public onChange = new EventBus<string>();
@@ -38,7 +38,7 @@ export class Editable extends Elm<"span"> {
         const group = groupBlock.group;
         this.onChange.send(value);
         group.parentEditor.undoLog.perform(
-            new EditableEditAction(this, value)
+            new EditableEditAction(this, value, this._value)
         );
     }
 

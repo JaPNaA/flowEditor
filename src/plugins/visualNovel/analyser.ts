@@ -1,6 +1,6 @@
 import { Editor } from "../../editor/editor/Editor";
 import { InstructionGroup } from "../../editor/editor/InstructionGroup";
-import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, RemoveGroupAction, RemoveInstructionAction, UndoableAction } from "../../editor/editor/editing/actions";
+import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, RemoveGroupAction, RemoveInstructionAction, UndoableAction } from "../../editor/editor/editing/actions/undoableActions";
 import { PluginAnalyser } from "../../editor/EditorPlugin";
 import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel";
 
@@ -26,7 +26,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
                     }
                 }
             }
-            for (const child of group._childGroups) {
+            for (const child of group.childGroups) {
                 const existing = this.groupStartContexts.get(child);
                 if (existing && context && !this.equalContext(existing, context)) {
                     // already set -- is conflict
@@ -52,7 +52,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
                 }
             }
             if (fallsOver) {
-                for (const child of group._childGroups) {
+                for (const child of group.childGroups) {
                     const existing = this.groupStartContexts.get(child);
                     if (existing && !this.equalContext(existing, context)) {
                         // already set -- is conflict
@@ -119,7 +119,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
                 }
             }
         } else if (action instanceof RemoveInstructionAction) {
-            if (action.removedInstruction instanceof VNContentInstrOneLine && action.removedInstruction.contextSet) {
+            if (action.removedBlock instanceof VNContentInstrOneLine && action.removedBlock.contextSet) {
                 const group = action.block.getGroup();
                 if (group) {
                     this.propagateContext(
@@ -137,7 +137,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
                 this.updateGroupStart(action.branchTarget);
             }
         } else if (action instanceof RemoveGroupAction || action instanceof AddGroupAction) {
-            for (const child of action.group._childGroups) {
+            for (const child of action.group.childGroups) {
                 this.updateGroupStart(child);
             }
         }
@@ -145,7 +145,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
 
     private updateGroupStart(group: InstructionGroup) {
         let startContext: Context | undefined;
-        for (const parent of group._parentGroups) {
+        for (const parent of group.parentGroups) {
             if (startContext) {
                 const context = this.getGroupEnd(parent);
                 if (context && !this.equalContext(startContext, context)) {
@@ -197,7 +197,7 @@ export class VisualNovelAnalyser implements PluginAnalyser {
             }
         }
 
-        for (const child of group._childGroups) {
+        for (const child of group.childGroups) {
             if (this.visitedGroupsSet.has(group)) { continue; }
             this.visitedGroupsSet.add(group);
             this.updateGroupStart(child);

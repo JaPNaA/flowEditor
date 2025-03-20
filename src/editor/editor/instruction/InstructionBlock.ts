@@ -1,5 +1,5 @@
 import { InstructionGroup } from "../InstructionGroup";
-import { AddInstructionAction, RemoveInstructionAction } from "../editing/actions";
+import { AddInstructionAction, RemoveInstructionAction } from "../editing/actions/undoableActions";
 import { Instruction, InstructionLine } from "./instructionTypes";
 
 /**
@@ -197,7 +197,7 @@ export class CompositeInstructionBlock implements InstructionBlock {
         const editor = this.getGroup();
         if (!editor) { throw new Error("No editor attached"); }
         editor.group.parentEditor.undoLog.perform(
-            new RemoveInstructionAction(index, this)
+            new RemoveInstructionAction(index, this.children[index], this)
         );
     }
 

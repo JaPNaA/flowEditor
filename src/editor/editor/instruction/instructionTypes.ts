@@ -2,7 +2,7 @@ import { appHooks } from "../../index";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { Editable } from "../editing/Editable";
 import { InstructionGroup } from "../InstructionGroup";
-import { BranchTargetChangeAction } from "../editing/actions";
+import { BranchTargetChangeAction } from "../editing/actions/undoableActions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
 
 export abstract class Instruction {
@@ -454,7 +454,7 @@ export abstract class BranchInstructionLine extends InstructionLine {
         if (!editor) { throw new Error("No editor attached"); }
         editor.undoLog.startGroup();
         editor.undoLog.perform(
-            new BranchTargetChangeAction(target, this)
+            new BranchTargetChangeAction(target, this.branchTarget, this)
         );
         editor.undoLog.endGroup();
     }
