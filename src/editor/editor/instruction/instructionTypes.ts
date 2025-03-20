@@ -2,8 +2,10 @@ import { appHooks } from "../../index";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { Editable } from "../editing/Editable";
 import { InstructionGroup } from "../InstructionGroup";
-import { BranchTargetChangeAction } from "../editing/actions/undoableActions";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
+import { ActionBusDispatchable } from "../editing/actions/ActionBus";
+import { UndoableAction } from "../editing/actions/UndoableAction";
+import { removeElmFromArray } from "../../../japnaaEngine2d/util/removeElmFromArray";
 
 export abstract class Instruction {
     /** Block containing the instruction's lines. Only to be used by InstructionBlock and this class. */
@@ -179,7 +181,7 @@ export abstract class InstructionLine extends Component {
                 charIndex -= area.length;
                 // not <= to account for the possibility we have the
                 // charIndex at the start (charIndex = 0) of the next Editable
-                if (charIndex < 0) { 
+                if (charIndex < 0) {
                     if (backwardsFirst) {
                         return editableIndex - 1;
                     } else {
@@ -403,6 +405,8 @@ export abstract class BranchInstructionLine extends InstructionLine {
     public branchTarget: InstructionGroup | null = null;
     public branchOffset: number = 0;
 
+    public actionBus = new ActionBusDispatchable();
+
     private branchConnectElm = new Elm()
         .class("branchConnect").attribute("contenteditable", "false")
         .on("click", () => {
@@ -413,7 +417,38 @@ export abstract class BranchInstructionLine extends InstructionLine {
 
     constructor() {
         super();
-        this._updateElmState();
+        this.updateElmState();
+
+        this.actionBus.subscribe(BranchTargetChangeAction, action => {
+            const groupBlock = action.branchLine.parentBlock.getGroup();
+            if (!groupBlock) { throw new Error("No group editor"); }
+            const group = groupBlock.group;
+
+            // remove parent/child relation
+            if (action.previousBranchTarget) {
+                removeElmFromArray(
+                    action.previousBranchTarget,
+                    group.childGroups
+                );
+                removeElmFromArray(
+                    group,
+                    action.previousBranchTarget.parentGroups
+                );
+            }
+
+            // update instruction
+            action.branchLine.branchTarget = action.branchTarget;
+            action.branchLine.updateElmState();
+
+            // update parent/child relations
+            if (action.branchTarget) {
+                action.branchTarget.parentGroups.push(group);
+                group.childGroups.push(action.branchTarget);
+            }
+
+            // update render hitboxes
+            group.editor.updateAfterMove();
+        });
     }
 
     public reset(): void {
@@ -436,15 +471,6 @@ export abstract class BranchInstructionLine extends InstructionLine {
         return this.branchTarget;
     }
 
-    /** DO NOT CALL OUTSIDE OF `UndoableAction` or `BranchInstructionLine` */
-    public _updateElmState() {
-        if (this.branchTarget) {
-            this.elm.removeClass("hanging");
-        } else {
-            this.elm.class("hanging");
-        }
-    }
-
     public setBranchOffset(branchOffset: number) {
         this.branchOffset = branchOffset;
     }
@@ -457,5 +483,32 @@ export abstract class BranchInstructionLine extends InstructionLine {
             new BranchTargetChangeAction(target, this.branchTarget, this)
         );
         editor.undoLog.endGroup();
+    }
+
+    private updateElmState() {
+        if (this.branchTarget) {
+            this.elm.removeClass("hanging");
+        } else {
+            this.elm.class("hanging");
+        }
+    }
+}
+
+export class BranchTargetChangeAction implements UndoableAction {
+    public static key = Symbol();
+    public key = BranchTargetChangeAction.key;
+
+    constructor(
+        public branchTarget: InstructionGroup | null,
+        public previousBranchTarget: InstructionGroup | null,
+        public branchLine: BranchInstructionLine
+    ) { }
+
+    public getTarget(): ActionBusDispatchable {
+        return this.branchLine.actionBus;
+    }
+
+    public inverse(): UndoableAction {
+        return new BranchTargetChangeAction(this.previousBranchTarget, this.branchTarget, this.branchLine);
     }
 }

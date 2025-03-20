@@ -1,6 +1,9 @@
-import { Editor } from "../../editor/editor/Editor";
+import { UndoableAction } from "../../editor/editor/editing/actions/UndoableAction";
+import { EditableEditAction } from "../../editor/editor/editing/Editable";
+import { AddGroupAction, Editor, RemoveGroupAction } from "../../editor/editor/Editor";
+import { AddInstructionAction, RemoveInstructionAction } from "../../editor/editor/instruction/InstructionBlock";
+import { BranchTargetChangeAction } from "../../editor/editor/instruction/instructionTypes";
 import { InstructionGroup } from "../../editor/editor/InstructionGroup";
-import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, RemoveGroupAction, RemoveInstructionAction, UndoableAction } from "../../editor/editor/editing/actions/undoableActions";
 import { PluginAnalyser } from "../../editor/EditorPlugin";
 import { VNContentInstrOneLine, VNInstructionContext } from "./visualNovel";
 

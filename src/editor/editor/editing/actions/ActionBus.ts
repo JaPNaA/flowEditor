@@ -46,6 +46,11 @@ export interface ActionClass<T extends ActionInstance> {
 
 export interface ActionInstance {
     key: symbol;
+
+    /**
+     * Gets the action bus to recieve this action.
+     */
+    getTarget(): ActionBusDispatchable;
 }
 
 export interface ActionBus {

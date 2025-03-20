@@ -1,5 +1,6 @@
 import { InstructionGroup } from "../InstructionGroup";
-import { AddInstructionAction, RemoveInstructionAction } from "../editing/actions/undoableActions";
+import { ActionBusDispatchable } from "../editing/actions/ActionBus";
+import { UndoableAction } from "../editing/actions/UndoableAction";
 import { Instruction, InstructionLine } from "./instructionTypes";
 
 /**
@@ -122,7 +123,57 @@ export class CompositeInstructionBlock implements InstructionBlock {
     public children: InstructionBlock[] = [];
     public numLines: number = 0;
 
-    constructor(public instruction?: Instruction | undefined) { }
+    public actionBus = new ActionBusDispatchable();
+
+    constructor(public instruction?: Instruction | undefined) {
+        this.actionBus.subscribe(AddInstructionAction, action => {
+            const group = action.parentBlock.getGroup();
+            action.parentBlock._insertBlock(action.relativeIndex, action.block);
+
+            if (group) {
+                const nextLineIndex = group.locateLine(action.block.getLine(action.block.numLines - 1)) + 1;
+
+                // insert into html
+                if (nextLineIndex < group.numLines) {
+                    const nextLineElm = group.getLine(nextLineIndex).elm.getHTMLElement();
+
+                    for (const line of action.block.lineIter()) {
+                        group.group.editor.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
+                    }
+                } else {
+                    for (const line of action.block.lineIter()) {
+                        group.group.editor.elm.append(line);
+                    }
+                }
+
+                for (const line of action.block.lineIter()) {
+                    for (const editable of line.getEditables()) {
+                        group.group.parentEditor.cursor.autocomplete.enteredValue(editable);
+                    }
+                }
+
+                group.group.editor.updateHeight();
+            }
+        });
+
+        this.actionBus.subscribe(RemoveInstructionAction, action => {
+            const instruction = action.block.children[action.relativeIndex];
+
+            action.block._removeBlock(action.relativeIndex);
+
+            const group = action.block.getGroup();
+
+            if (group) {
+                for (const line of instruction.lineIter()) {
+                    group.group.editor._removeInstructionLine(line);
+                    for (const editable of line.getEditables()) {
+                        group.group.parentEditor.cursor.autocomplete.removedValue(editable);
+                    }
+                }
+                group.group.editor.updateHeight();
+            }
+        });
+    }
 
     /** Get line by number relative to this block */
     public getLine(index: number): InstructionLine {
@@ -235,6 +286,44 @@ export class CompositeInstructionBlock implements InstructionBlock {
             curr.numLines -= instruction.numLines;
             curr = curr.parent;
         }
+    }
+}
+
+export class AddInstructionAction implements UndoableAction {
+    public static key = Symbol();
+    public key = AddInstructionAction.key;
+
+    constructor(
+        public block: InstructionBlock,
+        public relativeIndex: number,
+        public parentBlock: CompositeInstructionBlock
+    ) { }
+
+    public getTarget() {
+        return this.parentBlock.actionBus;
+    }
+
+    public inverse(): RemoveInstructionAction {
+        return new RemoveInstructionAction(this.relativeIndex, this.block, this.parentBlock);
+    }
+}
+
+export class RemoveInstructionAction implements UndoableAction {
+    public static key = Symbol();
+    public key = RemoveInstructionAction.key
+
+    constructor(
+        public relativeIndex: number,
+        public removedBlock: InstructionBlock,
+        public block: CompositeInstructionBlock
+    ) { }
+
+    public getTarget(): ActionBusDispatchable {
+        return this.block.actionBus;
+    }
+
+    public inverse(): AddInstructionAction {
+        return new AddInstructionAction(this.removedBlock, this.relativeIndex, this.block);
     }
 }
 

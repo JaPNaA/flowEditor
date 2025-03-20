@@ -4,9 +4,9 @@ import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroup } from "../InstructionGroup";
 import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "../../utils";
 import { InstructionLine } from "../instruction/instructionTypes";
-import { Editable } from "./Editable";
-import { AddInstructionAction, EditableEditAction, RemoveInstructionAction } from "./actions/undoableActions";
+import { Editable, EditableEditAction } from "./Editable";
 import { ActionInstance } from "./actions/ActionBus";
+import { AddInstructionAction, RemoveInstructionAction } from "../instruction/InstructionBlock";
 
 /**
  * `ContentEditableInputCapture` user the 'contentEditable' attribute to

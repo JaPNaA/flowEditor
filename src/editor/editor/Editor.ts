@@ -2,7 +2,7 @@ import { InstructionGroup } from "./InstructionGroup";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
 import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorCursor } from "./editing/EditorCursor";
-import { AddGroupAction, AddInstructionAction, BranchTargetChangeAction, EditableEditAction, MarkGroupAsStartAction, RemoveGroupAction, RemoveInstructionAction } from "./editing/actions/undoableActions";
+import { UndoableAction } from "./editing/actions/UndoableAction";
 import { GridBackground } from "./ui/GridBackground";
 import { EditorGroupNavigator } from "./ui/EditorGroupNavigator";
 import { appHooks, pluginHooks } from "../index";
@@ -22,7 +22,8 @@ import { UndoLog } from "./editing/actions/UndoLog";
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
     public actionBus = new ActionBusDispatchable();
-    public undoLog = new UndoLog(this.actionBus);
+    public allActionBus = new ActionBusDispatchable();
+    public undoLog = new UndoLog(this.allActionBus);
     public smoothCamera = new SmoothCamera();
     public blueprintRegistery = new InstructionBlueprintRegistery();
     public deserializer = new InstructionDeserializer();
@@ -117,98 +118,7 @@ export class Editor extends WorldElmWithComponents {
             }
         });
 
-        this.actionBus.subscribe(AddInstructionAction, action => {
-            const group = action.parentBlock.getGroup();
-            action.parentBlock._insertBlock(action.relativeIndex, action.block);
-
-            if (group) {
-                const nextLineIndex = group.locateLine(action.block.getLine(action.block.numLines - 1)) + 1;
-
-                // insert into html
-                if (nextLineIndex < group.numLines) {
-                    const nextLineElm = group.getLine(nextLineIndex).elm.getHTMLElement();
-
-                    for (const line of action.block.lineIter()) {
-                        group.group.editor.elm.getHTMLElement().insertBefore(line.elm.getHTMLElement(), nextLineElm);
-                    }
-                } else {
-                    for (const line of action.block.lineIter()) {
-                        group.group.editor.elm.append(line);
-                    }
-                }
-
-                for (const line of action.block.lineIter()) {
-                    for (const editable of line.getEditables()) {
-                        group.group.parentEditor.cursor.autocomplete.enteredValue(editable);
-                    }
-                }
-
-                group.group.editor.updateHeight();
-            }
-        });
-
-        this.actionBus.subscribe(RemoveInstructionAction, action => {
-            const instruction = action.block.children[action.relativeIndex];
-
-            action.block._removeBlock(action.relativeIndex);
-
-            const group = action.block.getGroup();
-
-            if (group) {
-                for (const line of instruction.lineIter()) {
-                    group.group.editor._removeInstructionLine(line);
-                    for (const editable of line.getEditables()) {
-                        group.group.parentEditor.cursor.autocomplete.removedValue(editable);
-                    }
-                }
-                group.group.editor.updateHeight();
-            }
-        });
-
-        this.actionBus.subscribe(BranchTargetChangeAction, action => {
-            const groupBlock = action.branchLine.parentBlock.getGroup();
-            if (!groupBlock) { throw new Error("No group editor"); }
-            const group = groupBlock.group;
-
-            // remove parent/child relation
-            if (action.previousBranchTarget) {
-                removeElmFromArray(
-                    action.previousBranchTarget,
-                    group.childGroups
-                );
-                removeElmFromArray(
-                    group,
-                    action.previousBranchTarget.parentGroups
-                );
-            }
-
-            // update instruction
-            action.branchLine.branchTarget = action.branchTarget;
-            action.branchLine._updateElmState();
-
-            // update parent/child relations
-            if (action.branchTarget) {
-                action.branchTarget.parentGroups.push(group);
-                group.childGroups.push(action.branchTarget);
-            }
-
-            // update render hitboxes
-            group.editor.updateAfterMove();
-        });
-
-        this.actionBus.subscribe(EditableEditAction, action => {
-            const autocomplete = action.editable.parentLine.parentBlock.getGroup()?.group.parentEditor.cursor.autocomplete;
-
-            if (autocomplete) { autocomplete.removedValue(action.editable); }
-            action.previousValue = action.editable._value;
-            action.editable._value = action.newValue;
-            action.editable.isPlaceholder = false;
-            if (autocomplete) { autocomplete.enteredValue(action.editable); }
-
-            action.editable.update();
-        });
-
-        this.actionBus.subscribeAllActions(action => this.cursor.onAction(action));
+        this.allActionBus.subscribeAllActions(action => this.cursor.onAction(action));
         this.undoLog.onAfterAllActionsPerformed.subscribe(() => this.engine.ticker.requestTick());
     }
 
@@ -710,6 +620,56 @@ class DummyText extends WorldElm {
     public remove(): void {
         super.remove();
         this.elm.remove();
+    }
+}
+
+export class AddGroupAction implements UndoableAction {
+    public static key = Symbol();
+    public key = AddGroupAction.key;
+
+    constructor(public group: InstructionGroup, public editor: Editor) { }
+
+    public getTarget(): ActionBusDispatchable {
+        return this.editor.actionBus;
+    }
+
+    public inverse(): RemoveGroupAction {
+        return new RemoveGroupAction(this.group, this.editor);
+    }
+}
+
+export class RemoveGroupAction implements UndoableAction {
+    public static key = Symbol();
+    public key = RemoveGroupAction.key;
+
+    constructor(public group: InstructionGroup, public editor: Editor) { }
+
+    public getTarget(): ActionBusDispatchable {
+        return this.editor.actionBus;
+    }
+
+    public inverse(): AddGroupAction {
+        return new AddGroupAction(this.group, this.editor);
+    }
+}
+
+
+export class MarkGroupAsStartAction implements UndoableAction {
+    public static key = Symbol();
+    public key = MarkGroupAsStartAction.key;
+
+    constructor(
+        public group: InstructionGroup | undefined,
+        public previousStartGroup: InstructionGroup | undefined,
+        public editor: Editor
+    ) { }
+
+    public getTarget(): ActionBusDispatchable {
+        return this.editor.actionBus;
+    }
+
+    public inverse(): MarkGroupAsStartAction {
+        return new MarkGroupAsStartAction(this.previousStartGroup, this.group, this.editor);
     }
 }
 

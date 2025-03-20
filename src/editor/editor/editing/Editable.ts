@@ -1,7 +1,8 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { UserInputEvent } from "./UserInputEvents";
 import { InstructionLine } from "../instruction/instructionTypes";
-import { EditableEditAction } from "./actions/undoableActions";
+import { UndoableAction } from "./actions/UndoableAction";
+import { ActionBusDispatchable } from "./actions/ActionBus";
 
 export class Editable extends Elm<"span"> {
     public onChange = new EventBus<string>();
@@ -17,28 +18,41 @@ export class Editable extends Elm<"span"> {
      */
     public isPlaceholder?: boolean;
 
-    /** DO NOT MUTATE OUTSIDE OF `UndoableAction` */
-    public _value: string;
+    public actionBus = new ActionBusDispatchable();
+
+    private value: string;
 
     constructor(initialText: string, public parentLine: InstructionLine) {
         super("span");
         this.class("editable");
         this.append(initialText);
-        this._value = initialText;
+        this.value = initialText;
+
+        this.actionBus.subscribe(EditableEditAction, action => {
+            const autocomplete = action.editable.parentLine.parentBlock.getGroup()?.group.parentEditor.cursor.autocomplete;
+
+            if (autocomplete) { autocomplete.removedValue(action.editable); }
+            action.previousValue = action.editable.value;
+            action.editable.value = action.newValue;
+            action.editable.isPlaceholder = false;
+            if (autocomplete) { autocomplete.enteredValue(action.editable); }
+
+            action.editable.update();
+        });
     }
 
     public getValue(): string {
-        return this._value;
+        return this.value;
     }
 
     public setValue(value: string) {
-        if (this._value === value) { return; }
+        if (this.value === value) { return; }
         const groupBlock = this.parentLine.parentBlock.getGroup();
         if (!groupBlock) { return; }
         const group = groupBlock.group;
         this.onChange.send(value);
         group.parentEditor.undoLog.perform(
-            new EditableEditAction(this, value, this._value)
+            new EditableEditAction(this, value, this.value)
         );
     }
 
@@ -53,8 +67,27 @@ export class Editable extends Elm<"span"> {
     }
 
     public update() {
-        if (this.elm.textContent !== this._value) {
-            this.replaceContents(this._value);
+        if (this.elm.textContent !== this.value) {
+            this.replaceContents(this.value);
         }
+    }
+}
+
+export class EditableEditAction implements UndoableAction {
+    public static key = Symbol();
+    public key = EditableEditAction.key;
+
+    constructor(
+        public editable: Editable,
+        public newValue: string,
+        public previousValue: string
+    ) { }
+
+    public getTarget(): ActionBusDispatchable {
+        return this.editable.actionBus;
+    }
+
+    public inverse(): EditableEditAction {
+        return new EditableEditAction(this.editable, this.previousValue, this.newValue);
     }
 }

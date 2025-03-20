@@ -1,7 +1,7 @@
 import { Editor } from "./editor/Editor";
 import { InstructionGroup } from "./editor/InstructionGroup";
 import { AutoCompleteSuggester } from "./editor/editing/AutoComplete";
-import { UndoableAction } from "./editor/editing/actions/undoableActions";
+import { UndoableAction } from "./editor/editing/actions/UndoableAction";
 import { InstructionBlueprintMin } from "./editor/instruction/InstructionBlueprintRegistery";
 import { Instruction } from "./editor/instruction/instructionTypes";
 import { Project } from "./project/Project";
