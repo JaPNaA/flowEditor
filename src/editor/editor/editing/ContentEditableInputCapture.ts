@@ -45,8 +45,7 @@ export class ContentEditableInputCapture {
     /** Fired when no editables are in focus */
     public unfocusHandler?: () => void;
 
-    public _lastSelectionAnchor?: Node;
-    public _lastSelectionOffset?: number;
+    public _lastFloatingPosition?: FloatingPosition;
     public lastPositionStart?: EditorCursorPositionAbsolute;
     public lastPositionEnd?: EditorCursorPositionAbsolute;
 
@@ -97,23 +96,28 @@ export class ContentEditableInputCapture {
             if (this.isCompositing) { return; }
             const selection = getSelection();
 
+
             if (selection && selection.anchorNode) {
+                const floatingPosition = this.domPositionToFloating(selection.anchorNode, selection.anchorOffset);
+
                 // set this.cursorMovingBackwards
-                if (this._lastSelectionAnchor) {
-                    const compared = selection.anchorNode.compareDocumentPosition(this._lastSelectionAnchor);
-                    if (compared & Node.DOCUMENT_POSITION_FOLLOWING) {
-                        this.cursorMovingBackwards = true;
-                    } else if (compared & Node.DOCUMENT_POSITION_PRECEDING) {
+                if (this._lastFloatingPosition && floatingPosition) {
+                    if (floatingPosition.group !== this._lastFloatingPosition.group) { return; }
+
+                    if (floatingPosition.lineNumber > this._lastFloatingPosition.lineNumber) {
                         this.cursorMovingBackwards = false;
-                    } else if (this._lastSelectionOffset! < selection.anchorOffset) {
-                        this.cursorMovingBackwards = false;
-                    } else if (this._lastSelectionOffset! > selection.anchorOffset) {
+                    } else if (floatingPosition.lineNumber < this._lastFloatingPosition.lineNumber) {
                         this.cursorMovingBackwards = true;
+                    } else {
+                        if (floatingPosition.offsetFromLine > this._lastFloatingPosition.offsetFromLine) {
+                            this.cursorMovingBackwards = false;
+                        } else if (floatingPosition.offsetFromLine < this._lastFloatingPosition.offsetFromLine) {
+                            this.cursorMovingBackwards = true;
+                        }
                     }
                 }
 
-                this._lastSelectionAnchor = selection.anchorNode;
-                this._lastSelectionOffset = selection.anchorOffset;
+                this._lastFloatingPosition = floatingPosition;
             }
 
             if (!selection || !selection.focusNode || !selection.anchorNode) { return; }
@@ -533,7 +537,7 @@ class InputCapture {
 
         const lineIndex = this.group.block.locateLine(instructionLine);
         const oldValue = this.lines[lineIndex].str;
-        const lastLineOffset = this.parent._lastSelectionOffset || 0;
+        const lastLineOffset = this.parent._lastFloatingPosition?.offsetFromLine || 0;
 
         // if (lastCursor !== newCursor) {
         //     this.parent.cursorMovingBackwards = newCursor < lastCursor;
