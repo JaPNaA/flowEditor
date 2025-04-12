@@ -177,7 +177,7 @@ class AssetsDirectoryTab extends DirectoryTab {
         // check path has image extention
         const pathExtention = path.slice(path.lastIndexOf(".") + 1);
         if (["png", "jpg", "jpeg", "gif", "svg", "bmp"].includes(pathExtention)) {
-            const newWindow = open();
+            const newWindow = this.openNewWindow(path);
             if (!newWindow) { return; }
             const image = newWindow.document.createElement("img");
             image.src = url;
@@ -186,7 +186,7 @@ class AssetsDirectoryTab extends DirectoryTab {
                 URL.revokeObjectURL(url);
             });
         } else if (["mp3", "wav", "ogg"].includes(pathExtention)) {
-            const newWindow = open();
+            const newWindow = this.openNewWindow(path);
             if (!newWindow) { return; }
             const audio = newWindow.document.createElement("audio");
             audio.controls = true;
@@ -200,6 +200,13 @@ class AssetsDirectoryTab extends DirectoryTab {
         } else {
             download(blob, path);
         }
+    }
+
+    private openNewWindow(title: string) {
+        const newWindow = open();
+        if (!newWindow) { return; }
+        newWindow.document.title = title;
+        return newWindow;
     }
 }
 
