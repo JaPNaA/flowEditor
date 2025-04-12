@@ -278,7 +278,7 @@ interface ProjectIndexPaths {
 const defaultProjectIndexPaths: Required<ProjectIndexPaths> = {
     flows: "flows",
     assets: "assets",
-    compiledFlows: "flow"
+    compiledFlows: "build"
 };
 
 const defaultProjectIndex: ProjectIndex = {
