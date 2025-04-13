@@ -31,6 +31,11 @@ export class ContentEditableInputCapture {
      */
     public positionChangeHandler?: (posStart: EditorCursorPositionAbsolute, posEnd: EditorCursorPositionAbsolute, selectBackwards: boolean) => void;
 
+    /**
+     * Handler called when the input capture changes the DOM selection.
+     */
+    public afterChangeDomSelectionHandler?: () => void;
+
     /** Fired when an editable is edited */
     public inputHandler?: (userInputEvent: EditableEditAction) => void;
 
@@ -185,6 +190,7 @@ export class ContentEditableInputCapture {
             this.freezeSelectionEvents = true;
             selection.setBaseAndExtent(startNode, startPos.offset, endNode, endPos.offset);
             this.freezeSelectionEvents = false;
+            this.afterChangeDomSelectionHandler?.();
         }
     }
 
@@ -603,13 +609,8 @@ class InputCapture {
                 } else {
                     this.shouldReset = true;
                 }
+                this.parent.inputHandler?.(result.action);
             }
-            // editable.checkInput(event);
-            // this.parent.inputHandler?.(event);
-            // if (event.isRejected()) {
-            //     this.shouldReset = true;
-            // } else {
-            // }
         }
 
         for (const editable of changedEditables) {

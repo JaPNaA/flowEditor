@@ -3,7 +3,6 @@ import { InstructionGroup } from "../InstructionGroup";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
 import { ContentEditableInputCapture } from "./ContentEditableInputCapture";
-import { ActionInstance } from "./actions/ActionBus";
 
 export class EditorCursor extends Elm<"span"> {
     public autocomplete = new AutoComplete();
@@ -56,6 +55,10 @@ export class EditorCursor extends Elm<"span"> {
         };
 
         this.inputCapture.positionChangeHandler = positionChangeHandler;
+
+        this.inputCapture.afterChangeDomSelectionHandler = () => {
+            this.autocomplete.updatePosition();
+        };
 
         this.inputCapture.inputHandler = () => {
             if (!this.positionStart) { return; }

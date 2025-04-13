@@ -2,7 +2,6 @@ import { JaPNaAEngine2d, Vec2M } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { looseStartsWith } from "../../utils";
 import { Editable } from "./Editable";
-import { EditorCursor } from "./EditorCursor";
 
 export interface AutoCompleteSuggester {
     learn(editable: Editable): void;
@@ -64,12 +63,25 @@ export class AutoComplete extends Component {
      */
     public updatePosition() {
         const selection = document.getSelection();
-        if (!selection || !selection.focusNode) { return; }
+        if (!selection || !selection.anchorNode) { return; }
         const range = document.createRange();
-        range.setStart(selection.focusNode, selection.focusOffset);
+        range.setStart(selection.anchorNode, selection.anchorOffset);
         range.collapse(true);
 
-        const boundingRect = range.getBoundingClientRect();
+        let boundingRect = range.getBoundingClientRect();
+
+        // workaround to avoid selecting a range with undefined rectangle
+        if (
+            boundingRect.x === 0 && boundingRect.y === 0 &&
+            boundingRect.width === 0 && boundingRect.height === 0 &&
+            selection.anchorOffset === 0 && selection.anchorNode instanceof Text
+        ) {
+            const oldValue = selection.anchorNode.nodeValue;
+            selection.anchorNode.nodeValue = ' ';
+            boundingRect = range.getBoundingClientRect();
+            selection.anchorNode.nodeValue = oldValue;
+        }
+
         range.detach();
 
         const pos = this.engine.camera.canvasToWorldPos(
