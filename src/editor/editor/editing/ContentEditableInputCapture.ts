@@ -99,25 +99,7 @@ export class ContentEditableInputCapture {
 
             if (selection && selection.anchorNode) {
                 const floatingPosition = this.domPositionToFloating(selection.anchorNode, selection.anchorOffset);
-
-                // set this.cursorMovingBackwards
-                if (this._lastFloatingPosition && floatingPosition) {
-                    if (floatingPosition.group !== this._lastFloatingPosition.group) { return; }
-
-                    if (floatingPosition.lineNumber > this._lastFloatingPosition.lineNumber) {
-                        this.cursorMovingBackwards = false;
-                    } else if (floatingPosition.lineNumber < this._lastFloatingPosition.lineNumber) {
-                        this.cursorMovingBackwards = true;
-                    } else {
-                        if (floatingPosition.offsetFromLine > this._lastFloatingPosition.offsetFromLine) {
-                            this.cursorMovingBackwards = false;
-                        } else if (floatingPosition.offsetFromLine < this._lastFloatingPosition.offsetFromLine) {
-                            this.cursorMovingBackwards = true;
-                        }
-                    }
-                }
-
-                this._lastFloatingPosition = floatingPosition;
+                this._recordFloatingPositionChange(floatingPosition);
             }
 
             if (!selection || !selection.focusNode || !selection.anchorNode) { return; }
@@ -204,6 +186,30 @@ export class ContentEditableInputCapture {
             selection.setBaseAndExtent(startNode, startPos.offset, endNode, endPos.offset);
             this.freezeSelectionEvents = false;
         }
+    }
+
+    /**
+     * Records a floating position change to set {@link cursorMovingFBackwards}
+     */
+    public _recordFloatingPositionChange(floatingPosition?: FloatingPosition) {
+        // set this.cursorMovingBackwards
+        if (this._lastFloatingPosition && floatingPosition) {
+            if (floatingPosition.group !== this._lastFloatingPosition.group) { return; }
+
+            if (floatingPosition.lineNumber > this._lastFloatingPosition.lineNumber) {
+                this.cursorMovingBackwards = false;
+            } else if (floatingPosition.lineNumber < this._lastFloatingPosition.lineNumber) {
+                this.cursorMovingBackwards = true;
+            } else {
+                if (floatingPosition.offsetFromLine > this._lastFloatingPosition.offsetFromLine) {
+                    this.cursorMovingBackwards = false;
+                } else if (floatingPosition.offsetFromLine < this._lastFloatingPosition.offsetFromLine) {
+                    this.cursorMovingBackwards = true;
+                }
+            }
+        }
+
+        this._lastFloatingPosition = floatingPosition;
     }
 
     public focus() {
@@ -477,6 +483,7 @@ class InputCapture {
         let floatingPosition: FloatingPosition | undefined;
         if (selection && selection.anchorNode) {
             floatingPosition = this.parent.domPositionToFloating(selection.anchorNode, selection.anchorOffset);
+            this.parent._recordFloatingPositionChange(floatingPosition);
         }
 
 
