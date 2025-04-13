@@ -37,7 +37,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     constructor() {
         super();
 
-        this.elm.class("newInstructionLine");
+        this.elm.class("newInstructionLine", "showPlaceholder");
         this.setAreas(this.editable = this.registerEditable(new NewInstructionEditable(this)));
         this.editable.isPlaceholder = true;
 
@@ -52,6 +52,12 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 this.splitGroupHere();
             } else {
                 this.isEmpty = Boolean(!changes.newValue);
+            }
+
+            if (this.isEmpty) {
+                this.elm.class("showPlaceholder");
+            } else {
+                this.elm.removeClass("showPlaceholder");
             }
 
             return accept;
@@ -73,7 +79,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
     }
 
     public reset(): void {
-        super.reset();
+        this.elm.replaceContents(this.editable);
     }
 
     public splitGroupHere() {
@@ -154,7 +160,7 @@ export class NewInstructionEditable extends Editable {
     private previousCursor?: EditorCursor;
 
     constructor(parentLine: NewInstructionLine) {
-        super("Press shortcut or hold shift and type to search...", parentLine);
+        super("", parentLine);
         this.intercepter = this.intercepter.bind(this);
         this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
     }

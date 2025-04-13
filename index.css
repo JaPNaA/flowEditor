@@ -122,12 +122,9 @@
     font-style: italic;
 }
 
-.instructionLine.newInstructionLine .placeholder {
+.instructionLine.newInstructionLine.showPlaceholder::after {
+    content: "Press shortcut or hold shift and type to search...";
     color: #c0c0c08c;
-}
-
-.instructionLine.newInstructionLine .placeholder.hidden {
-    display: none;
 }
 
 .instructionLine .branchConnect {
