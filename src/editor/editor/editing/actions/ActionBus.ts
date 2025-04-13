@@ -82,8 +82,10 @@ export interface ActionInstance {
  */
 export interface ActionControls {
     /**
-     * Mark the action as 'accepted', so future handlers do not
-     * perform a second action.
+     * Mark the action as 'accepted'. When set to true, indicates
+     * that an action has been performed in response to the event.
+     * 
+     * This is a hint so future handlers do not perform a second action.
      */
     accepted: boolean;
     /**
