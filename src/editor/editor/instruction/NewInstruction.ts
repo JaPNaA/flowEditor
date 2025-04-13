@@ -42,10 +42,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.editable.isPlaceholder = true;
 
         this.editable.onCheckInput = (changes) => {
-            let reject = false;
+            let accept = true;
 
             if (changes.newValue.includes("\n")) {
-                reject = true;
+                accept = false;
             }
 
             if (changes.newValue && changes.newValue[0] === "\n") {
@@ -54,7 +54,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 this.isEmpty = Boolean(!changes.newValue);
             }
 
-            return reject;
+            return accept;
         };
 
         this.editable.onKeyIntercepted.subscribe(event => {
