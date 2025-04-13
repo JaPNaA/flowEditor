@@ -239,7 +239,8 @@
     transition: 0.1s ease background-color;
 }
 
-.rightPanel .resizeHandle:hover {
+.rightPanel .resizeHandle:hover,
+.rightPanel .resizeHandle.dragging {
     background-color: #3862d8;
     z-index: 1;
 }

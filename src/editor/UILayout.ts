@@ -1,4 +1,5 @@
 import { Component, Elm } from "../japnaaEngine2d/elements";
+import { Vec2, Vec2M } from "../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorContainer } from "./editor/EditorContainer";
 import { ExecuterContainer } from "./executer/ExecuterContainer";
 import { ModalContainer } from "./modals/ModalContainer";
@@ -34,18 +35,35 @@ abstract class ResizeHandle extends Component {
     private currSize = 0.33;
     private collapsed = false;
 
+    private activeTouchId?: number;
+
     constructor(protected parent: Elm) {
         super("resizeHandle");
 
         this.mouseupHandler = this.mouseupHandler.bind(this);
         this.mousemoveHandler = this.mousemoveHandler.bind(this);
+        this.touchendHandler = this.touchendHandler.bind(this);
+        this.touchmoveHandler = this.touchmoveHandler.bind(this);
 
         this.elm.on("mousedown", ev => {
             ev.preventDefault();
             if (this.dragging) { return; }
             this.dragging = true;
+            this.elm.class("dragging");
             addEventListener("mouseup", this.mouseupHandler);
             addEventListener("mousemove", this.mousemoveHandler);
+        });
+
+        this.elm.on("touchstart", ev => {
+            if (ev.cancelable) { ev.preventDefault(); }
+            if (this.dragging) { return; }
+            if (ev.changedTouches.length !== 1) { return; }
+            this.dragging = true;
+            this.elm.class("dragging");
+            this.activeTouchId = ev.changedTouches[0].identifier;
+
+            addEventListener("touchend", this.touchendHandler);
+            addEventListener("touchmove", this.touchmoveHandler);
         });
 
         this.elm.on("dblclick", () => {
@@ -71,14 +89,40 @@ abstract class ResizeHandle extends Component {
 
     /** Set new size; if size === 0, is collapsed */
     protected abstract setSize(size: number): void;
-    protected abstract mousemoveHandler(ev: MouseEvent): void;
+    protected abstract dragHandler(pos: Vec2): void;
 
     private mouseupHandler() {
         removeEventListener("mouseup", this.mouseupHandler);
         removeEventListener("mousemove", this.mousemoveHandler);
         this.dragging = false;
+        this.elm.removeClass("dragging");
         if (!this.collapsed) {
             this.lastSize = this.currSize;
+        }
+    }
+
+    private mousemoveHandler(ev: MouseEvent) {
+        this.dragHandler(new Vec2M(ev.clientX, ev.clientY));
+    }
+
+    private touchendHandler(ev: TouchEvent) {
+        for (const touch of ev.changedTouches) {
+            if (touch.identifier === this.activeTouchId) {
+                this.activeTouchId = undefined;
+                this.dragging = false;
+                this.elm.removeClass("dragging");
+                removeEventListener("touchend", this.touchendHandler);
+                removeEventListener("touchmove", this.touchmoveHandler);
+                return;
+            }
+        }
+    }
+
+    private touchmoveHandler(ev: TouchEvent) {
+        for (const touch of ev.changedTouches) {
+            if (touch.identifier === this.activeTouchId) {
+                this.dragHandler(new Vec2M(touch.clientX, touch.clientY));
+            }
         }
     }
 
@@ -111,10 +155,10 @@ class HorizontalResizeHandle extends ResizeHandle {
         }
     }
 
-    protected mousemoveHandler(ev: MouseEvent) {
+    protected dragHandler(ev: Vec2) {
         // "1 -" because executer is on the right
-        const newWidth = 1 - ev.clientX / innerWidth;
-        this.userInputSize(newWidth)
+        const newWidth = 1 - ev.x / innerWidth;
+        this.userInputSize(newWidth);
     }
 }
 
@@ -132,9 +176,9 @@ class VerticalResizeHandle extends ResizeHandle {
         }
     }
 
-    protected mousemoveHandler(ev: MouseEvent) {
+    protected dragHandler(ev: Vec2) {
         // "1 -" because the container is on the bottom
-        const newHeight = 1 - ev.clientY / innerHeight;
-        this.userInputSize(newHeight)
+        const newHeight = 1 - ev.y / innerHeight;
+        this.userInputSize(newHeight);
     }
 }
