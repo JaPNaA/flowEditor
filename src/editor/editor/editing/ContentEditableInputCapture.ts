@@ -185,10 +185,16 @@ export class ContentEditableInputCapture {
                 }
             }
 
+            const inputCapture = this.inputCaptureElmToEditor.getK(positionStart.group);
+
             this.freezeSelectionEvents = true;
             selection.setBaseAndExtent(startNode, startPos.offset, endNode, endPos.offset);
+            if (this.afterChangeDomSelectionHandler) {
+                inputCapture?.disconnectMutationObserver();
+                this.afterChangeDomSelectionHandler();
+                inputCapture?.connectMutationObserver();
+            }
             this.freezeSelectionEvents = false;
-            this.afterChangeDomSelectionHandler?.();
         }
     }
 
@@ -349,10 +355,11 @@ class InputCapture {
         pre.setAttribute('contenteditable', 'PLAINTEXT-ONLY');
         this.supportsContentEditablePlaintextOnly = pre.contentEditable === 'plaintext-only';
     }
-    private static observerOptions = {
+    private static observerOptions: MutationObserverInit = {
         characterData: true,
         childList: true,
-        subtree: true
+        subtree: true,
+        characterDataOldValue: true // debug
     };
 
     private observer: MutationObserver = new MutationObserver(
@@ -382,7 +389,7 @@ class InputCapture {
         this.elm.attribute("contenteditable",
             InputCapture.supportsContentEditablePlaintextOnly ?
                 "plaintext-only" : "true");
-        this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+        this.connectMutationObserver();
         this.keydownHandler = this.keydownHandler.bind(this);
         this.elm.getHTMLElement().addEventListener("keydown", this.keydownHandler);
     }
@@ -415,8 +422,31 @@ class InputCapture {
         }
     }
 
-    public remove(): void {
+    /**
+     * The input capture automatically disconnects the mutation observer
+     * when handling mutations.
+     * 
+     * This method provides a method to manually disconnect the mutation
+     * observer to ignore temporary changes to the DOM that will be reverted
+     * immediately.
+     * 
+     * The input capture expects the observer to be connected most of
+     * the time, so {@link connectMutationObserver} should be called
+     * after the change is reverted.
+     */
+    public disconnectMutationObserver() {
         this.observer.disconnect();
+    }
+
+    /**
+     * Reverts {@link disconnectMutationObserver}
+     */
+    public connectMutationObserver() {
+        this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+    }
+
+    public remove(): void {
+        this.disconnectMutationObserver();
         this.elm.removeAttribute("contenteditable");
         this.elm.getHTMLElement().removeEventListener("keydown", this.keydownHandler);
         if (this.focusHandler) {
@@ -428,7 +458,7 @@ class InputCapture {
     }
 
     private resetContext(): void {
-        this.observer.disconnect();
+        this.disconnectMutationObserver()
 
         this.shouldReset = false;
 
@@ -452,7 +482,7 @@ class InputCapture {
             }
         }
 
-        this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+        this.connectMutationObserver();
     }
 
     private keydownHandler(ev: KeyboardEvent) {
@@ -478,7 +508,7 @@ class InputCapture {
     private mutationHandler(mutations: MutationRecord[]) {
         if (this.parent.isCompositing) { return; } // frozen when in the middle of IME input
 
-        this.observer.disconnect();
+        this.disconnectMutationObserver()
         this.freezeExternalActions = true;
         this.parent._freezeSelectionSets = true;
         this.parent._wasPositionSet = false;
@@ -531,7 +561,7 @@ class InputCapture {
         if (this.shouldReset) {
             this.resetContext(); // resetContext will add observer again
         } else {
-            this.observer.observe(this.elm.getHTMLElement(), InputCapture.observerOptions);
+            this.connectMutationObserver();
         }
     }
 

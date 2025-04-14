@@ -122,8 +122,9 @@
     font-style: italic;
 }
 
-.instructionLine.newInstructionLine.showPlaceholder::after {
+.instructionLine.newInstructionLine.showPlaceholder::before {
     content: "Press shortcut or hold shift and type to search...";
+    position: absolute;
     color: #c0c0c08c;
 }
 

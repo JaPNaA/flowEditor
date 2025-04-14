@@ -87,10 +87,6 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.editable.parentLine = this;
     }
 
-    public reset(): void {
-        this.elm.replaceContents(this.editable);
-    }
-
     public splitGroupHere() {
         const groupBlock = this.parentBlock.getGroup();
         if (!groupBlock) { throw new Error("No editor attached"); }
