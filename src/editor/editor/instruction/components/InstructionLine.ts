@@ -27,6 +27,7 @@ export abstract class InstructionLine extends Component {
 
     constructor() {
         super("instructionLine");
+        this.editRequestAccepter.setGetNextAccepter(() => this.parentBlock.getGroup()?.group.editor.editRequestAccepter);
     }
 
     public _setParent(instruction: InstructionBlock) {
@@ -232,7 +233,7 @@ export abstract class InstructionLine extends Component {
     protected registerEditable<T extends Editable>(editable: T): T {
         this.spanToEditable.set(editable.getHTMLElement(), editable);
         this.editables.push(editable);
-        editable.editRequestAccepter.setGetNextAccepter(() => this.parentBlock.getGroup()?.group.editor.editRequestAccepter);
+        editable.editRequestAccepter.setGetNextAccepter(() => this.editRequestAccepter);
         return editable;
     }
 }

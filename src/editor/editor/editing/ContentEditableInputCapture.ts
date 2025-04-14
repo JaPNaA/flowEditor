@@ -567,12 +567,27 @@ class InputCapture {
 
     private onMutateLineContent(line: HTMLDivElement, floatingPosition?: FloatingPosition) {
         const innerText = line.innerText;
+        let newValue = innerText;
+
         // Chrome inserts <br> in place of empty lines, which causes empty
         // lines to have innerText = '\n'. We detect this to correctly detect
         // empty lines.
         // Potential bug: the first '\n' may not be the '\n' caused by
         // the <br>, which could cause bugs related to newlines.
-        const newValue = line.children[0]?.tagName === 'BR' ? innerText.replace('\n', "") : innerText;
+        if (line.children[0]?.tagName === 'BR') {
+            newValue = innerText.replace('\n', "");
+        }
+
+        // We also insert our own <br> in place of empty lines, which
+        // has the same effect as above. However, we place our <br> at the end.
+        // We need to detect and fix this as well.
+        if (
+            line.children.length > 1 &&
+            line.children[line.children.length - 1].tagName === 'BR' &&
+            innerText.endsWith('\n')
+        ) {
+            newValue = innerText.slice(0, -1);
+        }
 
         const instructionLine = this.lineMap.getV(line);
         if (!instructionLine) { throw new Error("Line not registered"); }
