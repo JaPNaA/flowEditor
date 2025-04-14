@@ -1,7 +1,7 @@
 import { InstructionGroup } from "../InstructionGroup";
 import { UndoableAction } from "../editing/actions/UndoableAction";
 import { Instruction, InstructionLine } from "./instructionTypes";
-import { ActionBusDispatchable } from "../editing/actions/ActionBus";
+import { ActionBus, ActionBusDispatchable } from "../editing/actions/ActionBus";
 
 /**
  * A block of lines. May be nested (tree of instructions).
@@ -17,11 +17,13 @@ export interface InstructionBlock {
     /** Parent block */
     parent?: CompositeInstructionBlock;
     /** Children blocks. Do not mutate. */
-    children?: InstructionBlock[];
+    children?: ReadonlyArray<InstructionBlock>;
     /** Total number of lines in this block */
     numLines: number;
     /** The instruction associated with the block */
     instruction?: Instruction;
+    /** Action bus for this instruction block */
+    actionBus: ActionBus;
 
     /** Traverse up to the root group editor, if one exists. */
     getGroup(): InstructionGroupBlock | undefined;
@@ -43,6 +45,8 @@ export class SingleInstructionBlock implements InstructionBlock {
     public parent?: CompositeInstructionBlock | undefined;
     private lines: InstructionLine[] = [];
     public numLines: number = 0;
+
+    public actionBus = new ActionBusDispatchable();
 
     constructor(public instruction?: Instruction) { }
 
@@ -256,6 +260,7 @@ export class CompositeInstructionBlock implements InstructionBlock {
     public _insertBlock(index: number, block: InstructionBlock) {
         this.children.splice(index, 0, block);
         block.parent = this;
+        block.actionBus.parentBus = this.actionBus;
 
         let curr: InstructionBlock | undefined = this;
         while (curr != undefined) {
@@ -280,6 +285,7 @@ export class CompositeInstructionBlock implements InstructionBlock {
         }
         const instruction = this.children.splice(index, 1)[0];
         instruction.parent = undefined;
+        instruction.actionBus.parentBus = undefined;
 
         let curr: InstructionBlock | undefined = this;
         while (curr != undefined) {

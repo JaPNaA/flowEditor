@@ -9,10 +9,7 @@ export class ActionBusDispatchable implements ActionBus {
     /**
      * The parent bus will recieve all events from this bus.
      */
-    // todo: evaluate if we actually need this
-    // we might need this for plugins, but there is currently no
-    // valid usecase in the editor
-    public getParentBus?: () => ActionBusDispatchable | undefined;
+    public parentBus?: ActionBusDispatchable;
 
     private actionHandlers = new Map<symbol, EventHandler<any>[]>();
     private allHandlers: EventHandler<any>[] = [];
@@ -52,9 +49,8 @@ export class ActionBusDispatchable implements ActionBus {
             allHandler(action);
         }
 
-        const parentBus = this.getParentBus?.();
-        if (parentBus) {
-            parentBus.dispatch(action);
+        if (this.parentBus) {
+            this.parentBus.dispatch(action);
         }
     }
 }
@@ -76,4 +72,5 @@ export interface ActionInstance {
 export interface ActionBus {
     subscribe<T extends ActionInstance>(action: ActionClass<T>, handler: (action: T) => void): void;
     unsubscribe<T extends ActionInstance>(action: ActionClass<T>, handler: (action: T) => void): void;
+    parentBus?: ActionBusDispatchable;
 }
