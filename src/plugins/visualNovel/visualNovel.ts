@@ -989,7 +989,7 @@ class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpe
         }
     }
 
-    public export(): ControlGraphic[] {
+    public export(): [ControlGraphic, ControlShow] {
         const graphic: ControlGraphic = { visualNovelCtrl: "graphic", id: this.graphicId };
         for (const block of this.block.children) {
             const instruction = block.instruction;
@@ -1006,7 +1006,7 @@ class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpe
                 }
             }
         }
-        return [graphic];
+        return [graphic, { visualNovelCtrl: "show", id: this.graphicId }];
     }
 
     public serialize(): any {
