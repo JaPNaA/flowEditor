@@ -28,9 +28,11 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
 
     public editRequestAccepter = new RequestAccepter((ev: EditRequest, controls) => {
         if (ev.newContent.includes("\n")) {
+            // behaviour: if pressing enter on the first character of the editable, then insert a new instruction above
+            const isInsertOnFirst = ev.newContent[0] === "\n" && ev.editable.parentLine.getEditableFromIndex(0) === ev.editable;
             this.lineOperationRequestAccepter.accept(new LineOperationRequest(
                 ev.editable.parentLine,
-                true,
+                !isInsertOnFirst,
                 true
             ));
 
