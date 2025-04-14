@@ -33,7 +33,7 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     }
 
     public insertLine(_lineIndex: number): boolean {
-        this.line.splitGroupHere();
+        this.line.splitGroupHereOrReduceIndentation();
         return true;
     }
 
@@ -58,7 +58,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.editRequestAccepter = new RequestAccepter((changes, control) => {
             if (changes.newContent && changes.newContent[0] === "\n") {
                 control.accepted = true;
-                this.splitGroupHere();
+                this.splitGroupHereOrReduceIndentation();
             }
         }, this.editRequestAccepter);
 
@@ -87,15 +87,24 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.editable.parentLine = this;
     }
 
-    public splitGroupHere() {
+    public splitGroupHereOrReduceIndentation() {
         const groupBlock = this.parentBlock.getGroup();
         if (!groupBlock) { throw new Error("No editor attached"); }
         const group = groupBlock.group;
-        group.parentEditor.undoLog.startGroup();
+        if (this.parentBlock.parent?.parent) {
+            // cannot split a composite instruction, need to reduce indentation
+            this.reduceIndentation(group);
+            return;
+        }
         if (group.block.children.length <= 1) {
             return; // cannot split -- after removing self, block would become empty
         }
 
+        this.splitGroupHere(group);
+    }
+
+    private splitGroupHere(group: InstructionGroup) {
+        group.parentEditor.undoLog.startGroup();
         const index = group.block.children.indexOf(this.parentBlock);
         this.parentBlock.parent?.removeBlock(this.parentBlock);
         const newGroup = group.splitAtInstruction(index);
@@ -103,6 +112,35 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             newGroup.requestNewLine(0);
         }
         group.parentEditor.cursor.update();
+        group.parentEditor.undoLog.endGroup();
+    }
+
+    private reduceIndentation(group: InstructionGroup) {
+        const parent = this.parentBlock.parent;
+        if (!parent) { return; } // no parent
+        const parentParent = parent.parent;
+        if (!parentParent) { return; } // no parent parent to append to
+        const parentIndexInParentParent = parentParent.children.indexOf(parent);
+        if (parentIndexInParentParent < 0) {
+            console.warn("Could not locate parent parent in parent.");
+            return;
+        }
+
+        group.parentEditor.undoLog.startGroup();
+        parent.removeBlock(this.parentBlock);
+
+        const instruction = new NewInstruction(parentParent);
+        parentParent.insertBlock(
+            parentIndexInParentParent + 1,
+            instruction.block
+        );
+        group.parentEditor.cursor.setPosition({
+            char: 0,
+            editable: 0,
+            group: group,
+            line: group.block.locateLine(instruction.block.getLine(0))
+        });
+
         group.parentEditor.undoLog.endGroup();
     }
 
