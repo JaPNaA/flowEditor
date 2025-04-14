@@ -35,6 +35,8 @@ export class ContentEditableInputCapture {
      */
     public afterChangeDomSelectionHandler?: () => void;
 
+    public afterGroupEdited?: (group: InstructionGroup) => void;
+
     /** Fired when an editable is edited */
     public inputHandler?: () => void;
 
@@ -602,12 +604,15 @@ class InputCapture {
             } else {
                 this.shouldReset = true;
             }
+
             this.parent.inputHandler?.();
         }
 
         for (const editable of changedEditables) {
             editable.afterChangeApply();
         }
+
+        this.parent.afterGroupEdited?.(this.group);
     }
 
     private findParentLineElement(node: Node): HTMLDivElement | null {

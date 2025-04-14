@@ -60,6 +60,10 @@ export class EditorCursor extends Elm<"span"> {
             this.autocomplete.updatePosition();
         };
 
+        this.inputCapture.afterGroupEdited = group => {
+            group.editor.updateHeight();
+        };
+
         this.inputCapture.inputHandler = () => {
             if (!this.positionStart) { return; }
             this.allowAutocomplete = true;
