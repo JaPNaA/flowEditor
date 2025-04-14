@@ -3,7 +3,8 @@ import { Collidable, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, Rectangle, Rectan
 import { pluginHooks } from "../../index";
 import { RequestAccepter } from "../editing/requests/RequestAccepter";
 import { EditRequest, LineOperationRequest } from "../editing/requests/requests";
-import { BranchInstructionLine, InstructionLine } from "../instruction/instructionTypes";
+import { BranchInstructionLine } from "../instruction/baseInstructions/BranchInstructionLine";
+import { InstructionLine } from "../instruction/InstructionLine";
 import { NewInstruction } from "../instruction/NewInstruction";
 import { InstructionGroup } from "../InstructionGroup";
 

@@ -1,30 +1,30 @@
-import { InstructionGroup } from "./InstructionGroup";
-import { UIDGenerator } from "./toolchain/UIDGenerator";
 import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
-import { EditorCursor } from "./editing/EditorCursor";
-import { UndoableAction } from "./editing/actions/UndoableAction";
-import { GridBackground } from "./ui/GridBackground";
-import { EditorGroupNavigator } from "./ui/EditorGroupNavigator";
+import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray";
 import { appHooks, pluginHooks } from "../index";
-import { SmoothCamera } from "./ui/SmoothCamera";
-import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprintRegistery";
-import { Instruction } from "./instruction/instructionTypes";
-import { InstructionDeserializer } from "./toolchain/InstructionDeserializer";
-import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester";
 import { TextOpDialogue } from "../modals/TextOpDialogue";
 import { EditorSaveData } from "./EditorSaveData";
-import { newInstructionData } from "./toolchain/flowToInstructionData";
-import { InstructionGroupEditor } from "./ui/InstructionGroupEditor";
-import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray";
-import { UndoLog } from "./editing/actions/UndoLog";
+import { InstructionGroup } from "./InstructionGroup";
+import { EditorCursor } from "./editing/EditorCursor";
 import { ActionBusDispatchable } from "./editing/actions/ActionBus";
+import { UndoLog } from "./editing/actions/UndoLog";
+import { UndoableAction } from "./editing/actions/UndoableAction";
+import { InstructionBlueprintRegistery } from "./instruction/InstructionBlueprintRegistery";
+import { NewInstructionAutocompleteSuggester } from "./instruction/NewInstructionAutocompleteSuggester";
+import { Instruction } from "./instruction/baseInstructions/Instruction";
+import { InstructionDeserializer } from "./toolchain/InstructionDeserializer";
+import { UIDGenerator } from "./toolchain/UIDGenerator";
+import { newInstructionData } from "./toolchain/flowToInstructionData";
+import { EditorGroupNavigator } from "./ui/EditorGroupNavigator";
+import { GridBackground } from "./ui/GridBackground";
+import { InstructionGroupEditor } from "./ui/InstructionGroupEditor";
+import { SmoothCamera } from "./ui/SmoothCamera";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
     public actionBus = new ActionBusDispatchable();
     public undoLog = new UndoLog();
     public smoothCamera = new SmoothCamera();
-    public blueprintRegistery = new InstructionBlueprintRegistery();
+    public rootBlueprintRegistery = new InstructionBlueprintRegistery();
     public deserializer = new InstructionDeserializer();
     public textOpDialogue = new TextOpDialogue();
 
@@ -156,7 +156,7 @@ export class Editor extends WorldElmWithComponents {
         this.cursor.autocomplete.setEngine(this.engine);
         this.cursor.autocomplete.registerSuggester(
             NewInstructionAutocompleteSuggester.symbol,
-            new NewInstructionAutocompleteSuggester(this.blueprintRegistery)
+            new NewInstructionAutocompleteSuggester()
         );
         this.engine.htmlOverlay.elm.append(this.cursor.autocomplete);
     }

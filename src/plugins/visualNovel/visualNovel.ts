@@ -3,7 +3,6 @@ import { InstructionGroup } from "../../editor/editor/InstructionGroup";
 import { globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete";
 import { Editable } from "../../editor/editor/editing/Editable";
 import { InstructionBlueprintMin, InstructionBlueprintRegistery } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
-import { BranchInstructionLine, Instruction, InstructionComposite, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes";
 import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../../editor/EditorPlugin";
@@ -11,8 +10,12 @@ import { VisualNovelAnalyser } from "./analyser";
 import { AnimationEventPosition, ControlAnimate, ControlBackgroundMusic, ControlBackgroundMusicSettings, ControlGraphic, ControlSFX, ControlSFXSettings, ControlSay, ControlSayAdd, ControlSetVariableString, ControlShow, ControlSpeechBubbleSettings, ControlWait, VisualNovelAnimationEvent, VisualNovelControlItem } from "./controls";
 import { VisualNovelExecuter } from "./executer";
 import { VisualNovelRenderer } from "./renderer";
-import { SingleInstructionBlock } from "../../editor/editor/instruction/InstructionBlock";
-import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
+import { InstructionLine } from "../../editor/editor/instruction/InstructionLine";
+import { BranchInstructionLine } from "../../editor/editor/instruction/baseInstructions/BranchInstructionLine";
+import { Instruction } from "../../editor/editor/instruction/baseInstructions/Instruction";
+import { InstructionComposite } from "../../editor/editor/instruction/baseInstructions/InstructionComposite";
+import { OneLineInstruction, InstructionOneLine } from "../../editor/editor/instruction/baseInstructions/InstructionOneLine";
+import { SingleInstructionBlock } from "../../editor/editor/instruction/block/SingleInstructionBlock";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
@@ -957,7 +960,7 @@ class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpe
     public graphicId = 0;
 
     constructor(data: any) {
-        super(new CreateGraphicLineOpening(data.name || "unnamed graphic"));
+        super(new CreateGraphicLineOpening(data.name || "unnamed graphic"), CreateGraphicInstruction.instructionRegistery);
 
         for (const subInstruction of data.params) {
             if (!Array.isArray(subInstruction) || subInstruction.length !== 2) {
@@ -1012,12 +1015,6 @@ class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpe
             name: this.openingLine.editable.getValue(),
             params: this.block.children.map(x => x.instruction?.serialize()).filter(x => x)
         };
-    }
-
-    protected createNewInstruction(): Instruction {
-        // return new InstructionOneLine(new CreateGraphicSourceInstruction("path"));
-        const instruction = new NewInstruction(CreateGraphicInstruction.instructionRegistery);
-        return instruction;
     }
 }
 
@@ -1155,7 +1152,7 @@ class AnimateInstruction extends InstructionComposite<AnimateLineOpening> {
     }
 
     constructor(animateControl: ControlAnimate) {
-        super(new AnimateLineOpening());
+        super(new AnimateLineOpening(), AnimateInstruction.registery);
     }
 
     public export(): any[] {
@@ -1176,10 +1173,6 @@ class AnimateInstruction extends InstructionComposite<AnimateLineOpening> {
             length: this.openingLine.getLength(),
             events
         };
-    }
-
-    protected createNewInstruction(): Instruction {
-        return new NewInstruction(AnimateInstruction.registery);
     }
 }
 

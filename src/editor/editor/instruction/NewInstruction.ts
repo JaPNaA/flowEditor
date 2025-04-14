@@ -1,22 +1,36 @@
 import { Editable, EditableEditAction } from "../editing/Editable";
-import { InstructionOneLine, InstructionLine, OneLineInstruction, Instruction } from "./instructionTypes";
 import { EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocompleteSuggester";
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
 import { InstructionGroup } from "../InstructionGroup";
 import { EditorCursor } from "../editing/EditorCursor";
 import { RequestAccepter } from "../editing/requests/RequestAccepter";
+import { InstructionLine } from "./InstructionLine";
+import { Instruction } from "./baseInstructions/Instruction";
+import { InstructionOneLine, OneLineInstruction } from "./baseInstructions/InstructionOneLine";
+import { CompositeInstructionBlock } from "./block/CompositeInstructionBlock";
 
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
-    public getBlueprintRegistery: () => InstructionBlueprintRegistery | undefined;
+    public readonly blueprintRegistery: InstructionBlueprintRegistery;
+    public readonly indentationLevel: number;
 
-    constructor(blueprintRegistery?: InstructionBlueprintRegistery) {
+    constructor(parentBlock: CompositeInstructionBlock) {
         super(new NewInstructionLine());
-        if (blueprintRegistery) {
-            this.getBlueprintRegistery = () => blueprintRegistery;
-        } else {
-            this.getBlueprintRegistery = () => this.block.getGroup()?.group.parentEditor.blueprintRegistery;
+
+        let blueprintRegistery;
+        let indentationLevel = 0;
+        let curr: CompositeInstructionBlock | undefined = parentBlock;
+        while (curr) {
+            if (curr.blueprintRegistery && !blueprintRegistery) {
+                blueprintRegistery = curr.blueprintRegistery;
+            }
+            indentationLevel++;
+            curr = curr.parent;
         }
+
+        if (!blueprintRegistery) { throw new Error("New instruction must be added to a block with a blueprint registery"); }
+        this.blueprintRegistery = blueprintRegistery;
+        this.indentationLevel = indentationLevel - 1; // -1, since the parent block is always there
     }
 
     public insertLine(_lineIndex: number): boolean {
@@ -64,7 +78,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
             if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) { return; }
 
             const blueprint = (this.parentBlock.instruction as NewInstruction)
-                .getBlueprintRegistery()?.getBlueprintByShortcut(event.code);
+                .blueprintRegistery.getBlueprintByShortcut(event.code);
             if (blueprint) {
                 const instruction = blueprint.create();
                 this.changeView(instruction);

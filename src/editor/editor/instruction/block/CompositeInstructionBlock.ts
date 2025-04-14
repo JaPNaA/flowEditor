@@ -1,131 +1,20 @@
-import { InstructionGroup } from "../InstructionGroup";
-import { UndoableAction } from "../editing/actions/UndoableAction";
-import { Instruction, InstructionLine } from "./instructionTypes";
-import { ActionBus, ActionBusDispatchable } from "../editing/actions/ActionBus";
+import { ActionBusDispatchable } from "../../editing/actions/ActionBus";
+import { UndoableAction } from "../../editing/actions/UndoableAction";
+import { InstructionGroup } from "../../InstructionGroup";
+import { Instruction } from "../baseInstructions/Instruction";
+import { InstructionBlueprintRegistery } from "../InstructionBlueprintRegistery";
+import { InstructionLine } from "../InstructionLine";
+import { InstructionBlock } from "./InstructionBlock";
 
-/**
- * A block of lines. May be nested (tree of instructions).
- * 
- * Each instruction has a block. Not all blocks are instructions.
- * 
- * Can identify all instructions and lines by an index relative to any parent block.
- * 
- * The root is always an InstructionGroupEditor, but there may not always be a root
- * (ex. the block is deleted.)
- */
-export interface InstructionBlock {
-    /** Parent block */
-    parent?: CompositeInstructionBlock;
-    /** Children blocks. Do not mutate. */
-    children?: ReadonlyArray<InstructionBlock>;
-    /** Total number of lines in this block */
-    numLines: number;
-    /** The instruction associated with the block */
-    instruction?: Instruction;
-    /** Action bus for this instruction block */
-    actionBus: ActionBus;
-
-    /** Traverse up to the root group editor, if one exists. */
-    getGroup(): InstructionGroupBlock | undefined;
-
-    /** Get a line by index inside this block. */
-    getLine(index: number): InstructionLine;
-    /** Returns the index of a line inside this block. */
-    locateLine(line: InstructionLine): number;
-
-    /** Traverse parents to find a parent with an associated instruction */
-    parentInstruction(): Instruction | undefined;
-
-    /** Iterator through all lines. */
-    lineIter(): Generator<InstructionLine>;
-}
-
-/** A block of a single instruction */
-export class SingleInstructionBlock implements InstructionBlock {
-    public parent?: CompositeInstructionBlock | undefined;
-    private lines: InstructionLine[] = [];
-    public numLines: number = 0;
-
-    public actionBus = new ActionBusDispatchable();
-
-    constructor(public instruction?: Instruction) { }
-
-    public getLine(index: number): InstructionLine {
-        return this.lines[index];
-    }
-
-    public locateLine(line: InstructionLine): number {
-        const index = this.lines.indexOf(line);
-        if (index < 0) { throw new Error("Line not found"); }
-        return index;
-    }
-
-    public *lineIter(): Generator<InstructionLine, any, unknown> {
-        for (const line of this.lines) {
-            yield line;
-        }
-    }
-
-    public *instructionIter(): Generator<Instruction, any, unknown> {
-        if (this.instruction) {
-            yield this.instruction;
-        }
-    }
-
-    public getGroup(): InstructionGroupBlock | undefined {
-        if (!this.parent) { return; }
-        return this.parent.getGroup();
-    }
-
-    public parentInstruction(): Instruction | undefined {
-        if (this.instruction) { return this.instruction; }
-        return this.parent?.parentInstruction();
-    }
-
-    /** Insert a line. Only to be used by the owning Instruction class. */
-    public _insertLine(index: number, line: InstructionLine) {
-        this.lines.splice(index, 0, line);
-        line._setParent(this);
-
-        let curr: InstructionBlock | undefined = this;
-        while (curr != undefined) {
-            curr.numLines++;
-            curr = curr.parent;
-        }
-
-        const group = this.getGroup();
-        if (group) {
-            group.group.editor._insertInstructionLine(group.locateLine(line) + 1, line);
-        }
-    }
-
-    public _appendLine(line: InstructionLine) {
-        return this._insertLine(this.lines.length, line);
-    }
-
-    /** Removes a line. Only to be used by the owning Instruction class. */
-    public _removeLine(index: number) {
-        const removedLine = this.lines.splice(index, 1);
-        if (removedLine.length === 0) { return; }
-
-        let curr: InstructionBlock | undefined = this;
-        while (curr != undefined) {
-            curr.numLines--;
-            curr = curr.parent;
-        }
-
-        const group = this.getGroup();
-        if (group) {
-            group.group.editor._removeInstructionLine(removedLine[0]);
-        }
-    }
-}
 
 /** A block of multiple instructions */
 export class CompositeInstructionBlock implements InstructionBlock {
     public parent?: CompositeInstructionBlock | undefined;
     public children: InstructionBlock[] = [];
     public numLines: number = 0;
+
+    /** Instruction blueprints used for creating new instructions under the block */
+    public blueprintRegistery?: InstructionBlueprintRegistery;
 
     public actionBus = new ActionBusDispatchable();
 

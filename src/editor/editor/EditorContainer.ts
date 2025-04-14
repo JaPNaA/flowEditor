@@ -109,7 +109,7 @@ export class EditorContainer extends Component {
     }
 
     private _addPluginToEditor(plugin: EditorPlugin) {
-        this.editor.blueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
+        this.editor.rootBlueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
         this.editor.deserializer.registerDeserializer(plugin.parse);
         if (plugin.analyser) {
             this.editor.actionBus.subscribeAllActions(

@@ -1,8 +1,8 @@
 import { RectangleM } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { Editor } from "./Editor";
 import { InstructionElmData } from "./EditorSaveData";
-import { InstructionGroupBlock } from "./instruction/InstructionBlock";
-import { Instruction } from "./instruction/instructionTypes";
+import { Instruction } from "./instruction/baseInstructions/Instruction";
+import { InstructionGroupBlock } from "./instruction/block/CompositeInstructionBlock";
 import { UIDGenerator } from "./toolchain/UIDGenerator";
 import { InstructionGroupEditor } from "./ui/InstructionGroupEditor";
 
@@ -34,6 +34,7 @@ export class InstructionGroup {
             (initData.instructions.length + initData.branches.length) * 16 * 1.55 + 16
         );
 
+        this.block.blueprintRegistery = parentEditor.rootBlueprintRegistery;
         this.editor = new InstructionGroupEditor(this, rect);
     }
 
@@ -234,6 +235,6 @@ export class InstructionGroup {
     }
 
     private instructionFromData(data: any): Instruction {
-        return this.parentEditor.deserializer.deserialize(data);
+        return this.parentEditor.deserializer.deserialize(data, this.block);
     }
 }

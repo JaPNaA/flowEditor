@@ -3,8 +3,8 @@ import { LineOperationRequest } from "./requests/requests";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroup } from "../InstructionGroup";
 import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "../../utils";
-import { InstructionLine } from "../instruction/instructionTypes";
 import { Editable } from "./Editable";
+import { InstructionLine } from "../instruction/InstructionLine";
 
 /**
  * `ContentEditableInputCapture` user the 'contentEditable' attribute to

@@ -4,8 +4,12 @@ import { Editable } from "../../editor/editor/editing/Editable";
 import { InstructionBlueprintMin } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
 import { JSONInstruction } from "../../editor/editor/instruction/JSONInstruction";
 import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
-import { BranchInstructionLine, Instruction, InstructionLine, InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/instructionTypes";
 import { EditorPlugin } from "../../editor/EditorPlugin";
+import { BranchInstructionLine } from "../../editor/editor/instruction/baseInstructions/BranchInstructionLine";
+import { Instruction } from "../../editor/editor/instruction/baseInstructions/Instruction";
+import { InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/baseInstructions/InstructionOneLine";
+import { CompositeInstructionBlock } from "../../editor/editor/instruction/block/CompositeInstructionBlock";
+import { InstructionLine } from "../../editor/editor/instruction/InstructionLine";
 
 const autocompleteTypeCompareOp = Symbol();
 
@@ -77,7 +81,7 @@ export class DefaultPlugin implements EditorPlugin {
         }]
     ]
 
-    parse(data: any): Instruction | undefined {
+    parse(data: any, parentBlock: CompositeInstructionBlock): Instruction | undefined {
         if (!isControlItem(data)) {
             return;
         }
@@ -94,7 +98,7 @@ export class DefaultPlugin implements EditorPlugin {
             case "variable":
                 return new InstructionOneLine(new ControlVariableLine(data));
             case "nop":
-                return new NewInstruction();
+                return new NewInstruction(parentBlock);
         }
     }
 }

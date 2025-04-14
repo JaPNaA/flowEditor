@@ -1,7 +1,8 @@
+import { Instruction } from "../instruction/baseInstructions/Instruction";
+import { CompositeInstructionBlock } from "../instruction/block/CompositeInstructionBlock";
 import { JSONInstruction } from "../instruction/JSONInstruction";
-import { Instruction } from "../instruction/instructionTypes";
 
-export type Deserializer = (data: any) => Instruction | undefined;
+export type Deserializer = (data: any, parentBlock: CompositeInstructionBlock) => Instruction | undefined;
 
 export class InstructionDeserializer {
     private deserializers: Deserializer[] = [];
@@ -10,9 +11,9 @@ export class InstructionDeserializer {
         this.deserializers.push(deserializer);
     }
 
-    public deserialize(data: any): Instruction {
+    public deserialize(data: any, parentBlock: CompositeInstructionBlock): Instruction {
         for (const deserializer of this.deserializers) {
-            const result = deserializer(data);
+            const result = deserializer(data, parentBlock);
             if (result) {
                 return result;
             }

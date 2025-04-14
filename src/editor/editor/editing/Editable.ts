@@ -1,5 +1,5 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { InstructionLine } from "../instruction/instructionTypes";
+import { InstructionLine } from "../instruction/InstructionLine";
 import { ActionBusDispatchable } from "./actions/ActionBus";
 import { UndoableAction } from "./actions/UndoableAction";
 import { RequestAccepter } from "./requests/RequestAccepter";
