@@ -5,6 +5,9 @@ import { EditRequest } from "../../editing/requests/requests";
 import { InstructionBlock } from "../block/InstructionBlock";
 
 export abstract class InstructionLine extends Component {
+    private static readonly INITIAL_PADDING_LEFT = 12;
+    private static readonly INDENT_SIZE = 16;
+
     public preferredStartingCharOffset = 0;
     public parentBlock!: InstructionBlock;
 
@@ -211,6 +214,13 @@ export abstract class InstructionLine extends Component {
     protected setAreas(...elements: (string | Editable)[]) {
         this.areas = elements;
         this.reset();
+    }
+
+    protected setIndentation(indentationLevel: number) {
+        this.elm.getHTMLElement().style.paddingLeft = (
+            InstructionLine.INITIAL_PADDING_LEFT +
+            InstructionLine.INDENT_SIZE * indentationLevel
+        ) + "px";
     }
 
     protected createEditable(text: string | number): Editable {

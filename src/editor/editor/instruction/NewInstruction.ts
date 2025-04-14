@@ -12,7 +12,6 @@ import { CompositeInstructionBlock } from "./block/CompositeInstructionBlock";
 
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     public readonly blueprintRegistery: InstructionBlueprintRegistery;
-    public readonly indentationLevel: number;
 
     constructor(parentBlock: CompositeInstructionBlock) {
         super(new NewInstructionLine());
@@ -30,7 +29,7 @@ export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
 
         if (!blueprintRegistery) { throw new Error("New instruction must be added to a block with a blueprint registery"); }
         this.blueprintRegistery = blueprintRegistery;
-        this.indentationLevel = indentationLevel - 1; // -1, since the parent block is always there
+        this.line._setIndentation(indentationLevel - 1); // -1, since the parent block is always there
     }
 
     public insertLine(_lineIndex: number): boolean {
@@ -150,6 +149,10 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         }
 
         group.parentEditor.undoLog.endGroup();
+    }
+
+    public _setIndentation(level: number) {
+        this.setIndentation(level);
     }
 
     private splitAfterIfNeeded(group: InstructionGroup, thisIndex: number, thisIsAlwaysJump: boolean) {
