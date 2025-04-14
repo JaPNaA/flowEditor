@@ -1,4 +1,5 @@
 import { Editable, EditableEditAction } from "../editing/Editable";
+import { EditRequest } from "../editing/requests/requests";
 import { InstructionLine, OneLineInstruction, InstructionOneLine } from "./instructionTypes";
 
 export class JSONInstruction extends InstructionOneLine<JSONLine> {
@@ -32,11 +33,11 @@ class JSONLineEditable extends Editable {
         this.parentLine = parentLine;
     }
 
-    public checkInput(event: EditableEditAction): boolean {
-        if (event.newValue.includes("\n")) {
+    public checkInput(event: EditRequest): boolean {
+        if (event.newContent.includes("\n")) {
             const value = this.getValue();
             // support for multiline paste only if JSONLine is a string + is not newline at end of line
-            if (value[0] === '"' && value[value.length - 1] === '"' && event.newValue[event.newValue.length - 1] !== "\n") {
+            if (value[0] === '"' && value[value.length - 1] === '"' && event.newContent[event.newContent.length - 1] !== "\n") {
                 this.newlineDetected = true;
             } else {
                 return false;
@@ -57,7 +58,7 @@ class JSONLineEditable extends Editable {
         const group = groupBlock.group;
 
         group.parentEditor.undoLog.startGroup();
-        this.setValue(JSON.stringify(lines[0]));
+        this.requestSetValue(JSON.stringify(lines[0]));
 
         const currentPosition = group.block.children.indexOf(this.parentLine.parentBlock);
         let i;

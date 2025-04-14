@@ -67,7 +67,7 @@ export class TextOpDialogue extends Component {
             const line = lines[i];
             const editables = this.editables[i];
             for (const editable of editables) {
-                editable.setValue(line);
+                editable.requestSetValue(line);
             }
         }
         this.undoLog?.endGroup();

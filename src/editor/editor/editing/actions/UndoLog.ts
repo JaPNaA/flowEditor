@@ -23,10 +23,7 @@ export class UndoLog {
         let log;
         while (log = logs.pop()) {
             const action = log.inverse();
-            const result = action.getTarget().dispatch(action);
-            if (result.rejected) {
-                console.warn("Undo action was rejected", action);
-            }
+            action.getTarget().dispatch(action);
         }
         this.onAfterAllActionsPerformed.send();
     }
@@ -54,7 +51,7 @@ export class UndoLog {
 
     public perform(action: UndoableAction) {
         const result = action.getTarget().dispatch(action);
-        if (!this.frozen && !result.rejected) {
+        if (!this.frozen) {
             this.currLogGroup.push(action);
         }
         this.onAfterAllActionsPerformed.send();

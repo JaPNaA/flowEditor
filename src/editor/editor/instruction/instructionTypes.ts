@@ -3,9 +3,11 @@ import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { Editable } from "../editing/Editable";
 import { InstructionGroup } from "../InstructionGroup";
 import { CompositeInstructionBlock, InstructionBlock, SingleInstructionBlock } from "./InstructionBlock";
-import { ActionBusDispatchable } from "../editing/actions/ActionBus";
 import { UndoableAction } from "../editing/actions/UndoableAction";
 import { removeElmFromArray } from "../../../japnaaEngine2d/util/removeElmFromArray";
+import { ActionBusDispatchable } from "../editing/actions/ActionBus";
+import { RequestAccepter } from "../editing/requests/RequestAccepter";
+import { EditRequest } from "../editing/requests/requests";
 
 export abstract class Instruction {
     /** Block containing the instruction's lines. Only to be used by InstructionBlock and this class. */
@@ -62,6 +64,8 @@ export abstract class Instruction {
 export abstract class InstructionLine extends Component {
     public preferredStartingCharOffset = 0;
     public parentBlock!: InstructionBlock;
+
+    public editRequestAccepter = new RequestAccepter<EditRequest>();
 
     /**
      * Instruction areas.
@@ -275,7 +279,7 @@ export abstract class InstructionLine extends Component {
     protected registerEditable<T extends Editable>(editable: T): T {
         this.spanToEditable.set(editable.getHTMLElement(), editable);
         this.editables.push(editable);
-        editable.actionBus.getParentBus = () => this.parentBlock.getGroup()?.actionBus;
+        editable.editRequestAccepter.setGetNextAccepter(() => this.parentBlock.getGroup()?.group.editor.editRequestAccepter);
         return editable;
     }
 }

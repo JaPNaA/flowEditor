@@ -1,9 +1,7 @@
 import { InstructionGroup } from "../InstructionGroup";
-import { EditableEditAction } from "../editing/Editable";
-import { LineOperationEvent } from "../editing/UserInputEvents";
-import { ActionBusDispatchable } from "../editing/actions/ActionBus";
 import { UndoableAction } from "../editing/actions/UndoableAction";
 import { Instruction, InstructionLine } from "./instructionTypes";
+import { ActionBusDispatchable } from "../editing/actions/ActionBus";
 
 /**
  * A block of lines. May be nested (tree of instructions).
@@ -173,16 +171,6 @@ export class CompositeInstructionBlock implements InstructionBlock {
                     }
                 }
                 group.group.editor.updateHeight();
-            }
-        });
-
-        this.actionBus.subscribe(EditableEditAction, action => {
-            if (action.newValue.includes("\n")) {
-                this.getGroup()?.group.editor.onLineDelete(new LineOperationEvent(
-                    action.editable.parentLine,
-                    true,
-                    true
-                ));
             }
         });
     }

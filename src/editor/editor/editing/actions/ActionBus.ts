@@ -1,15 +1,17 @@
 import { removeElmFromArray } from "../../../../japnaaEngine2d/util/removeElmFromArray";
 
-type EventHandler<T extends ActionInstance> = (action: T, controls: ActionControls) => void;
+type EventHandler<T extends ActionInstance> = (action: T) => void;
 
 /**
  * ActionBus propagates Actions through the system.
  */
 export class ActionBusDispatchable implements ActionBus {
     /**
-     * If an event has not been handled after running all handles for this bus,
-     * the event will be propagated to the parent action bus.
+     * The parent bus will recieve all events from this bus.
      */
+    // todo: evaluate if we actually need this
+    // we might need this for plugins, but there is currently no
+    // valid usecase in the editor
     public getParentBus?: () => ActionBusDispatchable | undefined;
 
     private actionHandlers = new Map<symbol, EventHandler<any>[]>();
@@ -38,27 +40,22 @@ export class ActionBusDispatchable implements ActionBus {
         removeElmFromArray(handler, this.allHandlers);
     }
 
-    public dispatch(action: ActionInstance): ActionControls {
+    public dispatch(action: ActionInstance) {
         const handlers = this.actionHandlers.get(action.key);
-        const eventControls: ActionControls = { accepted: false, rejected: false };
 
         if (handlers) {
             for (const handler of handlers) {
-                handler(action, eventControls);
+                handler(action);
             }
         }
         for (const allHandler of this.allHandlers) {
-            allHandler(action, eventControls);
+            allHandler(action);
         }
 
-        if (!eventControls.accepted) {
-            const parentBus = this.getParentBus?.();
-            if (parentBus) {
-                return parentBus.dispatch(action)
-            }
+        const parentBus = this.getParentBus?.();
+        if (parentBus) {
+            parentBus.dispatch(action);
         }
-
-        return eventControls;
     }
 }
 
@@ -74,25 +71,6 @@ export interface ActionInstance {
      * Gets the action bus to recieve this action.
      */
     getTarget(): ActionBusDispatchable;
-}
-
-/**
- * Object passed around to event handlers, containing information
- * about the event.
- */
-export interface ActionControls {
-    /**
-     * Mark the action as 'accepted'. When set to true, indicates
-     * that an action has been performed in response to the event.
-     * 
-     * This is a hint so future handlers do not perform a second action.
-     */
-    accepted: boolean;
-    /**
-     * Mark the action as 'rejected' (nothing happened), so the action 
-     * will not be added to the undo log.
-     */
-    rejected: boolean;
 }
 
 export interface ActionBus {

@@ -1,7 +1,8 @@
 import { Elm } from "../../../japnaaEngine2d/elements";
 import { Collidable, Hitbox, JaPNaAEngine2d, QuadtreeElmChild, Rectangle, RectangleM, WorldElm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { pluginHooks } from "../../index";
-import { LineOperationEvent } from "../editing/UserInputEvents";
+import { RequestAccepter } from "../editing/requests/RequestAccepter";
+import { EditRequest, LineOperationRequest } from "../editing/requests/requests";
 import { BranchInstructionLine, InstructionLine } from "../instruction/instructionTypes";
 import { NewInstruction } from "../instruction/NewInstruction";
 import { InstructionGroup } from "../InstructionGroup";
@@ -18,6 +19,24 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
     public elm: Elm;
     public collisionType = InstructionGroupEditor.collisionType;
     public graphicHitbox: Hitbox<QuadtreeElmChild>;
+    // todo: the handler will propagate back down to find where to insert,
+    // but this should not be necessary
+    public lineOperationRequestAccepter = new RequestAccepter((op: LineOperationRequest, controls) => {
+        this.acceptLineOperationRequest(op);
+        controls.accepted = true;
+    });
+
+    public editRequestAccepter = new RequestAccepter((ev: EditRequest, controls) => {
+        if (ev.newContent.includes("\n")) {
+            this.lineOperationRequestAccepter.accept(new LineOperationRequest(
+                ev.editable.parentLine,
+                true,
+                true
+            ));
+
+            controls.accepted = true;
+        }
+    });
 
     private hitbox: Hitbox<InstructionGroupEditor>;
 
@@ -76,7 +95,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.updateAfterMove();
     }
 
-    public onLineDelete(lineOp: LineOperationEvent) {
+    private acceptLineOperationRequest(lineOp: LineOperationRequest) {
         const editor = this.instructionGroup.parentEditor;
         let targetLine = this.instructionGroup.block.locateLine(lineOp.line);
 

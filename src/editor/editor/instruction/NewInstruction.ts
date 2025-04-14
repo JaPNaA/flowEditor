@@ -5,6 +5,7 @@ import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocomplet
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
 import { InstructionGroup } from "../InstructionGroup";
 import { EditorCursor } from "../editing/EditorCursor";
+import { EditRequest } from "../editing/requests/requests";
 
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     public getBlueprintRegistery: () => InstructionBlueprintRegistery | undefined;
@@ -44,14 +45,14 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.editable.onCheckInput = (changes) => {
             let accept = true;
 
-            if (changes.newValue.includes("\n")) {
+            if (changes.newContent.includes("\n")) {
                 accept = false;
             }
 
-            if (changes.newValue && changes.newValue[0] === "\n") {
+            if (changes.newContent && changes.newContent[0] === "\n") {
                 this.splitGroupHere();
             } else {
-                this.isEmpty = Boolean(!changes.newValue);
+                this.isEmpty = Boolean(!changes.newContent);
             }
 
             if (this.isEmpty) {
@@ -154,7 +155,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 }
 
 export class NewInstructionEditable extends Editable {
-    public onCheckInput?: (action: EditableEditAction) => boolean;
+    public onCheckInput?: (action: EditRequest) => boolean;
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
     private isActive = false;
     private previousCursor?: EditorCursor;
@@ -165,7 +166,7 @@ export class NewInstructionEditable extends Editable {
         this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
     }
 
-    public checkInput(action: EditableEditAction): boolean {
+    public checkInput(action: EditRequest): boolean {
         // allow all
         return this.onCheckInput?.(action) ?? false;
     }

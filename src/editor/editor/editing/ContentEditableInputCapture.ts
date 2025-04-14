@@ -1,11 +1,10 @@
 import { Elm } from "../../../japnaaEngine2d/JaPNaAEngine2d";
-import { LineOperationEvent } from "./UserInputEvents";
+import { LineOperationRequest } from "./requests/requests";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroup } from "../InstructionGroup";
 import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "../../utils";
 import { InstructionLine } from "../instruction/instructionTypes";
-import { Editable, EditableEditAction } from "./Editable";
-import { ActionInstance } from "./actions/ActionBus";
+import { Editable } from "./Editable";
 
 /**
  * `ContentEditableInputCapture` user the 'contentEditable' attribute to
@@ -37,10 +36,7 @@ export class ContentEditableInputCapture {
     public afterChangeDomSelectionHandler?: () => void;
 
     /** Fired when an editable is edited */
-    public inputHandler?: (userInputEvent: EditableEditAction) => void;
-
-    /** Fired after a editables are edited and the changes are applied */
-    public afterInputHandler?: (userInputEvents: EditableEditAction[]) => void;
+    public inputHandler?: () => void;
 
     /** Fired on keydown, before changing the textarea. Can preventDefault here. Return 'true' to cancel change check. */
     public keydownIntercepter?: (event: KeyboardEvent) => boolean | undefined;
@@ -470,8 +466,8 @@ class InputCapture {
             // delete at first possible position
             if (lastPosition.editable === 0 && lastPosition.char === 0) {
                 // deletion
-                const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
-                lastPosition.group.editor.onLineDelete(lineOpEvent);
+                const lineOpEvent = new LineOperationRequest(instructionLine, false, false);
+                lastPosition.group.editor.lineOperationRequestAccepter.accept(lineOpEvent);
                 ev.preventDefault();
             }
         }
@@ -504,9 +500,10 @@ class InputCapture {
                     // case: complete line removal
                     const instructionLine = this.lineMap.getV(removedNode as HTMLDivElement);
                     if (instructionLine) {
-                        const lineOpEvent = new LineOperationEvent(instructionLine, false, false);
-                        instructionLine.parentBlock.getGroup()?.group.editor.onLineDelete(lineOpEvent);
-                        if (lineOpEvent.isRejected()) {
+                        const lineOpEvent = new LineOperationRequest(instructionLine, false, false);
+                        const result = instructionLine.parentBlock.getGroup()?.group.editor
+                            .lineOperationRequestAccepter.accept(lineOpEvent);
+                        if (result && result.accepted) {
                             this.shouldReset = true;
                         }
                     }
@@ -592,32 +589,25 @@ class InputCapture {
         }
 
         const changedEditables: Editable[] = [];
-        const changeEvents: EditableEditAction[] = [];
         for (let i = 0; i < editables.length; i++) {
             const editable = editables[i];
             const newValue = newEditableValues.values[i];
             const oldValue = editable.getValue();
             if (oldValue === newValue) { continue; }
 
-            const result = editable.setValue(newValue);
-            if (result) {
-                changeEvents.push(result.action);
-
-                if (result.result.accepted) {
-                    this.lines[lineIndex].str = areasToString(areas);
-                    changedEditables.push(editable);
-                } else {
-                    this.shouldReset = true;
-                }
-                this.parent.inputHandler?.(result.action);
+            const result = editable.requestSetValue(newValue);
+            if (result.accepted) {
+                this.lines[lineIndex].str = areasToString(areas);
+                changedEditables.push(editable);
+            } else {
+                this.shouldReset = true;
             }
+            this.parent.inputHandler?.();
         }
 
         for (const editable of changedEditables) {
             editable.afterChangeApply();
         }
-
-        this.parent.afterInputHandler?.(changeEvents);
     }
 
     private findParentLineElement(node: Node): HTMLDivElement | null {

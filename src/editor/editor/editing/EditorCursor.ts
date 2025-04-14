@@ -67,13 +67,6 @@ export class EditorCursor extends Elm<"span"> {
             this.onInput.send();
         };
 
-        this.inputCapture.afterInputHandler = events => {
-            const groups = new Set(events.map(x => x.editable.parentLine.parentBlock.getGroup()));
-            for (const group of groups) {
-                group?.group.editor.updateHeight();
-            }
-        };
-
         this.inputCapture.keydownIntercepter = e => {
             if (e.ctrlKey && !["ArrowLeft", "ArrowRight", "Delete", "Backspace", "C", "c", "V", "v", "X", "x"].includes(e.key)) {
                 this.onKeyboardShortcutPress.send(e);
@@ -106,7 +99,7 @@ export class EditorCursor extends Elm<"span"> {
                     const text = this.autocomplete.acceptSuggestion();
                     this.autocomplete.clearSuggestions();
                     if (!text) { break; }
-                    this.activeEditable.setValue(text);
+                    this.activeEditable.requestSetValue(text);
 
                     this.activeEditable.isPlaceholder = false;
                     this.allowAutocomplete = false;

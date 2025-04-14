@@ -1,7 +1,9 @@
 import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { InstructionLine } from "../instruction/instructionTypes";
-import { UndoableAction } from "./actions/UndoableAction";
 import { ActionBusDispatchable } from "./actions/ActionBus";
+import { UndoableAction } from "./actions/UndoableAction";
+import { RequestAccepter } from "./requests/RequestAccepter";
+import { EditRequest } from "./requests/requests";
 
 export class Editable extends Elm<"span"> {
     public onChange = new EventBus<string>();
@@ -17,6 +19,21 @@ export class Editable extends Elm<"span"> {
      */
     public isPlaceholder?: boolean;
 
+    public editRequestAccepter = new RequestAccepter((request: EditRequest, controls) => {
+        if (!this.checkInput(request)) {
+            return;
+        }
+
+        controls.accepted = true;
+
+        if (this.value === request.newContent) { return; }
+        const groupBlock = this.parentLine.parentBlock.getGroup();
+        if (!groupBlock) { return; }
+        groupBlock.group.parentEditor.undoLog.perform(
+            new EditableEditAction(this, request.newContent, this.value)
+        );
+    });
+
     public actionBus = new ActionBusDispatchable();
 
     private value: string;
@@ -27,12 +44,7 @@ export class Editable extends Elm<"span"> {
         this.append(initialText);
         this.value = initialText;
 
-        this.actionBus.subscribe(EditableEditAction, (action, controls) => {
-            if (!this.checkInput(action)) {
-                controls.rejected = true;
-                return;
-            }
-
+        this.actionBus.subscribe(EditableEditAction, (action) => {
             const autocomplete = action.editable.parentLine.parentBlock.getGroup()?.group.parentEditor.cursor.autocomplete;
 
             if (autocomplete) { autocomplete.removedValue(action.editable); }
@@ -42,7 +54,7 @@ export class Editable extends Elm<"span"> {
             if (autocomplete) { autocomplete.enteredValue(action.editable); }
 
             action.editable.update();
-            controls.accepted = true;
+            this.onChange.send(action.newValue);
         });
     }
 
@@ -50,28 +62,22 @@ export class Editable extends Elm<"span"> {
         return this.value;
     }
 
-    public setValue(value: string) {
-        if (this.value === value) { return; }
-        const groupBlock = this.parentLine.parentBlock.getGroup();
-        if (!groupBlock) { return; }
-        const group = groupBlock.group;
-        this.onChange.send(value);
-
-        const action = new EditableEditAction(this, value, this.value);
-        return {
-            action,
-            result: group.parentEditor.undoLog.perform(
-                new EditableEditAction(this, value, this.value)
-            )
-        };
+    /**
+     * Sends a request to edit this editable.
+     * Request may be propagated to parent elements.
+     */
+    public requestSetValue(newContent: string) {
+        return this.editRequestAccepter.accept(
+            new EditRequest(newContent, this)
+        );
     }
 
     /** Called by ContentEditableOverlayInputCapture after setting a new value for the editable and moving the cursor. */
     public afterChangeApply() { }
 
     /** Called by ContentEditableOverlayInputCapture to verify validity of input */
-    public checkInput(event: EditableEditAction): boolean {
-        if (event.newValue.includes("\n")) {
+    public checkInput(request: EditRequest): boolean {
+        if (request.newContent.includes("\n")) {
             return false;
         }
         return true;

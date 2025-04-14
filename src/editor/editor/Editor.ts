@@ -15,9 +15,9 @@ import { TextOpDialogue } from "../modals/TextOpDialogue";
 import { EditorSaveData } from "./EditorSaveData";
 import { newInstructionData } from "./toolchain/flowToInstructionData";
 import { InstructionGroupEditor } from "./ui/InstructionGroupEditor";
-import { ActionBusDispatchable } from "./editing/actions/ActionBus";
 import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray";
 import { UndoLog } from "./editing/actions/UndoLog";
+import { ActionBusDispatchable } from "./editing/actions/ActionBus";
 
 export class Editor extends WorldElmWithComponents {
     public cursor = new EditorCursor();
