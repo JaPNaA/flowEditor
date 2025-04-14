@@ -5,11 +5,11 @@ import { InstructionBlueprintMin } from "../../editor/editor/instruction/Instruc
 import { JSONInstruction } from "../../editor/editor/instruction/JSONInstruction";
 import { NewInstruction } from "../../editor/editor/instruction/NewInstruction";
 import { EditorPlugin } from "../../editor/EditorPlugin";
-import { BranchInstructionLine } from "../../editor/editor/instruction/baseInstructions/BranchInstructionLine";
+import { BranchInstructionLine } from "../../editor/editor/instruction/components/BranchInstructionLine";
 import { Instruction } from "../../editor/editor/instruction/baseInstructions/Instruction";
 import { InstructionOneLine, OneLineInstruction } from "../../editor/editor/instruction/baseInstructions/InstructionOneLine";
 import { CompositeInstructionBlock } from "../../editor/editor/instruction/block/CompositeInstructionBlock";
-import { InstructionLine } from "../../editor/editor/instruction/InstructionLine";
+import { InstructionLine } from "../../editor/editor/instruction/components/InstructionLine";
 
 const autocompleteTypeCompareOp = Symbol();
 

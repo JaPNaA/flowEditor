@@ -4,7 +4,7 @@ import { appHooks } from "../../../index";
 import { ActionBusDispatchable } from "../../editing/actions/ActionBus";
 import { UndoableAction } from "../../editing/actions/UndoableAction";
 import { InstructionGroup } from "../../InstructionGroup";
-import { InstructionLine } from "../InstructionLine";
+import { InstructionLine } from "./InstructionLine";
 
 export abstract class BranchInstructionLine extends InstructionLine {
     public branchTarget: InstructionGroup | null = null;

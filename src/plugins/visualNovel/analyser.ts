@@ -1,7 +1,7 @@
 import { UndoableAction } from "../../editor/editor/editing/actions/UndoableAction";
 import { EditableEditAction } from "../../editor/editor/editing/Editable";
 import { AddGroupAction, Editor, RemoveGroupAction } from "../../editor/editor/Editor";
-import { BranchTargetChangeAction } from "../../editor/editor/instruction/baseInstructions/BranchInstructionLine";
+import { BranchTargetChangeAction } from "../../editor/editor/instruction/components/BranchInstructionLine";
 import { AddInstructionAction, RemoveInstructionAction } from "../../editor/editor/instruction/block/CompositeInstructionBlock";
 import { InstructionGroup } from "../../editor/editor/InstructionGroup";
 import { PluginAnalyser } from "../../editor/EditorPlugin";

@@ -4,7 +4,7 @@ import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroup } from "../InstructionGroup";
 import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "../../utils";
 import { Editable } from "./Editable";
-import { InstructionLine } from "../instruction/InstructionLine";
+import { InstructionLine } from "../instruction/components/InstructionLine";
 
 /**
  * `ContentEditableInputCapture` user the 'contentEditable' attribute to

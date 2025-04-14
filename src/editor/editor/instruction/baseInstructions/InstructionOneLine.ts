@@ -1,7 +1,7 @@
 import { InstructionGroup } from "../../InstructionGroup";
 import { SingleInstructionBlock } from "../block/SingleInstructionBlock";
-import { InstructionLine } from "../InstructionLine";
-import { BranchInstructionLine } from "./BranchInstructionLine";
+import { InstructionLine } from "../components/InstructionLine";
+import { BranchInstructionLine } from "../components/BranchInstructionLine";
 import { Instruction } from "./Instruction";
 
 export interface OneLineInstruction extends InstructionLine {

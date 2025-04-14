@@ -5,7 +5,7 @@ import { InstructionBlueprint, InstructionBlueprintRegistery } from "./Instructi
 import { InstructionGroup } from "../InstructionGroup";
 import { EditorCursor } from "../editing/EditorCursor";
 import { RequestAccepter } from "../editing/requests/RequestAccepter";
-import { InstructionLine } from "./InstructionLine";
+import { InstructionLine } from "./components/InstructionLine";
 import { Instruction } from "./baseInstructions/Instruction";
 import { InstructionOneLine, OneLineInstruction } from "./baseInstructions/InstructionOneLine";
 import { CompositeInstructionBlock } from "./block/CompositeInstructionBlock";

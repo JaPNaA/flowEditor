@@ -1,7 +1,7 @@
 import { Editable } from "../editing/Editable";
 import { EditRequest } from "../editing/requests/requests";
 import { InstructionOneLine, OneLineInstruction } from "./baseInstructions/InstructionOneLine";
-import { InstructionLine } from "./InstructionLine";
+import { InstructionLine } from "./components/InstructionLine";
 
 export class JSONInstruction extends InstructionOneLine<JSONLine> {
     constructor(data: any) {

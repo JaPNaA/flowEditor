@@ -1,6 +1,6 @@
 import { InstructionGroup } from "../../InstructionGroup";
 import { InstructionBlock } from "../block/InstructionBlock";
-import { InstructionLine } from "../InstructionLine";
+import { InstructionLine } from "../components/InstructionLine";
 
 export abstract class Instruction {
     /** Block containing the instruction's lines. Only to be used by InstructionBlock and this class. */

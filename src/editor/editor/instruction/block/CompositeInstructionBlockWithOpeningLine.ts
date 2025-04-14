@@ -1,6 +1,6 @@
 import { Instruction } from "../baseInstructions/Instruction";
 import { InstructionBlueprintRegistery } from "../InstructionBlueprintRegistery";
-import { InstructionLine } from "../InstructionLine";
+import { InstructionLine } from "../components/InstructionLine";
 import { CompositeInstructionBlock } from "./CompositeInstructionBlock";
 import { SingleInstructionBlock } from "./SingleInstructionBlock";
 

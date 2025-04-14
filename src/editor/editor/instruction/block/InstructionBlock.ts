@@ -1,6 +1,6 @@
 import { ActionBus } from "../../editing/actions/ActionBus";
 import { Instruction } from "../baseInstructions/Instruction";
-import { InstructionLine } from "../InstructionLine";
+import { InstructionLine } from "../components/InstructionLine";
 import { CompositeInstructionBlock, InstructionGroupBlock } from "./CompositeInstructionBlock";
 
 /**

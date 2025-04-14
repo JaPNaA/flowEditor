@@ -1,4 +1,4 @@
-import { InstructionLine } from "../../instruction/InstructionLine";
+import { InstructionLine } from "../../instruction/components/InstructionLine";
 import { Editable } from "../Editable";
 
 export class LineOperationRequest {

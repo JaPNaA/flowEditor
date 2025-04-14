@@ -3,7 +3,7 @@ import { UndoableAction } from "../../editing/actions/UndoableAction";
 import { InstructionGroup } from "../../InstructionGroup";
 import { Instruction } from "../baseInstructions/Instruction";
 import { InstructionBlueprintRegistery } from "../InstructionBlueprintRegistery";
-import { InstructionLine } from "../InstructionLine";
+import { InstructionLine } from "../components/InstructionLine";
 import { InstructionBlock } from "./InstructionBlock";
 
 

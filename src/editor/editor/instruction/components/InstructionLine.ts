@@ -1,8 +1,8 @@
-import { Component, Elm } from "../../../japnaaEngine2d/elements";
-import { Editable } from "../editing/Editable";
-import { RequestAccepter } from "../editing/requests/RequestAccepter";
-import { EditRequest } from "../editing/requests/requests";
-import { InstructionBlock } from "./block/InstructionBlock";
+import { Component, Elm } from "../../../../japnaaEngine2d/elements";
+import { Editable } from "../../editing/Editable";
+import { RequestAccepter } from "../../editing/requests/RequestAccepter";
+import { EditRequest } from "../../editing/requests/requests";
+import { InstructionBlock } from "../block/InstructionBlock";
 
 export abstract class InstructionLine extends Component {
     public preferredStartingCharOffset = 0;
