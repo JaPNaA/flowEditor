@@ -131,8 +131,10 @@ export class CompositeInstructionBlock implements InstructionBlock {
 
     constructor(public instruction?: Instruction | undefined) {
         this.actionBus.subscribe(AddInstructionAction, action => {
-            const group = action.parentBlock.getGroup();
-            action.parentBlock._insertBlock(action.relativeIndex, action.block);
+            if (action.parentBlock !== this) { return; }
+
+            const group = this.getGroup();
+            this._insertBlock(action.relativeIndex, action.block);
 
             if (group) {
                 const nextLineIndex = group.locateLine(action.block.getLine(action.block.numLines - 1)) + 1;
@@ -161,11 +163,13 @@ export class CompositeInstructionBlock implements InstructionBlock {
         });
 
         this.actionBus.subscribe(RemoveInstructionAction, action => {
-            const instruction = action.block.children[action.relativeIndex];
+            if (action.block !== this) { return; }
 
-            action.block._removeBlock(action.relativeIndex);
+            const instruction = this.children[action.relativeIndex];
 
-            const group = action.block.getGroup();
+            this._removeBlock(action.relativeIndex);
+
+            const group = this.getGroup();
 
             if (group) {
                 for (const line of instruction.lineIter()) {

@@ -381,7 +381,7 @@ class CompositeInstructionBlockWithOpeningLine<T extends InstructionLine> extend
 
 export abstract class InstructionComposite<T extends InstructionLine> extends Instruction {
     public block: CompositeInstructionBlockWithOpeningLine<T>;
-    public childInstructions: Instruction[] = [];
+    // public childInstructions: Instruction[] = [];
 
     constructor(protected openingLine: T) {
         super();
