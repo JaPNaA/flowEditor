@@ -57,7 +57,9 @@ export class EditorCursor extends Elm<"span"> {
         this.inputCapture.positionChangeHandler = positionChangeHandler;
 
         this.inputCapture.afterChangeDomSelectionHandler = () => {
-            this.autocomplete.updatePosition();
+            if (this.allowAutocomplete) {
+                this.autocomplete.updatePosition();
+            }
         };
 
         this.inputCapture.afterGroupEdited = group => {
