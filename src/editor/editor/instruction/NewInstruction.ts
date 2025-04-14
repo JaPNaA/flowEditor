@@ -5,7 +5,7 @@ import { NewInstructionAutocompleteSuggester } from "./NewInstructionAutocomplet
 import { InstructionBlueprint, InstructionBlueprintRegistery } from "./InstructionBlueprintRegistery";
 import { InstructionGroup } from "../InstructionGroup";
 import { EditorCursor } from "../editing/EditorCursor";
-import { EditRequest } from "../editing/requests/requests";
+import { RequestAccepter } from "../editing/requests/RequestAccepter";
 
 export class NewInstruction extends InstructionOneLine<NewInstructionLine> {
     public getBlueprintRegistery: () => InstructionBlueprintRegistery | undefined;
@@ -42,27 +42,22 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         this.setAreas(this.editable = this.registerEditable(new NewInstructionEditable(this)));
         this.editable.isPlaceholder = true;
 
-        this.editable.onCheckInput = (changes) => {
-            let accept = true;
-
-            if (changes.newContent.includes("\n")) {
-                accept = false;
-            }
-
+        this.editRequestAccepter = new RequestAccepter((changes, control) => {
             if (changes.newContent && changes.newContent[0] === "\n") {
+                control.accepted = true;
                 this.splitGroupHere();
-            } else {
-                this.isEmpty = Boolean(!changes.newContent);
             }
+        }, this.editRequestAccepter);
+
+        this.editable.actionBus.subscribe(EditableEditAction, (action) => {
+            this.isEmpty = Boolean(!action.newValue);
 
             if (this.isEmpty) {
                 this.elm.class("showPlaceholder");
             } else {
                 this.elm.removeClass("showPlaceholder");
             }
-
-            return accept;
-        };
+        });
 
         this.editable.onKeyIntercepted.subscribe(event => {
             if (!this.isEmpty) { return; }
@@ -155,7 +150,6 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
 }
 
 export class NewInstructionEditable extends Editable {
-    public onCheckInput?: (action: EditRequest) => boolean;
     public onKeyIntercepted = new EventBus<KeyboardEvent>();
     private isActive = false;
     private previousCursor?: EditorCursor;
@@ -164,11 +158,6 @@ export class NewInstructionEditable extends Editable {
         super("", parentLine);
         this.intercepter = this.intercepter.bind(this);
         this.autoCompleteType = NewInstructionAutocompleteSuggester.symbol;
-    }
-
-    public checkInput(action: EditRequest): boolean {
-        // allow all
-        return this.onCheckInput?.(action) ?? false;
     }
 
     public update() {

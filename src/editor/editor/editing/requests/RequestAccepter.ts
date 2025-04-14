@@ -11,8 +11,11 @@ export class RequestAccepter<T> {
     /**
      * @param handler A handler that performs the appropriate actions for the request.
      */
-    constructor(private handler?: RequestHandler<T>) {
+    constructor(private handler?: RequestHandler<T>, nextAccepter?: RequestAccepter<T>) {
         this.handler = handler;
+        if (nextAccepter) {
+            this.getNextAccepter = () => nextAccepter;
+        }
     }
 
     public setHandler(handler: RequestHandler<T>) {
