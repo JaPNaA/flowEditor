@@ -95,6 +95,10 @@ export const pluginHooks = {
         visualNovelPlugin.setEngine(engine);
     },
 
+    beforeExport(editor: Editor) {
+        visualNovelPlugin.exporter.beforeExport(editor);
+    },
+
     getFlowHeader() {
         return visualNovelPlugin.getFlowHeader();
     }

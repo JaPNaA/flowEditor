@@ -536,6 +536,8 @@ export class Editor extends WorldElmWithComponents {
     }
 
     public compile() {
+        pluginHooks.beforeExport(this);
+
         const startIndicies = new Map<InstructionGroup, number>();
 
         const compiled: any[] = pluginHooks.getFlowHeader();

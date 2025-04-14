@@ -21,23 +21,62 @@ export interface EditorPlugin {
     executer?: PluginExecuter;
     renderer?: PluginRenderer;
     analyser?: PluginAnalyser;
+    exporter?: PluginExporter; // todo: consider renaming this to compiler
     autocomplete?: [symbol, AutoCompleteSuggester][];
 }
 
+/**
+ * Events and behaviour the plugin can hook into during the
+ * execution of a flow.
+ * 
+ * This must be implemented in a separate file, not using
+ * any dependencies on the editor source files.
+ */
 export interface PluginExecuter {
+    /**
+     * Called when the executer starts executing some program.
+     */
     start(executerContainer: Executer): Promise<void>;
+    /**
+     * Given data, determine if this plugin is responsible for this data,
+     * and then execute the instruction if responsible.
+     * @param data An instruction from the flow
+     * @return True if we executed this instruction, false otherwise.
+     */
     run(data: any): boolean;
     stop(): Promise<void>;
+    /**
+     * This method is called when the user restores from a state.
+     * @param state Result of getState, the state to restore to.
+     */
     setState(state: any): void;
+    /**
+     * Get the state of execution for everything in this plugin.
+     */
     getState(): any;
 }
 
+/**
+ * Behaviours the plugin can change regarding rendering of
+ * instructions in the editor.
+ */
 export interface PluginRenderer {
     renderGroup(group: InstructionGroup, engine: JaPNaAEngine2d): void;
 }
 
+/**
+ * Events the plugin can handle in the editor.
+ */
 export interface PluginAnalyser {
     onFlowLoad(editor: Editor): void;
     onActionPerformed(action: ActionInstance): void;
     dispose(): void;
+}
+
+/**
+ * Events the plugin can handle when exporting a flow
+ * in the editor.
+ */
+export interface PluginExporter {
+    beforeExport(editor: Editor): any;
 }

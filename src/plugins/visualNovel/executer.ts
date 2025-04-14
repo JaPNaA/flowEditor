@@ -1,4 +1,4 @@
-import { PluginExecuter } from "../../editor/EditorPlugin";
+import type { PluginExecuter } from "../../editor/EditorPlugin";
 import { Executer } from "../../executer/Executer";
 import { Elm } from "../../japnaaEngine2d/elements";
 import { isVisualNovelControlItem } from "./controls";

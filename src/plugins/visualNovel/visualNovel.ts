@@ -16,11 +16,12 @@ import { Instruction } from "../../editor/editor/instruction/baseInstructions/In
 import { InstructionComposite } from "../../editor/editor/instruction/baseInstructions/InstructionComposite";
 import { OneLineInstruction, InstructionOneLine } from "../../editor/editor/instruction/baseInstructions/InstructionOneLine";
 import { SingleInstructionBlock } from "../../editor/editor/instruction/block/SingleInstructionBlock";
+import { VisualNovelExporter } from "./exporter";
 
 const autocompleteTypeCharacter = Symbol();
 const autocompleteTypeBackground = Symbol();
 const autocompleteTypeBackgroundMusic = Symbol();
-const autocompleteTypeShow = Symbol();
+const autocompleteTypeGraphic = Symbol();
 
 export default class VisualNovelPlugin implements EditorPlugin {
     name = "Visual Novel";
@@ -132,6 +133,7 @@ export default class VisualNovelPlugin implements EditorPlugin {
     executer = new VisualNovelExecuter();
     renderer = new VisualNovelRenderer();
     analyser = new VisualNovelAnalyser();
+    exporter = new VisualNovelExporter();
 
     setProject(project: Project): void {
         this.renderer.setProject(project);
@@ -923,7 +925,7 @@ class SetVariableStringInstruction extends InstructionLine implements OneLineIns
     }
 }
 
-class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpening> {
+export class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpening> {
     private static instructionRegistery = new InstructionBlueprintRegistery();
 
     private static instructionBlueprints: InstructionBlueprintMin[] = [{
@@ -1009,10 +1011,14 @@ class CreateGraphicInstruction extends InstructionComposite<CreateGraphicLineOpe
         return [graphic, { visualNovelCtrl: "show", id: this.graphicId }];
     }
 
+    public getGraphicName(): string {
+        return this.openingLine.editable.getValue();
+    }
+
     public serialize(): any {
         return {
             visualNovelCtrl: "graphic",
-            name: this.openingLine.editable.getValue(),
+            name: this.getGraphicName(),
             params: this.block.children.map(x => x.instruction?.serialize()).filter(x => x)
         };
     }
@@ -1025,6 +1031,7 @@ class CreateGraphicLineOpening extends InstructionLine {
     constructor(name: string) {
         super();
         this.setAreas("Create Graphic: ", this.editable = this.createEditable(name));
+        this.editable.autoCompleteType = autocompleteTypeGraphic;
         this.elm.class("control");
     }
 }
