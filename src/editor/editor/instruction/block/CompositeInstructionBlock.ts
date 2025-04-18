@@ -21,6 +21,7 @@ export class CompositeInstructionBlock implements InstructionBlock {
     constructor(public instruction?: Instruction | undefined) {
         this.actionBus.subscribe(AddInstructionAction, action => {
             if (action.parentBlock !== this) { return; }
+            action.block.actionBus.parentBus = this.actionBus;
 
             const group = this.getGroup();
             this._insertBlock(action.relativeIndex, action.block);
@@ -55,6 +56,7 @@ export class CompositeInstructionBlock implements InstructionBlock {
             if (action.block !== this) { return; }
 
             const instruction = this.children[action.relativeIndex];
+            instruction.actionBus.parentBus = undefined;
 
             this._removeBlock(action.relativeIndex);
 

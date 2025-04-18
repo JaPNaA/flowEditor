@@ -1,4 +1,4 @@
-import { ActionBus } from "../../editing/actions/ActionBus";
+import { ActionBusDispatchable } from "../../editing/actions/ActionBus";
 import { Instruction } from "../baseInstructions/Instruction";
 import { InstructionLine } from "../components/InstructionLine";
 import { CompositeInstructionBlock, InstructionGroupBlock } from "./CompositeInstructionBlock";
@@ -24,7 +24,7 @@ export interface InstructionBlock {
     /** The instruction associated with the block */
     instruction?: Instruction;
     /** Action bus for this instruction block */
-    actionBus: ActionBus;
+    actionBus: ActionBusDispatchable;
 
     /** Traverse up to the root group editor, if one exists. */
     getGroup(): InstructionGroupBlock | undefined;

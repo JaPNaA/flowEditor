@@ -1,7 +1,7 @@
 import { ControlItem } from "../../FlowRunner";
 import { InstructionGroup } from "../../editor/editor/InstructionGroup";
 import { globalAutocompleteTypes } from "../../editor/editor/editing/AutoComplete";
-import { Editable } from "../../editor/editor/editing/Editable";
+import { Editable, EditableEditAction } from "../../editor/editor/editing/Editable";
 import { InstructionBlueprintMin, InstructionBlueprintRegistery } from "../../editor/editor/instruction/InstructionBlueprintRegistery";
 import { Project } from "../../editor/project/Project";
 import { JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
@@ -486,8 +486,8 @@ class BackgroundMacroLine extends InstructionLine implements OneLineInstruction 
             )
         );
         this.backgroundEditable.autoCompleteType = autocompleteTypeBackground;
-        this.backgroundEditable.onChange.subscribe(value => {
-            const serialized = this.parseBackgroundString(value);
+        this.backgroundEditable.actionBus.subscribe(EditableEditAction, action => {
+            const serialized = this.parseBackgroundString(action.newValue);
             (this.parentBlock.instruction as BackgroundMacro).contextSet = {
                 backgroundColor: serialized.color && "#" + serialized.color,
                 backgroundSrc: serialized.src

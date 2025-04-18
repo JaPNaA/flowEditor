@@ -32,6 +32,9 @@ export abstract class InstructionLine extends Component {
 
     public _setParent(instruction: InstructionBlock) {
         this.parentBlock = instruction;
+        for (const editable of this.editables) {
+            editable.actionBus.parentBus = instruction.actionBus;
+        }
     }
 
     public reset() {

@@ -6,7 +6,6 @@ import { RequestAccepter } from "./requests/RequestAccepter";
 import { EditRequest } from "./requests/requests";
 
 export class Editable extends Elm<"span"> {
-    public onChange = new EventBus<string>();
     /** The type of value autocomplete tries to complete this editable's value with */
     public autoCompleteType?: symbol;
     /**
@@ -54,7 +53,6 @@ export class Editable extends Elm<"span"> {
             if (autocomplete) { autocomplete.enteredValue(action.editable); }
 
             action.editable.update();
-            this.onChange.send(action.newValue);
         });
     }
 

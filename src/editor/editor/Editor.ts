@@ -82,6 +82,7 @@ export class Editor extends WorldElmWithComponents {
 
         this.actionBus.subscribe(AddGroupAction, action => {
             this.groupEditors.push(action.group);
+            action.group.block.actionBus.parentBus = this.actionBus;
             this.children.addChild(action.group.editor);
 
             // add parent-child relations
@@ -95,6 +96,7 @@ export class Editor extends WorldElmWithComponents {
 
         this.actionBus.subscribe(RemoveGroupAction, action => {
             removeElmFromArray(action.group, this.groupEditors);
+            action.group.block.actionBus.parentBus = undefined;
             this.children.removeChild(action.group.editor);
             this.cursor.unregisterGroupEditor(action.group);
 
