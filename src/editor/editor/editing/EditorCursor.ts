@@ -102,10 +102,17 @@ export class EditorCursor extends Elm<"span"> {
                 case "Enter":
                 case "Tab":
                     // accept suggestion
-                    const text = this.autocomplete.acceptSuggestion();
+                    const suggestionGetter = this.autocomplete.getSelectedSuggestion();
                     this.autocomplete.clearSuggestions();
-                    if (!text) { break; }
-                    this.activeEditable.requestSetValue(text);
+                    if (!suggestionGetter) { break; }
+                    // run the suggestion getter after clearing suggestions, this is to avoid
+                    // the case:
+                    //   - suggestionGetter requests autocomplete to be shown
+                    //   - this function request autocomplete to be cleared, clearing
+                    //     the requested autocomplete from suggestionGetter
+                    const suggestion = suggestionGetter();
+                    if (!suggestion) { break; }
+                    this.activeEditable.requestSetValue(suggestion);
 
                     this.activeEditable.isPlaceholder = false;
                     this.allowAutocomplete = false;
@@ -114,7 +121,7 @@ export class EditorCursor extends Elm<"span"> {
                         // end of current editable
                         this.setPosition({
                             group: this.positionStart.group,
-                            char: text.length,
+                            char: suggestionGetter.length,
                             editable: this.positionStart.editable,
                             line: this.positionStart.line
                         });
@@ -200,6 +207,13 @@ export class EditorCursor extends Elm<"span"> {
         }
 
         this.inputCapture.focus();
+    }
+
+    public requestAutocomplete() {
+        if (!this.activeEditable) { return; }
+        this.allowAutocomplete = true;
+        this.autocomplete.updatePosition();
+        this.autocomplete.showSuggestions(this.activeEditable);
     }
 
     public update() {

@@ -80,7 +80,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 .blueprintRegistery.getBlueprintByShortcut(event.code);
             if (blueprint) {
                 const instruction = blueprint.create();
-                this.changeView(instruction);
+                this.replaceSelfWith(instruction);
                 event.preventDefault();
             }
         });
@@ -148,8 +148,8 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
         return { ctrl: "nop" };
     }
 
-    public changeView(instruction: Instruction) {
-        // set all instruction's editables to placeholder if undefined
+    public replaceSelfWith(instruction: Instruction) {
+        // isPlaceholder is true by default
         for (const line of instruction.block.lineIter()) {
             for (const editable of line.getEditables()) {
                 if (editable.isPlaceholder === undefined) {
@@ -180,6 +180,7 @@ export class NewInstructionLine extends InstructionLine implements OneLineInstru
                 ...position,
                 char: instruction.block.getLine(0).preferredStartingCharOffset
             });
+            group.parentEditor.cursor.requestAutocomplete();
         }
 
         group.parentEditor.undoLog.endGroup();
@@ -237,7 +238,7 @@ export class NewInstructionEditable extends Editable {
 
     public acceptAutocomplete(blueprint: InstructionBlueprint) {
         const newInstruction = blueprint.create();
-        (this.parentLine as NewInstructionLine).changeView(newInstruction);
+        (this.parentLine as NewInstructionLine).replaceSelfWith(newInstruction);
     }
 
     private intercepter(ev: KeyboardEvent) {

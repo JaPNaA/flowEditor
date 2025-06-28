@@ -33,19 +33,15 @@ export class AutoComplete extends Component {
         super("autocomplete");
     }
 
-    public acceptSuggestion(): string | undefined {
+    public getSelectedSuggestion(): (() => string | void) | undefined {
         if (!this.lastSuggestions) { return; }
         const suggestion = this.lastSuggestions[this.selectedSuggestion];
         if (!suggestion) { return; }
         if (typeof suggestion[0].fill === "function") {
-            const ret = suggestion[0].fill();
-            if (ret !== undefined) {
-                return ret;
-            } else {
-                return;
-            }
-        } else {
             return suggestion[0].fill;
+        } else {
+            const str = suggestion[0].fill;
+            return () => str;
         }
     }
 
