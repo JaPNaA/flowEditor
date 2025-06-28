@@ -18,7 +18,6 @@ export abstract class InstructionComposite<T extends InstructionLine> extends In
     }
 
     public insertLine(index: number): boolean {
-        console.log("Composite insert", index);
         const newInstruction = new NewInstruction(this.block);
         this.block.insertBlock(index, newInstruction.block);
         return true;
