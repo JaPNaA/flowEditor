@@ -203,9 +203,10 @@ export class ContentEditableInputCapture {
      */
     public _recordFloatingPositionChange(floatingPosition?: FloatingPosition) {
         // set this.cursorMovingBackwards
-        if (this._lastFloatingPosition && floatingPosition) {
-            if (floatingPosition.group !== this._lastFloatingPosition.group) { return; }
-
+        if (this._lastFloatingPosition
+            && floatingPosition
+            && floatingPosition.group === this._lastFloatingPosition.group
+        ) {
             if (floatingPosition.lineNumber > this._lastFloatingPosition.lineNumber) {
                 this.cursorMovingBackwards = false;
             } else if (floatingPosition.lineNumber < this._lastFloatingPosition.lineNumber) {
