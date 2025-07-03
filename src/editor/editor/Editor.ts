@@ -769,6 +769,7 @@ class SelectRectangle extends WorldElm {
         X.fillStyle = "#aaf";
         X.strokeStyle = "#008";
         X.globalAlpha = 0.5;
+        X.beginPath();
         X.rect(0, 0, this.rect.width, this.rect.height);
         X.fill();
         X.stroke();
