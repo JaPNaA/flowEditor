@@ -1,4 +1,4 @@
-import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { Elm, JaPNaAEngine2d, ParentComponent, QuadtreeParentComponent, RectangleM, SubscriptionsComponent, Vec2, Vec2M, WorldElm, WorldElmWithComponents } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray";
 import { appHooks, pluginHooks } from "../index";
 import { TextOpDialogue } from "../modals/TextOpDialogue";
@@ -378,13 +378,10 @@ export class Editor extends WorldElmWithComponents {
 
     private addGroupHandler() {
         const newData = newInstructionData();
-        if (this.groupEditors.length === 0) {
-            newData.x = 8;
-            newData.y = 24;
-        } else {
-            newData.x = this.engine.mouse.worldPos.x - InstructionGroupEditor.defaultWidth / 2;
-            newData.y = this.engine.mouse.worldPos.y - 16;
-        }
+        const pos = this.calcAddGroupPosition();
+        newData.x = pos.x;
+        newData.y = pos.y;
+
         this.undoLog.startGroup();
         const newEditor = new InstructionGroup(this, newData);
         this.addGroup(newEditor);
@@ -404,6 +401,36 @@ export class Editor extends WorldElmWithComponents {
         }
         this.handleClickGroup(newEditor);
         this.undoLog.endGroup();
+    }
+
+    /**
+     * Calculate the position where a new group created by the user
+     * would be positioned.
+     */
+    private calcAddGroupPosition(): Vec2 {
+        const estimatedWidth = InstructionGroupEditor.defaultWidth;
+        const estimatedHeight = 40;
+        const padding = 8;
+
+        let vec;
+
+        if (this.groupEditors.length === 0) {
+            vec = new Vec2M(8, 24);
+        } else {
+            vec = new Vec2M(
+                this.engine.mouse.worldPos.x - estimatedWidth / 2,
+                this.engine.mouse.worldPos.y - estimatedHeight / 2
+            );
+        }
+
+        // constrain group position to be inside camera bounds
+        vec.x = Math.min(vec.x, this.engine.camera.rect.rightX() - estimatedWidth - padding);
+        vec.x = Math.max(vec.x, this.engine.camera.rect.x + padding);
+
+        vec.y = Math.min(vec.y, this.engine.camera.rect.bottomY() - estimatedHeight - padding);
+        vec.y = Math.max(vec.y, this.engine.camera.rect.y + padding);
+
+        return vec;
     }
 
     private markGroupAsStartHandler() {
