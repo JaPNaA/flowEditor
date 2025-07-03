@@ -30,8 +30,21 @@ export class Editor extends WorldElmWithComponents {
 
     private nonGroupEditorChildren = this.addComponent(new ParentComponent());
 
+    /**
+     * List of all group editors in the editor
+     */
     private groupEditors: InstructionGroup[] = []; // todo: make private (see InstructionGroupEditor.relinkParentsToFinalBranch)
+    /**
+     * The instruction groups to be lazy-rendered.
+     */
     private children = this.addComponent(new QuadtreeParentComponent());
+    /**
+     * This is the current group which the editor cursor is positioned in.
+     *
+     * The current editing group should always be rendered, even if the group
+     * goes off screen.
+     */
+    private currentEditingGroup?: InstructionGroup;
     private startGroup?: InstructionGroup;
 
 
@@ -191,6 +204,13 @@ export class Editor extends WorldElmWithComponents {
                 if (newY !== undefined) { targetPos.y = newY; }
                 this.smoothCamera.moveTo(targetPos);
             }
+        });
+        this.cursor.onFocusChangeGroup.subscribe(group => {
+            if (this.currentEditingGroup) {
+                this.children.unsetAlwaysRender(this.currentEditingGroup.editor);
+            }
+            this.currentEditingGroup = group;
+            this.children.setAlwaysRender(group.editor);
         });
 
         this.engine.htmlOverlay.elm.append(this.cursor.autocomplete);
@@ -366,6 +386,10 @@ export class Editor extends WorldElmWithComponents {
         if (!this.editMode) { return; }
         for (const group of this.groupEditors) {
             group.editor.unsetEditMode();
+        }
+        if (this.currentEditingGroup) {
+            this.children.unsetAlwaysRender(this.currentEditingGroup.editor);
+            this.currentEditingGroup = undefined;
         }
         this.editMode = false;
     }
