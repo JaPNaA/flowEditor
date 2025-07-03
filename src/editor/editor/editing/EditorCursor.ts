@@ -1,18 +1,22 @@
-import { Elm, EventBus } from "../../../japnaaEngine2d/JaPNaAEngine2d";
+import { Elm, EventBus, JaPNaAEngine2d, Vec2, Vec2M } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { InstructionGroup } from "../InstructionGroup";
 import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
 import { ContentEditableInputCapture } from "./ContentEditableInputCapture";
 
 export class EditorCursor extends Elm<"span"> {
-    public autocomplete = new AutoComplete();
     public activeEditable?: Editable;
 
     public onFocusChangeGroup = new EventBus<InstructionGroup>();
     public onClickGroup = new EventBus<InstructionGroup>();
     public onKeyboardShortcutPress = new EventBus<KeyboardEvent>();
     public onKeydownIntercept = new EventBus<KeyboardEvent>();
+    public onWorldPositionChange = new EventBus<Vec2>();
     public onInput = new EventBus();
+
+    public autocomplete = new AutoComplete(this);
+
+    protected engine!: JaPNaAEngine2d;
 
     private inputCapture = new ContentEditableInputCapture();
     private positionStart?: Readonly<EditorCursorPositionAbsolute>;
@@ -58,7 +62,7 @@ export class EditorCursor extends Elm<"span"> {
 
         this.inputCapture.afterChangeDomSelectionHandler = () => {
             if (this.allowAutocomplete) {
-                this.autocomplete.updatePosition();
+                this.updateWorldPosition();
             }
         };
 
@@ -155,6 +159,10 @@ export class EditorCursor extends Elm<"span"> {
         };
     }
 
+    public setEngine(engine: JaPNaAEngine2d) {
+        this.engine = engine;
+    }
+
     /** Register a group editor. Called by InstructionGroupEditor when entering edit mode */
     public registerGroupEditor(group: InstructionGroup) {
         this.inputCapture.registerGroup(group);
@@ -212,7 +220,6 @@ export class EditorCursor extends Elm<"span"> {
     public requestAutocomplete() {
         if (!this.activeEditable) { return; }
         this.allowAutocomplete = true;
-        this.autocomplete.updatePosition();
         this.autocomplete.showSuggestions(this.activeEditable);
     }
 
@@ -239,10 +246,42 @@ export class EditorCursor extends Elm<"span"> {
         if (!editable) { return; }
         this.activeEditable = editable;
         if (this.allowAutocomplete) {
-            this.autocomplete.updatePosition();
             this.autocomplete.showSuggestions(editable);
         }
         editable.update(); // some editables like in NewInstruction use update to enable/disable their keydown intercepter
+        this.updateWorldPosition();
+    }
+
+    private updateWorldPosition() {
+        const selection = document.getSelection();
+        if (!selection || !selection.anchorNode) { return; }
+        const range = document.createRange();
+        range.setStart(selection.anchorNode, selection.anchorOffset);
+        range.collapse(true);
+
+        let boundingRect = range.getBoundingClientRect();
+
+        // workaround to avoid selecting a range with undefined rectangle
+        if (
+            boundingRect.x === 0 && boundingRect.y === 0 &&
+            boundingRect.width === 0 && boundingRect.height === 0 &&
+            selection.anchorOffset === 0 && selection.anchorNode instanceof Text
+        ) {
+            const oldValue = selection.anchorNode.nodeValue;
+            selection.anchorNode.nodeValue = ' ';
+            boundingRect = range.getBoundingClientRect();
+            selection.anchorNode.nodeValue = oldValue;
+        }
+
+        range.detach();
+
+        this.onWorldPositionChange.send(
+            this.engine.camera.canvasToWorldPos(
+                this.engine.sizer.screenPosToCanvasPos(
+                    new Vec2M(boundingRect.x, boundingRect.y + boundingRect.height)
+                )
+            )
+        );
     }
 
     private getEditableFromPosition(position: Readonly<EditorCursorPositionAbsolute>) {

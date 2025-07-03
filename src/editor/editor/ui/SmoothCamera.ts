@@ -10,7 +10,7 @@ export class SmoothCamera extends WorldElm {
     public tick() {
         if (!this.targetPos) { return; }
         this.engine.camera.goto(
-            new Vec2M(this.engine.camera.rect.x, this.engine.camera.rect.y)
+            this.engine.camera.rect.topLeft()
                 .lerp(0.3, this.targetPos)
         );
         this.engine.ticker.requestTick();
@@ -25,5 +25,11 @@ export class SmoothCamera extends WorldElm {
             .translate(
                 new Vec2M(-this.engine.camera.rect.width / 2, -this.engine.camera.rect.height / 2)
             );
+        this.engine.ticker.requestTick();
+    }
+
+    public moveTo(pos: Vec2) {
+        this.targetPos = pos;
+        this.engine.ticker.requestTick();
     }
 }

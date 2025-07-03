@@ -2,6 +2,7 @@ import { JaPNaAEngine2d, Vec2M } from "../../../japnaaEngine2d/JaPNaAEngine2d";
 import { Component, Elm } from "../../../japnaaEngine2d/elements";
 import { looseStartsWith } from "../../utils";
 import { Editable } from "./Editable";
+import { EditorCursor } from "./EditorCursor";
 
 export interface AutoCompleteSuggester {
     learn(editable: Editable): void;
@@ -21,16 +22,19 @@ export const globalAutocompleteTypes = {
 };
 
 export class AutoComplete extends Component {
-    protected engine!: JaPNaAEngine2d;
-
     private map = new Map<symbol, AutoCompleteSuggester>();
     private defaultHandlerPreviousValues = new Map<symbol, Map<string, number>>();
     private lastSuggestions: [AutoCompleteSuggestion, Elm][] | null = null;
     private selectedSuggestion: number = 0;
 
-
-    constructor() {
+    constructor(cursor: EditorCursor) {
         super("autocomplete");
+
+        cursor.onWorldPositionChange.subscribe((pos) => {
+            const style = this.elm.getHTMLElement().style;
+            style.left = pos.x + "px";
+            style.top = pos.y + "px";
+        });
     }
 
     public getSelectedSuggestion(): (() => string | void) | undefined {
@@ -47,47 +51,6 @@ export class AutoComplete extends Component {
 
     public isShowingSuggestions() {
         return Boolean(this.lastSuggestions && this.lastSuggestions.length);
-    }
-
-    public setEngine(engine: JaPNaAEngine2d) {
-        this.engine = engine;
-    }
-
-    /**
-     * Updates the position of the AutoComplete popup using the current
-     * document cursor position (`document.getSelection()`)
-     */
-    public updatePosition() {
-        const selection = document.getSelection();
-        if (!selection || !selection.anchorNode) { return; }
-        const range = document.createRange();
-        range.setStart(selection.anchorNode, selection.anchorOffset);
-        range.collapse(true);
-
-        let boundingRect = range.getBoundingClientRect();
-
-        // workaround to avoid selecting a range with undefined rectangle
-        if (
-            boundingRect.x === 0 && boundingRect.y === 0 &&
-            boundingRect.width === 0 && boundingRect.height === 0 &&
-            selection.anchorOffset === 0 && selection.anchorNode instanceof Text
-        ) {
-            const oldValue = selection.anchorNode.nodeValue;
-            selection.anchorNode.nodeValue = ' ';
-            boundingRect = range.getBoundingClientRect();
-            selection.anchorNode.nodeValue = oldValue;
-        }
-
-        range.detach();
-
-        const pos = this.engine.camera.canvasToWorldPos(
-            this.engine.sizer.screenPosToCanvasPos(
-                new Vec2M(boundingRect.x, boundingRect.y + boundingRect.height)
-            )
-        );
-        const style = this.elm.getHTMLElement().style;
-        style.left = pos.x + "px";
-        style.top = pos.y + "px";
     }
 
     public showSuggestions(editable: Editable) {

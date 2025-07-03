@@ -155,11 +155,44 @@ export class Editor extends WorldElmWithComponents {
         });
         this.navigator._setEngine(engine);
 
-        this.cursor.autocomplete.setEngine(this.engine);
+        this.cursor.setEngine(this.engine);
         this.cursor.autocomplete.registerSuggester(
             NewInstructionAutocompleteSuggester.symbol,
             new NewInstructionAutocompleteSuggester()
         );
+        this.cursor.onWorldPositionChange.subscribe((pos) => {
+            const autoscrollStep = 64 / this.engine.camera.getScale();
+            const margin = 128 / this.engine.camera.getScale();
+
+            let newX: number | undefined;
+            let newY: number | undefined;
+
+            if (pos.x > this.engine.camera.rect.rightX() - margin) {
+                // scroll to the right
+                newX = pos.x - this.engine.camera.rect.width + margin + autoscrollStep;
+            } else if (pos.x < this.engine.camera.rect.x + margin) {
+                // scroll to the left
+                newX = pos.x - autoscrollStep - margin;
+            }
+
+            if (pos.y > this.engine.camera.rect.bottomY() - margin) {
+                // scroll down
+                newY = pos.y - this.engine.camera.rect.height + margin + autoscrollStep;
+            } else if (pos.y < this.engine.camera.rect.y + margin) {
+                // scroll up
+                newY = pos.y - autoscrollStep - margin;
+            }
+
+            console.log(newX, newY);
+
+            if (newX !== undefined || newY !== undefined) {
+                const targetPos = this.engine.camera.rect.topLeft();
+                if (newX !== undefined) { targetPos.x = newX; }
+                if (newY !== undefined) { targetPos.y = newY; }
+                this.smoothCamera.moveTo(targetPos);
+            }
+        });
+
         this.engine.htmlOverlay.elm.append(this.cursor.autocomplete);
     }
 
