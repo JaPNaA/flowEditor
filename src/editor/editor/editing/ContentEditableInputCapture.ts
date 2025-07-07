@@ -3,8 +3,10 @@ import { LineOperationRequest } from "./requests/requests";
 import { EditorCursorPositionAbsolute } from "./EditorCursor";
 import { InstructionGroup } from "../InstructionGroup";
 import { TwoWayMap, findEditableValuesInChangedString, getAncestorWhich } from "../../utils";
-import { Editable } from "./Editable";
+import { Editable, EditableEditAction } from "./Editable";
 import { InstructionLine } from "../instruction/components/InstructionLine";
+import { UndoableAction } from "./actions/UndoableAction";
+import { ActionInstance } from "./actions/ActionBus";
 
 /**
  * `ContentEditableInputCapture` user the 'contentEditable' attribute to
@@ -415,7 +417,12 @@ class InputCapture {
         this.elm.getHTMLElement().addEventListener("blur", this.blurHandler);
     }
 
-    public onAction() {
+    public onAction(action: ActionInstance) {
+        if (action.key !== EditableEditAction.key || (action as EditableEditAction).inputCapturePreUpdated) {
+            // action was pre-handled, do nothing
+            return;
+        }
+
         if (this.freezeExternalActions) {
             this.shouldReset = true;
         } else {
@@ -643,7 +650,7 @@ class InputCapture {
             const oldValue = editable.getValue();
             if (oldValue === newValue) { continue; }
 
-            const result = editable.requestSetValue(newValue);
+            const result = editable.requestSetValueInputCaptureHandled(newValue);
             if (result.accepted) {
                 this.lines[lineIndex].str = areasToString(areas);
                 changedEditables.push(editable);

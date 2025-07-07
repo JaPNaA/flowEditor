@@ -14,6 +14,11 @@ export class LineOperationRequest {
 export class EditRequest {
     constructor(
         public readonly newContent: string,
-        public readonly editable: Editable
+        public readonly editable: Editable,
+        /**
+         * Set for edit requests triggered from the input capture, and
+         * have already been handled.
+         */
+        public readonly inputCapturePreUpdated: boolean
     ) { }
 }

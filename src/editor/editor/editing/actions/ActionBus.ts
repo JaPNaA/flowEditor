@@ -57,10 +57,18 @@ export class ActionBusDispatchable implements ActionBus {
 
 export interface ActionClass<T extends ActionInstance> {
     new(...args: any[]): T;
+    /**
+     * All action instances must have a key matching this static value.
+     */
     key: symbol;
 }
 
 export interface ActionInstance {
+    /**
+     * All actions of the same type have the same 'key'. This is
+     * used to quickly identify the handlers that should run for
+     * any specific action.
+     */
     key: symbol;
 
     /**

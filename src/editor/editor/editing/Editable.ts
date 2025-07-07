@@ -29,7 +29,7 @@ export class Editable extends Elm<"span"> {
         const groupBlock = this.parentLine.parentBlock.getGroup();
         if (!groupBlock) { return; }
         groupBlock.group.parentEditor.undoLog.perform(
-            new EditableEditAction(this, request.newContent, this.value)
+            new EditableEditAction(this, request.newContent, this.value, request.inputCapturePreUpdated)
         );
     });
 
@@ -66,8 +66,19 @@ export class Editable extends Elm<"span"> {
      */
     public requestSetValue(newContent: string) {
         return this.editRequestAccepter.accept(
-            new EditRequest(newContent, this)
+            new EditRequest(newContent, this, false)
         );
+    }
+
+    /**
+     * Sends a request to edit this editable. This method is a
+     * special version of {@link requestSetValue} for the input capture,
+     * since the DOM has already been updated to reflect the change.
+     */
+    public requestSetValueInputCaptureHandled(newContent: string) {
+        return this.editRequestAccepter.accept(
+            new EditRequest(newContent, this, true)
+        )
     }
 
     /** Called by ContentEditableOverlayInputCapture after setting a new value for the editable and moving the cursor. */
@@ -95,7 +106,13 @@ export class EditableEditAction implements UndoableAction {
     constructor(
         public editable: Editable,
         public newValue: string,
-        public previousValue: string
+        public previousValue: string,
+        /**
+         * Internal flag set only for actions that were already handled
+         * by the input capture. These actions do not need to be
+         * handled by the input capture again.
+         */
+        public inputCapturePreUpdated: boolean,
     ) { }
 
     public getTarget(): ActionBusDispatchable {
@@ -103,6 +120,6 @@ export class EditableEditAction implements UndoableAction {
     }
 
     public inverse(): EditableEditAction {
-        return new EditableEditAction(this.editable, this.previousValue, this.newValue);
+        return new EditableEditAction(this.editable, this.previousValue, this.newValue, false);
     }
 }
