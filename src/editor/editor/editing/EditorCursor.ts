@@ -274,6 +274,14 @@ export class EditorCursor extends Elm<"span"> {
 
         range.detach();
 
+        if (
+            boundingRect.x === 0 && boundingRect.y === 0 &&
+            boundingRect.width === 0 && boundingRect.height === 0
+        ) {
+            // likely an invalid bounding box -- better to ignore
+            return;
+        }
+
         this.onWorldPositionChange.send(
             this.engine.camera.canvasToWorldPos(
                 this.engine.sizer.screenPosToCanvasPos(

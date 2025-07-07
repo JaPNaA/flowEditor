@@ -196,12 +196,11 @@ export class Editor extends WorldElmWithComponents {
                 newY = pos.y - autoscrollStep - margin;
             }
 
-            console.log(newX, newY);
-
             if (newX !== undefined || newY !== undefined) {
                 const targetPos = this.engine.camera.rect.topLeft();
                 if (newX !== undefined) { targetPos.x = newX; }
                 if (newY !== undefined) { targetPos.y = newY; }
+                // temporarily disable since it's buggy
                 this.smoothCamera.moveTo(targetPos);
             }
         });

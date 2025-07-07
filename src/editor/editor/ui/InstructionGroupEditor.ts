@@ -96,6 +96,20 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         this.elmVisible = true;
         this.updateHeight();
         this.updateAfterMove();
+        // Update the CSS right after showing the element, since
+        // the camera may try to pan to the cursor. Without updating
+        // CSS here, the camera may pan to (0, 0).
+        this.drawUpdateHtmlOverlayPosition();
+    }
+
+    /**
+     * This method is called during the draw loop and also when
+     * the element is shown for the first time.
+     */
+    private drawUpdateHtmlOverlayPosition() {
+        const elm = this.elm.getHTMLElement();
+        elm.style.top = this.rect.y + "px";
+        elm.style.left = this.rect.x + "px";
     }
 
     private acceptLineOperationRequest(lineOp: LineOperationRequest) {
@@ -169,7 +183,6 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
         if (!this.isSetUp) { return; }
 
         const X = this.engine.canvas.X;
-        const elm = this.elm.getHTMLElement();
 
         // debug: draw graphic hitbox
         // X.strokeStyle = "#f0f";
@@ -208,8 +221,7 @@ export class InstructionGroupEditor extends WorldElm implements QuadtreeElmChild
             this.showElm();
         }
 
-        elm.style.top = this.rect.y + "px";
-        elm.style.left = this.rect.x + "px";
+        this.drawUpdateHtmlOverlayPosition();
 
         X.strokeStyle = "#aaa";
         X.fillStyle = "#aaa";
