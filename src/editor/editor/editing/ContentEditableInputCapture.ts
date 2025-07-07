@@ -160,17 +160,17 @@ export class ContentEditableInputCapture {
         const startLine = positionStart.group.block.getLine(positionStart.line);
         const startEditableOffset = startLine.getCharIndexOfEditable(startLine.getEditableFromIndex(positionStart.editable));
         const startLineHTMLElm = groupElm.lineMap.getK(startLine);
-        if (!startLineHTMLElm) { return; }
+        if (!startLineHTMLElm) { throw new Error("Failed to set postiion: start line not registered"); }
 
         const endLine = positionEnd.group.block.getLine(positionEnd.line);
         const endEditableOffset = endLine.getCharIndexOfEditable(endLine.getEditableFromIndex(positionEnd.editable));
         const endLineHTMLElm = groupElm.lineMap.getK(endLine);
-        if (!endLineHTMLElm) { return; }
+        if (!endLineHTMLElm) { throw new Error("Failed to set postiion: end line not registered"); }
 
         const selection = getSelection();
         const startPos = startLine.getEditableAndOffsetFromCharIndex(startEditableOffset + positionStart.char);
         const endPos = endLine.getEditableAndOffsetFromCharIndex(endEditableOffset + positionEnd.char);
-        if (!startPos || !endPos) { return; }
+        if (!startPos || !endPos) { throw new Error("Failed to set postiion: could not find start or end editable"); }
 
         const startNode = startPos.editable.getHTMLElement().childNodes[0] || startPos.editable.getHTMLElement();
         const endNode = endPos.editable.getHTMLElement().childNodes[0] || endPos.editable.getHTMLElement();
@@ -418,7 +418,7 @@ class InputCapture {
     }
 
     public onAction(action: ActionInstance) {
-        if (action.key !== EditableEditAction.key || (action as EditableEditAction).inputCapturePreUpdated) {
+        if (action.key === EditableEditAction.key && (action as EditableEditAction).inputCapturePreUpdated) {
             // action was pre-handled, do nothing
             return;
         }
@@ -427,6 +427,7 @@ class InputCapture {
             this.shouldReset = true;
         } else {
             this.resetContext();
+            this.resetCursorPosition();
         }
     }
 
@@ -465,6 +466,13 @@ class InputCapture {
         }
     }
 
+    /**
+     * Resets the input capture context, which includes the DOM for the input
+     * capture and the maps lines in the DOM.
+     * 
+     * Note that the cursor is not reset after this method is called. To
+     * reset the cursor, call {@link resetCursorPosition}.
+     */
     private resetContext(): void {
         this.disconnectMutationObserver()
 
@@ -482,6 +490,13 @@ class InputCapture {
             this.lineMap.set(line.elm.getHTMLElement(), line);
         }
 
+        this.connectMutationObserver();
+    }
+
+    /**
+     * Resets the cursor position after a {@link resetContext} call.
+     */
+    private resetCursorPosition(): void {
         if (this.group == this.parent.lastPositionStart?.group && this.parent.lastPositionEnd) {
             const startPos = clampPosition(this.parent.lastPositionStart);
             const endPos = clampPosition(this.parent.lastPositionEnd);
@@ -489,8 +504,6 @@ class InputCapture {
                 this.parent.setPosition(startPos, endPos);
             }
         }
-
-        this.connectMutationObserver();
     }
 
     private keydownHandler(ev: KeyboardEvent) {
@@ -561,15 +574,21 @@ class InputCapture {
         this.freezeExternalActions = false;
         this.parent._freezeSelectionSets = false;
 
-        if (floatingPosition && !this.parent._wasPositionSet) {
-            const position = this.parent.floatingPositionToAbsolute(floatingPosition);
-            this.parent.setPosition(position, position);
-        }
-
         if (this.shouldReset) {
             this.resetContext(); // resetContext will add observer again
         } else {
             this.connectMutationObserver();
+        }
+
+        // set the position after resetting the context
+        if (floatingPosition) {
+            if (this.parent._wasPositionSet && this.parent.lastPositionStart && this.parent.lastPositionEnd) {
+                this.parent.setPosition(this.parent.lastPositionStart, this.parent.lastPositionEnd);
+            } else {
+                // restore position
+                const position = this.parent.floatingPositionToAbsolute(floatingPosition);
+                this.parent.setPosition(position, position);
+            }
         }
     }
 
