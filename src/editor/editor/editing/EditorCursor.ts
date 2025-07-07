@@ -4,6 +4,20 @@ import { Editable } from "./Editable";
 import { AutoComplete } from "./AutoComplete";
 import { ContentEditableInputCapture } from "./ContentEditableInputCapture";
 
+/**
+ * A list of keys to ignore, even if the user is pressing this key while
+ * holding ctrl.
+ * 
+ * These keys have special browser behaviour associated with them
+ * when ctrl is held.
+ */
+const IGNORE_CTRL_KEY_LIST = [
+    "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+    "Delete", "Backspace",
+    "Home", "End",
+    "C", "c", "V", "v", "X", "x",
+];
+
 export class EditorCursor extends Elm<"span"> {
     public activeEditable?: Editable;
 
@@ -78,7 +92,7 @@ export class EditorCursor extends Elm<"span"> {
         };
 
         this.inputCapture.keydownIntercepter = e => {
-            if (e.ctrlKey && !["ArrowLeft", "ArrowRight", "Delete", "Backspace", "C", "c", "V", "v", "X", "x"].includes(e.key)) {
+            if (e.ctrlKey && !IGNORE_CTRL_KEY_LIST.includes(e.key)) {
                 this.onKeyboardShortcutPress.send(e);
                 return;
             }
