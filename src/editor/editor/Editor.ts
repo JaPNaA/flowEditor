@@ -163,8 +163,17 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Backspace", "Delete"]), this.deleteSelectedHandler);
         this.subscriptions.subscribe(this.engine.keyboard.getKeydownBus(["Enter", "NumpadEnter"]), ev => {
             ev.preventDefault();
-            this.ensureCursorInSelectedGroup();
             this.setEditMode();
+
+            const selectedGroup = this.getOneSelectedGroup();
+            if (selectedGroup) {
+                this.cursor.setPosition({
+                    group: selectedGroup,
+                    char: 0,
+                    editable: 0,
+                    line: 0
+                });
+            }
         });
         this.navigator._setEngine(engine);
 
@@ -341,23 +350,6 @@ export class Editor extends WorldElmWithComponents {
                 this.cursor.unfocus();
             }
             this.tempEditModeGroup = undefined;
-        }
-    }
-
-    public ensureCursorInSelectedGroup() {
-        const cursorPos = this.cursor.getPosition();
-        if (!cursorPos || !this.selectedGroups.has(cursorPos.group)) {
-            const selectedGroup = this.getOneSelectedGroup();
-            if (!selectedGroup) { return; }
-            this.cursor.setPosition({
-                group: selectedGroup,
-                char: 0,
-                editable: 0,
-                line: 0
-            });
-            if (!this.editMode) {
-                this.cursor.unfocus();
-            }
         }
     }
 

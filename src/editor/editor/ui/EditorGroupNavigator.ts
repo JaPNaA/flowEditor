@@ -53,7 +53,6 @@ export class EditorGroupNavigator {
             this.siblings = children;
             this.focus(this.siblings[0]);
         }
-        this.parent.ensureCursorInSelectedGroup();
     }
 
     private arrowUpHandler(event: KeyboardEvent) {
@@ -66,7 +65,6 @@ export class EditorGroupNavigator {
             this.siblings = parentsArr;
             this.focus(this.siblings[0]);
         }
-        this.parent.ensureCursorInSelectedGroup();
     }
 
     private arrowLeftHandler(event: KeyboardEvent) {
@@ -76,7 +74,6 @@ export class EditorGroupNavigator {
 
         const index = (this.siblings.indexOf(this.focusGroup) + this.siblings.length - 1) % this.siblings.length;
         this.focus(this.siblings[index]);
-        this.parent.ensureCursorInSelectedGroup();
     }
 
     private arrowRightHandler(event: KeyboardEvent) {
@@ -86,7 +83,6 @@ export class EditorGroupNavigator {
 
         const index = (this.siblings.indexOf(this.focusGroup) + 1) % this.siblings.length;
         this.focus(this.siblings[index]);
-        this.parent.ensureCursorInSelectedGroup();
     }
 
     private homeHandler(event: KeyboardEvent) {
@@ -98,6 +94,7 @@ export class EditorGroupNavigator {
         this.focus(groups[groups.length - 1]);
     }
 
+    /** Tries set or update this.focusGroup */
     private ensureFocusGroup() {
         const selection = this.parent.getSelectedGroups();
         if (!this.focusGroup || !selection.has(this.focusGroup)) {
