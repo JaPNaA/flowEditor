@@ -23,25 +23,37 @@ export const appHooks = {
     },
 
     getCompiledFlowFromEditor() {
-        return editorContainer.compile();
+        const activeTab = editorContainer.getActiveTab();
+        if (activeTab) {
+            return editorContainer.compile(activeTab);
+        }
     },
 
     getEditorSaveData() {
-        return editorContainer.getSaveData();
+        const activeTab = editorContainer.getActiveTab();
+        if (activeTab) {
+            return editorContainer.getSaveDataForTab(activeTab);
+        }
     },
 
     requestEditorTextOp() {
-        return editorContainer.openTextOp();
+        const activeTab = editorContainer.getActiveTab();
+        if (activeTab) {
+            return editorContainer.openTextOp(activeTab);
+        }
     },
 
     saveEditor() {
-        return editorContainer.save();
+        return editorContainer.saveAll();
     },
 
     setEditorSaveData(data: EditorSaveData | null) {
-        editorContainer.preventSaveOnExit = true;
-        editorContainer.setSaveData(data);
-        location.reload();
+        const activeTab = editorContainer.getActiveTab();
+        if (activeTab) {
+            editorContainer.preventSaveOnExit = true;
+            editorContainer.writeSaveDataForTab(activeTab, data);
+            location.reload();
+        }
     },
 
     openProject(newProject: Project) {

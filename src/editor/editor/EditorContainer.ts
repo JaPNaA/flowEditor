@@ -1,11 +1,23 @@
-import { Component, JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { Component, EventBus, JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray";
 import { EditorPlugin } from "../EditorPlugin";
 import { pluginHooks } from "../index";
 import { DetectedExternallyModifiedError, Project } from "../project/Project";
 import { Editor } from "./Editor";
 
+interface EditorTabState {
+    fileName: string,
+    ignoreExternallyModified: boolean,
+
+    /** Did the flow successfully load? If not, don't try to save to avoid corruption */
+    successfulLoad: boolean,
+}
+
 export class EditorContainer extends Component {
     public preventSaveOnExit = false;
+
+    public onNewTab = new EventBus<Editor>();
+    public onCloseTab = new EventBus<Editor>();
 
     private plugins: EditorPlugin[] = [];
 
@@ -17,24 +29,16 @@ export class EditorContainer extends Component {
         parentElement: this.elm.getHTMLElement()
     });
 
-    private editor = new Editor();
-    private editorOpenFile?: string;
-    private autoSaveInterval: number;
-
-    /** Did the flow successfully load? If not, don't try to save to avoid corruption */
-    private successfulLoad = false;
-
-    private ignoreExternallyModified: boolean = false;
+    private tabs: Editor[] = [];
+    private editorStates = new Map<Editor, EditorTabState>();
+    private activeEditor?: Editor;
 
     constructor(private project: Project) {
         super("editorContainer");
 
-        console.log(this.engine.world);
-        this.engine.world.addElm(this.editor);
-
         addEventListener("beforeunload", async () => {
             if (this.preventSaveOnExit) { return; }
-            await this.save();
+            await this.saveAll();
         });
 
         addEventListener("wheel", ev => {
@@ -53,18 +57,22 @@ export class EditorContainer extends Component {
 
                 moveBy.scale(1 / this.engine.camera.getScale());
 
-                this.editor.smoothCamera.moveBy(moveBy);
+                this.activeEditor?.smoothCamera.moveBy(moveBy);
             }
         }, { passive: false });
 
         addEventListener("focus", () => {
-            if (this.editorOpenFile) {
-                this.project.checkIsLatestFlowSave(this.editorOpenFile)
+            const activeEditor = this.activeEditor;
+            if (!activeEditor) { return; }
+            const editorOpenFile = this.editorStates.get(activeEditor);
+
+            if (editorOpenFile) {
+                this.project.checkIsLatestFlowSave(editorOpenFile.fileName)
                     .then(isLatest => {
-                        if (!isLatest && !this.ignoreExternallyModified) {
-                            this.ignoreExternallyModified = true;
+                        if (!isLatest && !editorOpenFile.ignoreExternallyModified) {
+                            editorOpenFile.ignoreExternallyModified = true;
                             if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?")) {
-                                this.reloadProject();
+                                this.reloadTab(activeEditor);
                             }
                         }
                     });
@@ -73,106 +81,159 @@ export class EditorContainer extends Component {
 
         this.elm.attribute("tabindex", "0");
 
-        this.autoSaveInterval = window.setInterval(async () => {
+        window.setInterval(async () => {
             if (this.preventSaveOnExit) { return; }
-            if (!this.editor.dirty) { return; }
+            if (!this.activeEditor || !this.activeEditor.dirty) { return; }
             console.log("autosave");
-            await this.save();
-            this.editor.dirty = false;
+            await this.saveAll();
+            this.activeEditor.dirty = false;
         }, 600e3);
 
         pluginHooks.setEngine(this.engine);
-        this.setup();
+        this.openDefaultTab();
     }
 
-    public async setup() {
+    public getActiveTab() {
+        return this.activeEditor;
+    }
+
+    public async openDefaultTab() {
         if (!this.project.isReady()) { await this.project.onReady.promise(); }
         const startFile = this.project.getStartFlowSavePath();
-        try {
-            const save = await this.project.getFlowSave(startFile);
-            this.editor.deserialize(save);
-            this.successfulLoad = true;
-        } catch (err) {
-            console.error(err);
-        }
-        this.editorOpenFile = startFile;
-        this.ignoreExternallyModified = false;
-        pluginHooks.onEditorLoad(this.editor);
+        this.openTab(startFile);
     }
 
     public async setProject(project: Project) {
-        await this.setSaveData(this.getSaveData());
-        this.project = project;
-        return this.reloadProject();
-    }
+        await this.saveAll();
 
-    public async reloadProject() {
-        this.editor.remove();
-        this.editor = new Editor();
-        this.engine.world.addElm(this.editor);
+        this.activeEditor?.remove();
+        this.activeEditor = undefined;
 
-        for (const plugin of this.plugins) {
-            this._addPluginToEditor(plugin);
+        const oldTabs = this.tabs;
+        this.tabs = [];
+        for (const tab of oldTabs) {
+            this.onCloseTab.send(tab);
         }
 
-        return this.setup();
+        this.project = project;
+        return this.createEditor();
+    }
+
+    public async openTab(fileName: string) {
+        const [newEditor, editorState] = await this.createEditorAndOpenFile(fileName);
+        this.editorStates.set(newEditor, editorState);
+        this.tabs.push(newEditor);
+        pluginHooks.onEditorLoad(newEditor);
+    }
+
+    public async reloadTab(tab: Editor) {
+        const tabState = this.editorStates.get(tab);
+        if (!tabState) { throw new Error("Unknown tab"); }
+
+        const [newEditor, editorState] = await this.createEditorAndOpenFile(tabState.fileName);
+
+        const tabIndex = this.tabs.indexOf(tab);
+        if (tabIndex < 0) { throw new Error("Tab not found in tabs list"); }
+
+        this.editorStates.set(newEditor, editorState);
+        this.editorStates.delete(tab);
+        this.tabs[tabIndex] = newEditor;
+
+        if (this.activeEditor === tab) {
+            tab.remove();
+            this.activeEditor = newEditor;
+            this.engine.world.addElm(newEditor);
+        }
+    }
+
+    private async createEditorAndOpenFile(fileName: string): Promise<[Editor, EditorTabState]> {
+        if (!this.project.isReady()) { await this.project.onReady.promise(); }
+        const newEditor = this.createEditor();
+        let successfulLoad = false;
+        try {
+            const save = await this.project.getFlowSave(fileName);
+            newEditor.deserialize(save);
+            successfulLoad = true;
+        } catch (err) {
+            console.error(err);
+        }
+        return [newEditor, { fileName, ignoreExternallyModified: false, successfulLoad }];
     }
 
     public registerPlugin(plugin: EditorPlugin) {
-        this._addPluginToEditor(plugin);
+        for (const tab of this.tabs) {
+            this._addPluginToEditor(tab, plugin);
+        }
         this.plugins.push(plugin);
     }
 
-    private _addPluginToEditor(plugin: EditorPlugin) {
-        this.editor.rootBlueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
-        this.editor.deserializer.registerDeserializer(plugin.parse);
+    private createEditor() {
+        const editor = new Editor();
+
+        for (const plugin of this.plugins) {
+            this._addPluginToEditor(editor, plugin);
+        }
+
+        return editor;
+    }
+
+    private _addPluginToEditor(editor: Editor, plugin: EditorPlugin) {
+        editor.rootBlueprintRegistery.registerBlueprints(plugin.instructionBlueprints, plugin.name);
+        editor.deserializer.registerDeserializer(plugin.parse);
         if (plugin.analyser) {
-            this.editor.actionBus.subscribeAllActions(
+            editor.actionBus.subscribeAllActions(
                 plugin.analyser.onActionPerformed.bind(plugin.analyser)
             );
         }
         if (plugin.autocomplete) {
             for (const [key, suggester] of plugin.autocomplete) {
-                this.editor.cursor.autocomplete.registerSuggester(key, suggester);
+                editor.cursor.autocomplete.registerSuggester(key, suggester);
             }
         }
     }
 
-    public compile() {
-        return this.editor.compile();
+    public compile(tab: Editor) {
+        return tab.compile();
     }
 
     public focus() {
         this.elm.getHTMLElement().focus();
     }
 
-    public getSaveData() {
-        return this.editor.serialize();
+    // todo: rename, remove "for tab", since all operations will be on tabs now
+    public getSaveDataForTab(editor: Editor) {
+        return editor.serialize();
     }
 
-    public async save() {
-        return this.setSaveData(this.getSaveData());
+    public async saveAll() {
+        const promises = [];
+        for (const tab of this.tabs) {
+            promises.push(this.writeSaveDataForTab(tab, this.getSaveDataForTab(tab)));
+        }
+        await Promise.all(promises);
     }
 
-    public openTextOp() {
-        return this.editor.openTextOp();
+    public openTextOp(tab: Editor) {
+        return tab.openTextOp();
     }
 
-    public async setSaveData(saveData: any) {
-        if (!this.successfulLoad) { console.warn("Refuse to save due to failure to load"); return; }
-        if (!this.editorOpenFile) { console.warn("No open file to save to"); return; }
+    public async writeSaveDataForTab(tab: Editor, saveData: any) {
+        const state = this.editorStates.get(tab);
+        if (!state) { throw new Error("Unknown tab"); }
+        if (!state.successfulLoad) { console.warn("Refuse to save due to failure to load"); return; }
+        if (!state.fileName) { console.warn("No open file to save to"); return; }
         const saveStr = saveData ? JSON.stringify(saveData) : "";
 
         try {
-            return await this.project.writeFlowSave(this.editorOpenFile, saveStr);
+            return await this.project.writeFlowSave(state.fileName, saveStr);
         } catch (err) {
             if (err instanceof DetectedExternallyModifiedError) {
                 if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?")) {
-                    return await this.project.writeFlowSave(this.editorOpenFile, saveStr, true);
+                    return await this.project.writeFlowSave(state.fileName, saveStr, true);
                 }
             }
         }
 
-        this.ignoreExternallyModified = false;
+        state.ignoreExternallyModified = false;
     }
 }

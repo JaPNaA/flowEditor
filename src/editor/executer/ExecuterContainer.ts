@@ -103,7 +103,9 @@ export class ExecuterContainer extends Component {
     }
 
     public execute() {
-        this.executer.execute({ flow: appHooks.getCompiledFlowFromEditor() });
+        const flow = appHooks.getCompiledFlowFromEditor();
+        if (!flow) { return; }
+        this.executer.execute({ flow });
     }
 
     public resume() {
