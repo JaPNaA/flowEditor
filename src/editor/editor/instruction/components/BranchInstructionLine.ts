@@ -15,7 +15,7 @@ export abstract class BranchInstructionLine extends InstructionLine {
     private branchConnectElm = new Elm()
         .class("branchConnect").attribute("contenteditable", "false")
         .on("click", () => {
-            this.parentBlock.getGroup()?.group.editor.unsetEditMode();
+            this.parentBlock.getGroup()?.group.parentEditor.unsetEditMode();
             appHooks.focusEditor();
             this.requestUserToSetBranchTarget();
         });
