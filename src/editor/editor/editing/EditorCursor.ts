@@ -22,7 +22,7 @@ export class EditorCursor extends Elm<"span"> {
     public activeEditable?: Editable;
 
     public onFocusChangeGroup = new EventBus<InstructionGroup>();
-    public onClickGroup = new EventBus<InstructionGroup>();
+    public onFocus = new EventBus();
     public onKeyboardShortcutPress = new EventBus<KeyboardEvent>();
     public onKeydownIntercept = new EventBus<KeyboardEvent>();
     public onWorldPositionChange = new EventBus<Vec2>();
@@ -42,7 +42,8 @@ export class EditorCursor extends Elm<"span"> {
         this.class("cursor");
 
         let justInputted = false;
-        const positionChangeHandler = (
+
+        this.inputCapture.positionChangeHandler = (
             posStart: EditorCursorPositionAbsolute,
             posEnd: EditorCursorPositionAbsolute,
             backwards: boolean
@@ -61,8 +62,6 @@ export class EditorCursor extends Elm<"span"> {
                 }
             }
 
-
-            this.onClickGroup.send(posStart.group);
             this.afterCursorMove(posStart);
 
             if (!justInputted) {
@@ -71,8 +70,6 @@ export class EditorCursor extends Elm<"span"> {
             }
             justInputted = false;
         };
-
-        this.inputCapture.positionChangeHandler = positionChangeHandler;
 
         this.inputCapture.afterChangeDomSelectionHandler = () => {
             if (this.allowAutocomplete) {
@@ -165,6 +162,7 @@ export class EditorCursor extends Elm<"span"> {
 
         this.inputCapture.focusHandler = () => {
             this.removeClass("hidden");
+            this.onFocus.send();
         };
 
         this.inputCapture.unfocusHandler = () => {

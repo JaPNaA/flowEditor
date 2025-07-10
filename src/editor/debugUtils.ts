@@ -7,6 +7,7 @@ let nextObjId = 1;
  * Returns a unique ID for any object, useful for logging.
  */
 export function objId(x: any) {
+    if (x === undefined || x === null) { return x; }
     if (objIdMap.has(x)) { return objIdMap.get(x); }
     const id = nextObjId++;
     objIdMap.set(x, id);

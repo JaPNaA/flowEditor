@@ -90,7 +90,7 @@ export class Editor extends WorldElmWithComponents {
         this.subscriptions.subscribe(this.cursor.onKeyboardShortcutPress, ev => {
             this.engine.keyboard.pretendPress(ev);
         });
-        this.subscriptions.subscribe(this.cursor.onClickGroup, group => this.handleClickGroup(group));
+        this.subscriptions.subscribe(this.cursor.onFocus, () => this.setEditMode());
         this.subscriptions.subscribe(this.cursor.onInput, () => this.dirty = true);
 
         this.actionBus.subscribe(AddGroupAction, action => {
@@ -331,16 +331,6 @@ export class Editor extends WorldElmWithComponents {
         }
         this.tempEditModeGroup = group;
         group.editor.setEditMode();
-        if (this.cursor.getPosition()?.group !== group) {
-            // focus selected group
-            this.cursor.setPosition({
-                group: group,
-                line: 0,
-                editable: 0,
-                char: 0,
-            });
-            this.cursor.unfocus();
-        }
     }
 
     private unsetTempEditMode() {

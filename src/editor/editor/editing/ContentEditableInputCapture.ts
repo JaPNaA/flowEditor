@@ -96,11 +96,9 @@ export class ContentEditableInputCapture {
 
     constructor() {
         document.addEventListener("selectionchange", ev => {
-            if (!ev.isTrusted) { return; }
             if (this.freezeSelectionEvents) { return; }
             if (this.isCompositing) { return; }
             const selection = getSelection();
-
 
             if (selection && selection.anchorNode) {
                 const floatingPosition = this.domPositionToFloating(selection.anchorNode, selection.anchorOffset);
