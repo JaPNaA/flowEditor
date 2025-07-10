@@ -32,4 +32,9 @@ export class SmoothCamera extends WorldElm {
         this.targetPos = pos;
         this.engine.ticker.requestTick();
     }
+
+    public moveBy(pos: Vec2) {
+        this.targetPos = Vec2M.add(this.targetPos || this.engine.camera.rect.topLeft(), pos);
+        this.engine.ticker.requestTick();
+    }
 }

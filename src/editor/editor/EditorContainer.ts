@@ -1,4 +1,4 @@
-import { Component, JaPNaAEngine2d } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { Component, JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../EditorPlugin";
 import { pluginHooks } from "../index";
 import { DetectedExternallyModifiedError, Project } from "../project/Project";
@@ -38,9 +38,24 @@ export class EditorContainer extends Component {
         });
 
         addEventListener("wheel", ev => {
-            this.engine.camera.zoomInto(ev.deltaY > 0 ? 1 / 1.2 : 1.2, this.engine.mouse.worldPos);
-            this.engine.ticker.requestTick();
-        });
+            ev.preventDefault();
+            if (ev.ctrlKey) {
+                this.engine.camera.zoomInto(ev.deltaY > 0 ? 1 / 1.2 : 1.2, this.engine.mouse.worldPos);
+                this.engine.ticker.requestTick();
+            } else {
+                let moveBy;
+                // shift swaps x and y axis
+                if (ev.shiftKey) {
+                    moveBy = new Vec2M(ev.deltaY, ev.deltaX);
+                } else {
+                    moveBy = new Vec2M(ev.deltaX, ev.deltaY);
+                }
+
+                moveBy.scale(1 / this.engine.camera.getScale());
+
+                this.editor.smoothCamera.moveBy(moveBy);
+            }
+        }, { passive: false });
 
         addEventListener("focus", () => {
             if (this.editorOpenFile) {
