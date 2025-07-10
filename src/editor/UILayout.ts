@@ -15,7 +15,14 @@ export class UILayout extends Component {
         this.rightPanel = new Elm().class("rightPanel");
         this.rightBottomPanel = new Elm().class("rightBottomPanel")
         this.elm.append(
-            editor,
+            new Elm().class("leftPanel").append(
+                new Elm().class("tabs", "editorTabs").append(
+                    new Elm("button").class("tab", "active").append("start.json"),
+                    new Elm("button").class("tab").append("second.json"),
+                    new Elm("button").class("tab").append("third.json")
+                ),
+                editor
+            ),
             this.rightPanel.append(
                 new HorizontalResizeHandle(this.rightPanel),
                 executer,

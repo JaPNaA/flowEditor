@@ -91,7 +91,7 @@ class DirectoryTabs extends Component {
 }
 
 abstract class DirectoryTab {
-    public button = new Elm("button");
+    public button = new Elm("button").class("tab");
     public content = new Elm().class("items");
 
     constructor(

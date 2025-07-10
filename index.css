@@ -5,14 +5,27 @@
     flex-direction: row;
 }
 
+.leftPanel {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.editorTabs.tabs,
+.editorTabs.tabs .tab {
+    line-height: 1.5em;
+    z-index: 1;
+}
+
 .editorContainer {
     position: relative;
-    width: auto;
+    width: 100%;
     height: 100%;
     z-index: 0;
     background-color: #0a0a0a;
     color: #c0c0c0;
     flex-grow: 1;
+    flex-basis: 0;
 }
 
 .dummyText {
@@ -226,7 +239,6 @@
     width: 33%;
 }
 
-
 .rightPanel.collapsed .rightBottomPanel {
     display: none;
 }
@@ -374,24 +386,6 @@
     flex-direction: column;
 }
 
-.projectFilesDisplay .directoryTabs .tabs {
-    line-height: 1em;
-    background-color: #222222;
-    color: #c9c9c9;
-}
-
-.projectFilesDisplay .directoryTabs .tabs button {
-    background-color: transparent;
-}
-
-.projectFilesDisplay .directoryTabs .tabs button:hover {
-    background-color: #303030;
-}
-
-.projectFilesDisplay .directoryTabs .tabs button.active {
-    background-color: #181818;
-}
-
 .projectFilesDisplay .directoryTabs .tabContent {
     flex-grow: 1;
     overflow-x: hidden;
@@ -463,4 +457,26 @@
 
 .projectFilesDisplay .directoryTabs .items .item .fileOps button.delete:hover {
     background-color: #682222;
+}
+
+/* --- Component styles --- */
+
+/* Tabs */
+
+.tabs {
+    line-height: 1em;
+    background-color: #222222;
+    color: #c9c9c9;
+}
+
+.tabs button.tab {
+    background-color: transparent;
+}
+
+.tabs button.tab:hover {
+    background-color: #303030;
+}
+
+.tabs button.tab.active {
+    background-color: #181818;
 }
