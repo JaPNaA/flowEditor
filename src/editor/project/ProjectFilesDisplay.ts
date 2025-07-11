@@ -68,10 +68,10 @@ class DirectoryTabs extends Component {
         );
 
         this.tabContent.on("wheel", ev => ev.stopPropagation());
-        const assetsTab = new AssetsDirectoryTab(this, project);
-        this.addTab(new FlowsDirectoryTab(this, project));
-        this.addTab(assetsTab);
-        assetsTab.show();
+        const flowsTab = new FlowsDirectoryTab(this, project);
+        this.addTab(flowsTab);
+        this.addTab(new AssetsDirectoryTab(this, project));
+        flowsTab.show();
     }
 
     public _deactivateAllTabs() {
@@ -242,7 +242,7 @@ class FlowsDirectoryTab extends DirectoryTab {
     }
 
     public async openItem(path: string): Promise<void> {
-        throw new Error("Not implemented");
+        appHooks.openFlowFile(path);
     }
 }
 

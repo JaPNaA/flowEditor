@@ -64,6 +64,10 @@ export const appHooks = {
         project = newProject;
     },
 
+    openFlowFile(path: string) {
+        editorContainer.openOrActivateTab(path);
+    },
+
     showModal(modal: Component) {
         modalContainer.addModal(modal);
     }

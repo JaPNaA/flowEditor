@@ -101,7 +101,7 @@ export class EditorContainer extends Component {
     public async openDefaultTab() {
         if (!this.project.isReady()) { await this.project.onReady.promise(); }
         const startFile = this.project.getStartFlowSavePath();
-        this.openTab(startFile);
+        this.openOrActivateTab(startFile);
     }
 
     public async setProject(project: Project) {
@@ -109,19 +109,32 @@ export class EditorContainer extends Component {
 
         this.activeEditor?.remove();
         this.activeEditor = undefined;
+        this.engine.ticker.requestTick();
 
         const oldTabs = this.tabs;
         this.tabs = [];
+        this.editorStates.clear();
         for (const tab of oldTabs) {
             this.onTabClose.send(tab);
         }
 
         this.project = project;
-        return this.createEditor();
+        return this.openDefaultTab();
     }
 
-    public async openTab(fileName: string) {
-        const tabResult = await this.createEditorAndOpenFile(fileName);
+    public async openOrActivateTab(filename: string) {
+        for (const [editor, state] of this.editorStates) {
+            if (state.fileName === filename) {
+                this.showTab(editor);
+                return;
+            }
+        }
+
+        this.openTab(filename);
+    }
+
+    private async openTab(filename: string) {
+        const tabResult = await this.createEditorAndOpenFile(filename);
         if (!tabResult) { return; }
         const [newEditor, editorState] = tabResult;
 
@@ -134,6 +147,8 @@ export class EditorContainer extends Component {
     }
 
     public async showTab(tab: Editor) {
+        if (this.activeEditor === tab) { return; }
+
         if (this.activeEditor) {
             this.activeEditor.remove();
         }
