@@ -1,9 +1,12 @@
 import { Component, Elm } from "../japnaaEngine2d/elements";
 import { Vec2, Vec2M } from "../japnaaEngine2d/JaPNaAEngine2d";
+import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray";
+import { Editor } from "./editor/Editor";
 import { EditorContainer } from "./editor/EditorContainer";
 import { ExecuterContainer } from "./executer/ExecuterContainer";
 import { ModalContainer } from "./modals/ModalContainer";
 import { ProjectFilesDisplay } from "./project/ProjectFilesDisplay";
+import { TwoWayMap } from "./utils";
 
 export class UILayout extends Component {
     private rightPanel: Elm;
@@ -16,11 +19,7 @@ export class UILayout extends Component {
         this.rightBottomPanel = new Elm().class("rightBottomPanel")
         this.elm.append(
             new Elm().class("leftPanel").append(
-                new Elm().class("tabs", "editorTabs").append(
-                    new Elm("button").class("tab", "active").append("start.json"),
-                    new Elm("button").class("tab").append("second.json"),
-                    new Elm("button").class("tab").append("third.json")
-                ),
+                new EditorTabs(editor),
                 editor
             ),
             this.rightPanel.append(
@@ -33,6 +32,58 @@ export class UILayout extends Component {
             ),
             modal
         );
+    }
+}
+
+class EditorTabs extends Component {
+    private tabEditorMap = new TwoWayMap<Elm<"button">, Editor>();
+    private tabElms: Elm<"button">[] = [];
+    private activeTabElm: Elm<"button"> | null = null;
+
+    constructor(editor: EditorContainer) {
+        super("editorTabs");
+        this.elm.class("tabs");
+
+        editor.onTabInsert.subscribe(({ editor, index, tabState }) => {
+            const tabElm = this.createTabElm(tabState.fileName);
+            this.tabEditorMap.set(tabElm, editor);
+
+            if (index === 0) {
+                this.tabElms.unshift(tabElm);
+                this.elm.appendAsFirst(tabElm);
+            } else {
+                const nextTab = this.tabElms[index - 1];
+                this.tabElms.splice(index, 0, tabElm);
+                this.elm.getHTMLElement().insertBefore(tabElm.getHTMLElement(), nextTab.getHTMLElement());
+            }
+        });
+
+        editor.onTabClose.subscribe(tab => {
+            const tabElm = this.tabEditorMap.getK(tab);
+            if (!tabElm) { throw new Error("Unknown tab"); }
+            this.tabEditorMap.deleteV(tab);
+            removeElmFromArray(tabElm, this.tabElms);
+            tabElm.remove();
+
+            if (this.activeTabElm === tabElm) {
+                this.activeTabElm = null;
+            }
+        });
+
+        editor.onTabActiveChange.subscribe(tab => {
+            const tabElm = this.tabEditorMap.getK(tab);
+            if (!tabElm) { throw new Error("Unknown tab"); }
+
+            if (this.activeTabElm) {
+                this.activeTabElm.removeClass("active");
+            }
+            tabElm.class("active");
+            this.activeTabElm = tabElm;
+        });
+    }
+
+    private createTabElm(title: string) {
+        return new Elm("button").class("tab").append(title);
     }
 }
 

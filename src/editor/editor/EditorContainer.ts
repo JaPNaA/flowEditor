@@ -12,8 +12,13 @@ interface EditorTabState {
 export class EditorContainer extends Component {
     public preventSaveOnExit = false;
 
-    public onNewTab = new EventBus<Editor>();
-    public onCloseTab = new EventBus<Editor>();
+    public onTabActiveChange = new EventBus<Editor>();
+    public onTabInsert = new EventBus<{
+        editor: Editor,
+        index: number,
+        tabState: EditorTabState
+    }>();
+    public onTabClose = new EventBus<Editor>();
 
     private plugins: EditorPlugin[] = [];
 
@@ -108,7 +113,7 @@ export class EditorContainer extends Component {
         const oldTabs = this.tabs;
         this.tabs = [];
         for (const tab of oldTabs) {
-            this.onCloseTab.send(tab);
+            this.onTabClose.send(tab);
         }
 
         this.project = project;
@@ -119,8 +124,11 @@ export class EditorContainer extends Component {
         const tabResult = await this.createEditorAndOpenFile(fileName);
         if (!tabResult) { return; }
         const [newEditor, editorState] = tabResult;
+
         this.editorStates.set(newEditor, editorState);
-        this.tabs.push(newEditor);
+        const newLength = this.tabs.push(newEditor);
+        this.onTabInsert.send({ editor: newEditor, index: newLength - 1, tabState: editorState });
+
         pluginHooks.onEditorLoad(newEditor);
         this.showTab(newEditor);
     }
@@ -130,6 +138,7 @@ export class EditorContainer extends Component {
             this.activeEditor.remove();
         }
         this.activeEditor = tab;
+        this.onTabActiveChange.send(tab);
         this.engine.world.addElm(tab);
     }
 
@@ -148,6 +157,10 @@ export class EditorContainer extends Component {
         this.editorStates.set(newEditor, editorState);
         this.editorStates.delete(tab);
         this.tabs[tabIndex] = newEditor;
+
+        this.onTabClose.send(tab);
+        this.onTabInsert.send({ editor: newEditor, index: tabIndex, tabState: editorState });
+
 
         if (this.activeEditor === tab) {
             tab.remove();
