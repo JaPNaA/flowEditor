@@ -1,5 +1,4 @@
 import { Component, EventBus, JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d";
-import { removeElmFromArray } from "../../japnaaEngine2d/util/removeElmFromArray";
 import { EditorPlugin } from "../EditorPlugin";
 import { pluginHooks } from "../index";
 import { DetectedExternallyModifiedError, Project } from "../project/Project";
@@ -8,9 +7,6 @@ import { Editor } from "./Editor";
 interface EditorTabState {
     fileName: string,
     ignoreExternallyModified: boolean,
-
-    /** Did the flow successfully load? If not, don't try to save to avoid corruption */
-    successfulLoad: boolean,
 }
 
 export class EditorContainer extends Component {
@@ -120,17 +116,31 @@ export class EditorContainer extends Component {
     }
 
     public async openTab(fileName: string) {
-        const [newEditor, editorState] = await this.createEditorAndOpenFile(fileName);
+        const tabResult = await this.createEditorAndOpenFile(fileName);
+        if (!tabResult) { return; }
+        const [newEditor, editorState] = tabResult;
         this.editorStates.set(newEditor, editorState);
         this.tabs.push(newEditor);
         pluginHooks.onEditorLoad(newEditor);
+        this.showTab(newEditor);
+    }
+
+    public async showTab(tab: Editor) {
+        if (this.activeEditor) {
+            this.activeEditor.remove();
+        }
+        this.activeEditor = tab;
+        this.engine.world.addElm(tab);
     }
 
     public async reloadTab(tab: Editor) {
         const tabState = this.editorStates.get(tab);
         if (!tabState) { throw new Error("Unknown tab"); }
 
-        const [newEditor, editorState] = await this.createEditorAndOpenFile(tabState.fileName);
+        const tabResult = await this.createEditorAndOpenFile(tabState.fileName);
+        if (!tabResult) { return; }
+
+        const [newEditor, editorState] = tabResult;
 
         const tabIndex = this.tabs.indexOf(tab);
         if (tabIndex < 0) { throw new Error("Tab not found in tabs list"); }
@@ -146,18 +156,18 @@ export class EditorContainer extends Component {
         }
     }
 
-    private async createEditorAndOpenFile(fileName: string): Promise<[Editor, EditorTabState]> {
+    private async createEditorAndOpenFile(fileName: string): Promise<[Editor, EditorTabState] | undefined> {
         if (!this.project.isReady()) { await this.project.onReady.promise(); }
-        const newEditor = this.createEditor();
-        let successfulLoad = false;
+        let newEditor: Editor;
         try {
             const save = await this.project.getFlowSave(fileName);
+            newEditor = this.createEditor();
             newEditor.deserialize(save);
-            successfulLoad = true;
+            return [newEditor, { fileName, ignoreExternallyModified: false }];
         } catch (err) {
+            alert(`Failed to open the flow '${fileName}'. The file may be corrupted. See console for error details.`);
             console.error(err);
         }
-        return [newEditor, { fileName, ignoreExternallyModified: false, successfulLoad }];
     }
 
     public registerPlugin(plugin: EditorPlugin) {
@@ -220,7 +230,6 @@ export class EditorContainer extends Component {
     public async writeSaveDataForTab(tab: Editor, saveData: any) {
         const state = this.editorStates.get(tab);
         if (!state) { throw new Error("Unknown tab"); }
-        if (!state.successfulLoad) { console.warn("Refuse to save due to failure to load"); return; }
         if (!state.fileName) { console.warn("No open file to save to"); return; }
         const saveStr = saveData ? JSON.stringify(saveData) : "";
 

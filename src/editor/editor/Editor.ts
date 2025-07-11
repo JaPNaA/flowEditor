@@ -132,7 +132,7 @@ export class Editor extends WorldElmWithComponents {
             }
         });
 
-        this.undoLog.onAfterAllActionsPerformed.subscribe(() => this.engine.ticker.requestTick());
+        this.undoLog.onAfterAllActionsPerformed.subscribe(() => this.engine?.ticker.requestTick());
     }
 
     public getGroups(): ReadonlyArray<InstructionGroup> {
@@ -583,7 +583,7 @@ export class Editor extends WorldElmWithComponents {
         this.undoLog.startGroup();
         this.undoLog.perform(new MarkGroupAsStartAction(group, this.startGroup, this));
         this.undoLog.endGroup();
-        this.engine.ticker.requestTick();
+        this.engine?.ticker.requestTick();
     }
 
     public getStartGroup(): InstructionGroup | undefined {
