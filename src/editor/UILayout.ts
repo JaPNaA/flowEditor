@@ -40,12 +40,12 @@ class EditorTabs extends Component {
     private tabElms: Elm<"button">[] = [];
     private activeTabElm: Elm<"button"> | null = null;
 
-    constructor(editor: EditorContainer) {
+    constructor(private editor: EditorContainer) {
         super("editorTabs");
         this.elm.class("tabs");
 
         editor.onTabInsert.subscribe(({ editor, index, tabState }) => {
-            const tabElm = this.createTabElm(tabState.fileName);
+            const tabElm = this.createTabElm(tabState.fileName, editor);
             this.tabEditorMap.set(tabElm, editor);
 
             if (index === 0) {
@@ -82,8 +82,10 @@ class EditorTabs extends Component {
         });
     }
 
-    private createTabElm(title: string) {
-        return new Elm("button").class("tab").append(title);
+    private createTabElm(title: string, editor: Editor) {
+        return new Elm("button").class("tab").append(title).onActivate(() => {
+            this.editor.showTab(editor);
+        });
     }
 }
 
