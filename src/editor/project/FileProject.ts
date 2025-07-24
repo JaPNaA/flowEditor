@@ -2,7 +2,7 @@ import { FlowData } from "../../FlowRunner";
 import { FSReadWrite } from "../../filesystem/FS";
 import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorSaveData } from "../editor/EditorSaveData";
-import { DetectedExternallyModifiedError, Project } from "./Project";
+import { externallyModifiedError, noError, Project, ProjectMaybeError } from "./Project";
 
 export class FileProject implements Project {
     public onReady = new EventBus();
@@ -76,22 +76,36 @@ export class FileProject implements Project {
         return items;
     }
 
-    public async writeFlowSave(path: string, content: string, force?: boolean): Promise<void> {
-        const lastModified = await this.flowsDirectory.lastModified(path);
-        if (!force) {
-            await this.throwIfUnexpectedLastModifiedFlowSave(path, lastModified);
+    public async newFlowSave(path: string, data: string, force?: boolean): Promise<ProjectMaybeError> {
+        if (force) {
+            await this.createOrReplaceFlow(path, new Blob([data]));
+            return noError;
         }
 
-        await this.flowsDirectory.write(path, new Blob([content]));
-        const newLastModified = await this.flowsDirectory.lastModified(path);
-        if (newLastModified) {
-            this.lastModifiedMap.set(path, newLastModified);
+        try {
+            // expect this to fail!
+            await this.flowsDirectory.read(path);
+            return externallyModifiedError;
+        } catch (err) {
+            await this.createOrReplaceFlow(path, new Blob([data]));
+            return noError;
         }
+    }
+
+    public async writeFlowSave(path: string, content: string, force?: boolean): Promise<ProjectMaybeError> {
+        const lastModified = await this.flowsDirectory.lastModified(path);
+        if (!force && await this.hasUnexpectedLastModifiedFlowSave(path, lastModified)) {
+            return externallyModifiedError;
+        }
+
+        await this.createOrReplaceFlow(path, new Blob([content]));
+
+        return noError;
     }
 
     public async moveFlowSave(pathFrom: string, pathTo: string): Promise<void> {
         const lastModified = await this.flowsDirectory.lastModified(pathFrom);
-        this.throwIfUnexpectedLastModifiedFlowSave(pathFrom, lastModified);
+        this.hasUnexpectedLastModifiedFlowSave(pathFrom, lastModified);
 
         await this.flowsDirectory.mv(pathFrom, pathTo);
 
@@ -103,7 +117,7 @@ export class FileProject implements Project {
 
     public async removeFlowSave(path: string): Promise<void> {
         const lastModified = await this.flowsDirectory.lastModified(path);
-        this.throwIfUnexpectedLastModifiedFlowSave(path, lastModified);
+        this.hasUnexpectedLastModifiedFlowSave(path, lastModified);
 
         await this.flowsDirectory.rm(path);
     }
@@ -232,6 +246,14 @@ export class FileProject implements Project {
         }
     }
 
+    private async createOrReplaceFlow(path: string, content: Blob) {
+        await this.flowsDirectory.write(path, content);
+        const newLastModified = await this.flowsDirectory.lastModified(path);
+        if (newLastModified) {
+            this.lastModifiedMap.set(path, newLastModified);
+        }
+    }
+
     private setReady() {
         if (this.ready) { return; }
         this.ready = true;
@@ -253,14 +275,15 @@ export class FileProject implements Project {
         await Promise.all(promises);
     }
 
-    private async throwIfUnexpectedLastModifiedFlowSave(path: string, lastModified: number | null): Promise<void> {
-        if (lastModified === null) { return; }
+    private async hasUnexpectedLastModifiedFlowSave(path: string, lastModified: number | null): Promise<boolean> {
+        if (lastModified === null) { return false; }
         const expectedLastModified = this.lastModifiedMap.get(path);
         if (expectedLastModified !== undefined) {
             if (lastModified !== expectedLastModified) {
-                throw new DetectedExternallyModifiedError();
+                return true;
             }
         }
+        return false;
     }
 }
 

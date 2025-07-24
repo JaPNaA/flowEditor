@@ -1,7 +1,7 @@
 import { Component, EventBus, JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../EditorPlugin";
 import { pluginHooks } from "../index";
-import { DetectedExternallyModifiedError, Project } from "../project/Project";
+import { externallyModifiedError, Project } from "../project/Project";
 import { Editor } from "./Editor";
 
 interface EditorTabState {
@@ -261,13 +261,10 @@ export class EditorContainer extends Component {
         if (!state.fileName) { console.warn("No open file to save to"); return; }
         const saveStr = saveData ? JSON.stringify(saveData) : "";
 
-        try {
-            return await this.project.writeFlowSave(state.fileName, saveStr);
-        } catch (err) {
-            if (err instanceof DetectedExternallyModifiedError) {
-                if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?")) {
-                    return await this.project.writeFlowSave(state.fileName, saveStr, true);
-                }
+        const result = await this.project.writeFlowSave(state.fileName, saveStr);
+        if (result.isError && result.errorType === externallyModifiedError.errorType) {
+            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?")) {
+                return await this.project.writeFlowSave(state.fileName, saveStr, true);
             }
         }
 

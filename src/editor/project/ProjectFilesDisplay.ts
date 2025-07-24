@@ -5,6 +5,7 @@ import { FileProject } from "./FileProject";
 import { NullProject } from "./NullProject";
 import { Project } from "./Project";
 import { FileAccessAPIFileSystem } from "../../filesystem/FS";
+import { defaultNewEditorSaveData } from "../editor/defaultEditorSaveData";
 
 export class ProjectFilesDisplay extends Component {
     private project!: Project;
@@ -154,7 +155,7 @@ class AssetsDirectoryTab extends DirectoryTab {
                 for (const asset of assets) {
                     this.content.append(new FileItem(asset, this));
                 }
-                this.content.append(new AddFileItem(this));
+                this.content.append(new AddFileItem().onActivate(() => this.addFileClickHandler()));
             });
     }
 
@@ -202,6 +203,20 @@ class AssetsDirectoryTab extends DirectoryTab {
         }
     }
 
+    private addFileClickHandler() {
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.multiple = true;
+        fileInput.onchange = async () => {
+            if (!fileInput.files) { return; }
+            for (const file of fileInput.files) {
+                await this.writeItem(file.name, file);
+            }
+            await this.refresh();
+        };
+        fileInput.click();
+    }
+
     private openNewWindow(title: string) {
         const newWindow = open();
         if (!newWindow) { return; }
@@ -225,7 +240,7 @@ class FlowsDirectoryTab extends DirectoryTab {
                 for (const flow of flows) {
                     this.content.append(new FileItem(flow, this));
                 }
-                this.content.append(new AddFileItem(this));
+                this.content.append(new AddFileItem().onActivate(() => this.addFileClickHandler()));
             });
     }
 
@@ -243,6 +258,21 @@ class FlowsDirectoryTab extends DirectoryTab {
 
     public async openItem(path: string): Promise<void> {
         appHooks.openFlowFile(path);
+    }
+
+    private async addFileClickHandler() {
+        let name = prompt("Enter name of new flow");
+        if (!name) { return; }
+        if (!name.endsWith(".json")) {
+            name += ".json";
+        }
+
+        const result = await this.project.newFlowSave(name, JSON.stringify(defaultNewEditorSaveData));
+        if (result.isError) {
+            alert("Failed to create new file: " + result.message);
+        }
+
+        this.refresh();
     }
 }
 
@@ -276,22 +306,13 @@ class FileItem extends Component {
 }
 
 class AddFileItem extends Component {
-    constructor(parentTab: DirectoryTab) {
+    constructor() {
         super("addFileItem");
         this.elm.append("+ Add file");
+    }
 
-        this.elm.onActivate(async () => {
-            const fileInput = document.createElement("input");
-            fileInput.type = "file";
-            fileInput.multiple = true;
-            fileInput.onchange = async () => {
-                if (!fileInput.files) { return; }
-                for (const file of fileInput.files) {
-                    await parentTab.writeItem(file.name, file);
-                }
-                await parentTab.refresh();
-            };
-            fileInput.click();
-        });
+    public onActivate(handler: () => void) {
+        this.elm.onActivate(handler);
+        return this;
     }
 }

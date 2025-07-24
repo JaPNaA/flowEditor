@@ -1,7 +1,14 @@
 import { EditorSaveData } from "../editor/EditorSaveData";
 import { EventBus } from "../../japnaaEngine2d/JaPNaAEngine2d";
-import { DetectedExternallyModifiedError, Project } from "./Project";
+import { externallyModifiedError, noError, Project, ProjectMaybeError } from "./Project";
 import { FlowData } from "../../FlowRunner";
+import { defaultNewEditorSaveData } from "../editor/defaultEditorSaveData";
+
+const nullProjectCannotHaveNewFlows: ProjectMaybeError = {
+    isError: true,
+    errorType: Symbol(),
+    message: "No project is open. Consider creating a project first."
+};
 
 /**
  * The NullProject is open when the user has not opened any project.
@@ -51,20 +58,22 @@ export class NullProject implements Project {
         if (stored) {
             return JSON.parse(stored);
         } else {
-            return {
-                startGroup: 0,
-                elms: [{ branches: [], children: [], instructions: [{ ctrl: 'nop' }, { ctrl: 'end' }], id: 0, x: 8, y: 24 }]
-            };
+            return defaultNewEditorSaveData;
         }
     }
 
-    public async writeFlowSave(path: string, data: string, force?: boolean): Promise<void> {
+    public async newFlowSave(_path: string, _data: string, _force?: boolean): Promise<ProjectMaybeError> {
+        return nullProjectCannotHaveNewFlows;
+    }
+
+    public async writeFlowSave(path: string, data: string, force?: boolean): Promise<ProjectMaybeError> {
         if (path !== "localstorage") { throw new Error("Cannot write another file into localstorage"); }
         if (!force && this.lastRead !== localStorage['flowEditorSave']) {
-            throw new DetectedExternallyModifiedError();
+            return externallyModifiedError;
         }
         localStorage['flowEditorSave'] = data;
         this.lastRead = data;
+        return noError;
     }
 
     public async moveFlowSave(pathFrom: string, pathTo: string): Promise<void> {
