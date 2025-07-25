@@ -103,6 +103,14 @@ export class DefaultPlugin implements EditorPlugin {
     }
 }
 
+
+interface ControlBranchLineSerialized {
+    ctrl: 'branch';
+    v1: string,
+    v2: string,
+    op: string,
+}
+
 class ControlBranchLine extends BranchInstructionLine implements OneLineInstruction {
     private opSpan: Editable;
     private v1Span: Editable;
@@ -110,7 +118,7 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
 
     public isBranch: boolean = true;
 
-    constructor(data: ControlBranch) {
+    constructor(data: ControlBranch | ControlBranchLineSerialized) {
         super();
 
         this.setAreas(
@@ -128,7 +136,16 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
         this.v2Span.autoCompleteType = globalAutocompleteTypes.variable;
     }
 
-    public serialize(): ControlBranch {
+    public serialize(): ControlBranchLineSerialized {
+        return {
+            ctrl: 'branch',
+            v1: this.v1Span.getValue(),
+            op: this.opSpan.getValue(),
+            v2: this.v2Span.getValue()
+        };
+    }
+
+    public export(): [ControlBranch] {
         let v1: string | number = this.v1Span.getValue();
         let v1Float = parseFloat(v1);
         let v2: string | number = this.v2Span.getValue();
@@ -138,11 +155,11 @@ class ControlBranchLine extends BranchInstructionLine implements OneLineInstruct
         if (!isNaN(v1Float)) { v1 = v1Float; }
         if (!isNaN(v2Float)) { v2 = v2Float; }
         if (op !== '=' && op !== '<' && op != '<=') { throw new Error("Invalid"); }
-        return {
+        return [{
             ctrl: "branch",
             op, v1, v2,
             offset: this.branchOffset
-        };
+        }];
     }
 }
 
@@ -207,6 +224,11 @@ class ControlInputLine extends InstructionLine implements OneLineInstruction {
     }
 }
 
+interface ControlVariableLineSerialized {
+    ctrl: 'variable';
+    varEditable: string,
+    expressionEditable: string
+}
 
 class ControlVariableLine extends InstructionLine implements OneLineInstruction {
     public isBranch: boolean = false;
@@ -216,27 +238,42 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
     private variableSpan: Editable;
     private expressionSpan: Editable;
 
-    constructor(data: ControlVariable) {
-        super();
-        this.variableSpan = this.createEditable(data.v1);
-        this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
-        let op: string = data.op;
-        let v2 = data.v2;
 
-        if (op === "+" && typeof v2 === "number" && v2 < 0) {
-            v2 *= -1;
-            op = "-";
+    constructor(data: ControlVariable | ControlVariableLineSerialized) {
+        super();
+        if ('v1' in data) {
+            this.variableSpan = this.createEditable(data.v1);
+            let op: string = data.op;
+            let v2 = data.v2;
+
+            if (op === "+" && typeof v2 === "number" && v2 < 0) {
+                v2 *= -1;
+                op = "-";
+            }
+
+            this.expressionSpan = this.createEditable(
+                data.op === "=" ?
+                    data.v2 : `${op}${v2}`
+            );
+        } else if ('expressionEditable' in data) {
+            this.variableSpan = this.createEditable(data.varEditable);
+            this.expressionSpan = this.createEditable(data.expressionEditable);
+        } else {
+            throw new Error("Failed to deserialize: unexpected format");
         }
 
-        this.expressionSpan = this.createEditable(
-            data.op === "=" ?
-                data.v2 : `${op}${v2}`
-        );
-        this.setAreas(this.variableSpan, " <- ", this.expressionSpan)
+        this.variableSpan.autoCompleteType = globalAutocompleteTypes.variable;
         this.elm.class("control");
+        this.setAreas(this.variableSpan, " <- ", this.expressionSpan)
     }
 
-    public serialize(): ControlVariable {
+    public serialize(): ControlVariableLineSerialized {
+        const v1 = this.variableSpan.getValue();
+        const expression = this.expressionSpan.getValue();
+        return { ctrl: 'variable', varEditable: v1, expressionEditable: expression };
+    }
+
+    public export(): [ControlVariable] {
         const expression = this.expressionSpan.getValue();
         const match = expression.match(ControlVariableLine.expressionRegex);
         const v1 = this.variableSpan.getValue().trim();
@@ -255,19 +292,19 @@ class ControlVariableLine extends InstructionLine implements OneLineInstruction 
                 v2 *= -1;
             }
 
-            return {
+            return [{
                 ctrl: "variable",
                 v1: v1,
                 op: op as "+" | "*",
                 v2: v2
-            };
+            }];
         } else {
-            return {
+            return [{
                 ctrl: "variable",
                 v1: v1,
                 op: "=",
                 v2: this.stringToNumberIfIs(expression.trim())
-            };
+            }];
         }
     }
 

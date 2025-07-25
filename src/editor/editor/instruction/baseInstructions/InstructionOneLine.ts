@@ -5,9 +5,9 @@ import { BranchInstructionLine } from "../components/BranchInstructionLine";
 import { Instruction } from "./Instruction";
 
 export interface OneLineInstruction extends InstructionLine {
-    /** Serialize to be loaded into the editor later */
+    /** Serialize to be loaded into the editor later. Should never throw, even if user input is invalid. */
     serialize(): any;
-    /** Export into an executable instructions */
+    /** Export into an executable instructions. May throw if user input is invalid. */
     export?(): any[];
     /** Instruction is a branch? */
     isBranch: boolean;
