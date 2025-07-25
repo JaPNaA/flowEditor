@@ -36,7 +36,7 @@ export class UILayout extends Component {
 }
 
 class EditorTabs extends Component {
-    private tabEditorMap = new TwoWayMap<Elm<"button">, Editor>();
+    private tabIdMap = new TwoWayMap<Elm<"button">, number>();
     private tabElms: Elm<"button">[] = [];
     private activeTabElm: Elm<"button"> | null = null;
 
@@ -44,13 +44,13 @@ class EditorTabs extends Component {
         super("editorTabs");
         this.elm.class("tabs");
 
-        editor.onTabInsert.subscribe(({ editor, index, tabState }) => {
-            const tabElm = this.createTabElm(tabState.fileName, editor);
-            this.tabEditorMap.set(tabElm, editor);
+        editor.onTabInsert.subscribe(({ tabId, index, tabState }) => {
+            const tabElm = this.createTabElm(tabState.fileName, tabId);
+            this.tabIdMap.set(tabElm, tabId);
 
-            if (index === 0) {
-                this.tabElms.unshift(tabElm);
-                this.elm.appendAsFirst(tabElm);
+            if (index === this.tabElms.length) {
+                this.tabElms.push(tabElm);
+                this.elm.append(tabElm);
             } else {
                 const nextTab = this.tabElms[index - 1];
                 this.tabElms.splice(index, 0, tabElm);
@@ -59,9 +59,9 @@ class EditorTabs extends Component {
         });
 
         editor.onTabClose.subscribe(tab => {
-            const tabElm = this.tabEditorMap.getK(tab);
+            const tabElm = this.tabIdMap.getK(tab);
             if (!tabElm) { throw new Error("Unknown tab"); }
-            this.tabEditorMap.deleteV(tab);
+            this.tabIdMap.deleteV(tab);
             removeElmFromArray(tabElm, this.tabElms);
             tabElm.remove();
 
@@ -71,7 +71,7 @@ class EditorTabs extends Component {
         });
 
         editor.onTabActiveChange.subscribe(tab => {
-            const tabElm = this.tabEditorMap.getK(tab);
+            const tabElm = this.tabIdMap.getK(tab);
             if (!tabElm) { throw new Error("Unknown tab"); }
 
             if (this.activeTabElm) {
@@ -82,9 +82,9 @@ class EditorTabs extends Component {
         });
     }
 
-    private createTabElm(title: string, editor: Editor) {
+    private createTabElm(title: string, tabId: number) {
         return new Elm("button").class("tab").append(title).onActivate(() => {
-            this.editor.showTab(editor);
+            this.editor.showTab(tabId);
         });
     }
 }

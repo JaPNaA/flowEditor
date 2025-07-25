@@ -3,22 +3,30 @@ import { EditorPlugin } from "../EditorPlugin";
 import { pluginHooks } from "../index";
 import { externallyModifiedError, Project } from "../project/Project";
 import { Editor } from "./Editor";
+import { EditorSaveData } from "./EditorSaveData";
 
 interface EditorTabState {
     fileName: string,
     ignoreExternallyModified: boolean,
+    saveData?: EditorSaveData,
 }
 
+/**
+ * The editor container is responsible for handle the saving of editors,
+ * and can contain several tabs.
+ */
 export class EditorContainer extends Component {
     public preventSaveOnExit = false;
+    public nextTabId = 0;
 
-    public onTabActiveChange = new EventBus<Editor>();
+    public onTabActiveChange = new EventBus<number>();
     public onTabInsert = new EventBus<{
         editor: Editor,
+        tabId: number,
         index: number,
         tabState: EditorTabState
     }>();
-    public onTabClose = new EventBus<Editor>();
+    public onTabClose = new EventBus<number>();
 
     private plugins: EditorPlugin[] = [];
 
@@ -30,12 +38,15 @@ export class EditorContainer extends Component {
         parentElement: this.elm.getHTMLElement()
     });
 
-    private tabs: Editor[] = [];
-    private editorStates = new Map<Editor, EditorTabState>();
-    private activeEditor?: Editor;
+    /** A list of the tabIds in the order they are shown */
+    private tabIds: number[] = [];
+    private editorStates = new Map<number, EditorTabState>();
+    private activeTab?: { id: number, editor: Editor };
 
     constructor(private project: Project) {
         super("editorContainer");
+
+        console.log(this.engine);
 
         addEventListener("beforeunload", async () => {
             if (this.preventSaveOnExit) { return; }
@@ -58,14 +69,14 @@ export class EditorContainer extends Component {
 
                 moveBy.scale(1 / this.engine.camera.getScale());
 
-                this.activeEditor?.smoothCamera.moveBy(moveBy);
+                this.activeTab?.editor.smoothCamera.moveBy(moveBy);
             }
         }, { passive: false });
 
         addEventListener("focus", () => {
-            const activeEditor = this.activeEditor;
-            if (!activeEditor) { return; }
-            const editorOpenFile = this.editorStates.get(activeEditor);
+            const activeTab = this.activeTab;
+            if (!activeTab) { return; }
+            const editorOpenFile = this.editorStates.get(activeTab.id);
 
             if (editorOpenFile) {
                 this.project.checkIsLatestFlowSave(editorOpenFile.fileName)
@@ -73,7 +84,7 @@ export class EditorContainer extends Component {
                         if (!isLatest && !editorOpenFile.ignoreExternallyModified) {
                             editorOpenFile.ignoreExternallyModified = true;
                             if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?")) {
-                                this.reloadTab(activeEditor);
+                                this.reloadTab(activeTab.id);
                             }
                         }
                     });
@@ -84,10 +95,11 @@ export class EditorContainer extends Component {
 
         window.setInterval(async () => {
             if (this.preventSaveOnExit) { return; }
-            if (!this.activeEditor || !this.activeEditor.dirty) { return; }
+            const activeTab = this.activeTab;
+            if (!activeTab || !activeTab.editor.dirty) { return; }
             console.log("autosave");
             await this.saveAll();
-            this.activeEditor.dirty = false;
+            activeTab.editor.dirty = false; // todo handle each editor separately
         }, 600e3);
 
         pluginHooks.setEngine(this.engine);
@@ -95,7 +107,11 @@ export class EditorContainer extends Component {
     }
 
     public getActiveTab() {
-        return this.activeEditor;
+        return this.activeTab?.editor;
+    }
+
+    public getActiveTabId() {
+        return this.activeTab?.id;
     }
 
     public async openDefaultTab() {
@@ -107,12 +123,12 @@ export class EditorContainer extends Component {
     public async setProject(project: Project) {
         await this.saveAll();
 
-        this.activeEditor?.remove();
-        this.activeEditor = undefined;
+        this.activeTab?.editor.remove();
+        this.activeTab = undefined;
         this.engine.ticker.requestTick();
 
-        const oldTabs = this.tabs;
-        this.tabs = [];
+        const oldTabs = this.tabIds;
+        this.tabIds = [];
         this.editorStates.clear();
         for (const tab of oldTabs) {
             this.onTabClose.send(tab);
@@ -136,62 +152,73 @@ export class EditorContainer extends Component {
     private async openTab(filename: string) {
         const tabResult = await this.createEditorAndOpenFile(filename);
         if (!tabResult) { return; }
-        const [newEditor, editorState] = tabResult;
+        const [newEditor, editorState, tabId] = tabResult;
 
-        this.editorStates.set(newEditor, editorState);
-        const newLength = this.tabs.push(newEditor);
-        this.onTabInsert.send({ editor: newEditor, index: newLength - 1, tabState: editorState });
+        this.editorStates.set(tabId, editorState);
+        const newLength = this.tabIds.push(tabId);
+        this.onTabInsert.send({ editor: newEditor, tabId, index: newLength - 1, tabState: editorState });
 
         pluginHooks.onEditorLoad(newEditor);
-        this.showTab(newEditor);
+        this.setActiveEditor(newEditor, tabId);
     }
 
-    public async showTab(tab: Editor) {
-        if (this.activeEditor === tab) { return; }
+    public showTab(tabId: number) {
+        if (this.activeTab?.id === tabId) { return; }
 
-        if (this.activeEditor) {
-            this.activeEditor.remove();
+        const state = this.editorStates.get(tabId);
+        if (!state) { throw new Error("Unknown tab id"); }
+        if (!state.saveData) { throw new Error("Tab save data not saved"); }
+
+        const editor = this.createEditor();
+        editor.deserialize(state.saveData);
+
+        this.setActiveEditor(editor, tabId);
+    }
+
+    private async setActiveEditor(editor: Editor, tabId: number) {
+        if (this.activeTab) {
+            const state = this.editorStates.get(this.activeTab.id)!;
+            state.saveData = this.activeTab.editor.serialize();
+            this.activeTab.editor.remove();
         }
-        this.activeEditor = tab;
-        this.onTabActiveChange.send(tab);
-        this.engine.world.addElm(tab);
+        this.activeTab = { editor, id: tabId };
+        this.onTabActiveChange.send(tabId);
+        this.engine.world.addElm(editor);
+        this.engine.ticker.requestTick();
     }
 
-    public async reloadTab(tab: Editor) {
-        const tabState = this.editorStates.get(tab);
+    public async reloadTab(tabId: number) {
+        const tabState = this.editorStates.get(tabId);
         if (!tabState) { throw new Error("Unknown tab"); }
 
         const tabResult = await this.createEditorAndOpenFile(tabState.fileName);
         if (!tabResult) { return; }
 
-        const [newEditor, editorState] = tabResult;
+        const [newEditor, editorState, newTabId] = tabResult;
 
-        const tabIndex = this.tabs.indexOf(tab);
+        const tabIndex = this.tabIds.indexOf(tabId);
         if (tabIndex < 0) { throw new Error("Tab not found in tabs list"); }
 
-        this.editorStates.set(newEditor, editorState);
-        this.editorStates.delete(tab);
-        this.tabs[tabIndex] = newEditor;
+        this.editorStates.set(newTabId, editorState);
+        this.editorStates.delete(tabId);
+        this.tabIds[tabIndex] = newTabId;
 
-        this.onTabClose.send(tab);
-        this.onTabInsert.send({ editor: newEditor, index: tabIndex, tabState: editorState });
+        this.onTabClose.send(tabId);
+        this.onTabInsert.send({ editor: newEditor, tabId: newTabId, index: tabIndex, tabState: editorState });
 
-
-        if (this.activeEditor === tab) {
-            tab.remove();
-            this.activeEditor = newEditor;
-            this.engine.world.addElm(newEditor);
+        if (this.activeTab?.id === tabId) {
+            this.setActiveEditor(newEditor, newTabId);
         }
     }
 
-    private async createEditorAndOpenFile(fileName: string): Promise<[Editor, EditorTabState] | undefined> {
+    private async createEditorAndOpenFile(fileName: string): Promise<[Editor, EditorTabState, number] | undefined> {
         if (!this.project.isReady()) { await this.project.onReady.promise(); }
         let newEditor: Editor;
         try {
             const save = await this.project.getFlowSave(fileName);
             newEditor = this.createEditor();
             newEditor.deserialize(save);
-            return [newEditor, { fileName, ignoreExternallyModified: false }];
+            return [newEditor, { fileName, ignoreExternallyModified: false }, this.nextTabId++];
         } catch (err) {
             alert(`Failed to open the flow '${fileName}'. The file may be corrupted. See console for error details.`);
             console.error(err);
@@ -199,8 +226,8 @@ export class EditorContainer extends Component {
     }
 
     public registerPlugin(plugin: EditorPlugin) {
-        for (const tab of this.tabs) {
-            this._addPluginToEditor(tab, plugin);
+        if (this.activeTab?.editor) {
+            this._addPluginToEditor(this.activeTab.editor, plugin);
         }
         this.plugins.push(plugin);
     }
@@ -238,14 +265,20 @@ export class EditorContainer extends Component {
         this.elm.getHTMLElement().focus();
     }
 
-    // todo: rename, remove "for tab", since all operations will be on tabs now
-    public getSaveDataForTab(editor: Editor) {
-        return editor.serialize();
+    public getSaveDataForTab(tabId: number) {
+        if (this.activeTab?.id === tabId) {
+            return this.activeTab.editor.serialize();
+        }
+
+        const state = this.editorStates.get(tabId);
+        if (!state) { throw new Error("Unknown tabId"); }
+        if (!state.saveData) { throw new Error("Tab has no associated save data"); }
+        return state.saveData;
     }
 
     public async saveAll() {
         const promises = [];
-        for (const tab of this.tabs) {
+        for (const tab of this.tabIds) {
             promises.push(this.writeSaveDataForTab(tab, this.getSaveDataForTab(tab)));
         }
         await Promise.all(promises);
@@ -255,8 +288,8 @@ export class EditorContainer extends Component {
         return tab.openTextOp();
     }
 
-    public async writeSaveDataForTab(tab: Editor, saveData: any) {
-        const state = this.editorStates.get(tab);
+    public async writeSaveDataForTab(tabId: number, saveData: any) {
+        const state = this.editorStates.get(tabId);
         if (!state) { throw new Error("Unknown tab"); }
         if (!state.fileName) { console.warn("No open file to save to"); return; }
         const saveStr = saveData ? JSON.stringify(saveData) : "";

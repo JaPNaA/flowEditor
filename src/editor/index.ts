@@ -30,8 +30,8 @@ export const appHooks = {
     },
 
     getEditorSaveData() {
-        const activeTab = editorContainer.getActiveTab();
-        if (activeTab) {
+        const activeTab = editorContainer.getActiveTabId();
+        if (activeTab !== undefined) {
             return editorContainer.getSaveDataForTab(activeTab);
         }
     },
@@ -48,8 +48,8 @@ export const appHooks = {
     },
 
     setEditorSaveData(data: EditorSaveData | null) {
-        const activeTab = editorContainer.getActiveTab();
-        if (activeTab) {
+        const activeTab = editorContainer.getActiveTabId();
+        if (activeTab !== undefined) {
             editorContainer.preventSaveOnExit = true;
             editorContainer.writeSaveDataForTab(activeTab, data);
             location.reload();
