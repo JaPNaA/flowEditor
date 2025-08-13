@@ -17,6 +17,10 @@
     z-index: 1;
 }
 
+.editorTabs.tabs .tab {
+    padding-right: 0;
+}
+
 .editorContainer {
     position: relative;
     width: 100%;

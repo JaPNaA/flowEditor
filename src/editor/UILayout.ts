@@ -1,7 +1,6 @@
 import { Component, Elm } from "../japnaaEngine2d/elements";
 import { Vec2, Vec2M } from "../japnaaEngine2d/JaPNaAEngine2d";
 import { removeElmFromArray } from "../japnaaEngine2d/util/removeElmFromArray";
-import { Editor } from "./editor/Editor";
 import { EditorContainer } from "./editor/EditorContainer";
 import { ExecuterContainer } from "./executer/ExecuterContainer";
 import { ModalContainer } from "./modals/ModalContainer";
@@ -36,9 +35,9 @@ export class UILayout extends Component {
 }
 
 class EditorTabs extends Component {
-    private tabIdMap = new TwoWayMap<Elm<"button">, number>();
-    private tabElms: Elm<"button">[] = [];
-    private activeTabElm: Elm<"button"> | null = null;
+    private tabIdMap = new TwoWayMap<EditorTab, number>();
+    private tabElms: EditorTab[] = [];
+    private activeTabElm: EditorTab | null = null;
 
     constructor(private editor: EditorContainer) {
         super("editorTabs");
@@ -71,21 +70,51 @@ class EditorTabs extends Component {
         });
 
         editor.onTabActiveChange.subscribe(tab => {
+            if (this.activeTabElm) {
+                this.activeTabElm.unsetActive();
+            }
+            this.activeTabElm = null;
+
+            if (tab === null) { return; }
+
             const tabElm = this.tabIdMap.getK(tab);
             if (!tabElm) { throw new Error("Unknown tab"); }
 
-            if (this.activeTabElm) {
-                this.activeTabElm.removeClass("active");
-            }
-            tabElm.class("active");
+            tabElm.setActive();
             this.activeTabElm = tabElm;
         });
     }
 
     private createTabElm(title: string, tabId: number) {
-        return new Elm("button").class("tab").append(title).onActivate(() => {
+        return new EditorTab(title, () => {
             this.editor.showTab(tabId);
+        }, () => {
+            this.editor.closeTab(tabId);
         });
+    }
+}
+
+class EditorTab extends Elm<"button"> {
+    constructor(title: string, clickHandler: () => void, closeHandler: () => void) {
+        super("button");
+
+        this.class("tab")
+            .append(
+                title,
+                new Elm("button").class("tabClose").append('\u2715').onActivate(e => {
+                    e.stopPropagation();
+                    closeHandler();
+                })
+            )
+            .onActivate(clickHandler);
+    }
+
+    public setActive() {
+        this.class("active");
+    }
+
+    public unsetActive() {
+        this.removeClass("active");
     }
 }
 

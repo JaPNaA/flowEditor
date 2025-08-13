@@ -19,7 +19,7 @@ export class EditorContainer extends Component {
     public preventSaveOnExit = false;
     public nextTabId = 0;
 
-    public onTabActiveChange = new EventBus<number>();
+    public onTabActiveChange = new EventBus<number | null>();
     public onTabInsert = new EventBus<{
         editor: Editor,
         tabId: number,
@@ -175,16 +175,45 @@ export class EditorContainer extends Component {
         this.setActiveEditor(editor, tabId);
     }
 
-    private async setActiveEditor(editor: Editor, tabId: number) {
-        if (this.activeTab) {
-            const state = this.editorStates.get(this.activeTab.id)!;
-            state.saveData = this.activeTab.editor.serialize();
-            this.activeTab.editor.remove();
+    public closeTab(tabId: number) {
+        const tabIndex = this.tabIds.indexOf(tabId);
+        if (tabIndex < 0) { throw new Error("Unknown tab id"); }
+
+        // switch focus to a different tab
+        if (this.activeTab && this.activeTab.id === tabId) {
+            if (tabIndex == 0) {
+                if (this.tabIds.length > 1) {
+                    this.showTab(this.tabIds[1]);
+                } else {
+                    this.removeActiveEditor();
+                    this.onTabActiveChange.send(null);
+                }
+            } else {
+                this.showTab(this.tabIds[tabIndex - 1]);
+            }
         }
+
+        // todo: alert plugins about closed editor
+        this.editorStates.delete(tabId);
+        this.tabIds.splice(tabIndex, 1);
+        this.onTabClose.send(tabId);
+    }
+
+    private async setActiveEditor(editor: Editor, tabId: number) {
+        this.removeActiveEditor();
         this.activeTab = { editor, id: tabId };
         this.onTabActiveChange.send(tabId);
         this.engine.world.addElm(editor);
         this.engine.ticker.requestTick();
+    }
+
+    private removeActiveEditor() {
+        if (!this.activeTab) { return; }
+
+        const state = this.editorStates.get(this.activeTab.id)!;
+        state.saveData = this.activeTab.editor.serialize();
+        this.activeTab.editor.remove();
+        this.activeTab = undefined;
     }
 
     public async reloadTab(tabId: number) {
