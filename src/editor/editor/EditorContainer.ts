@@ -1,4 +1,4 @@
-import { Component, EventBus, JaPNaAEngine2d, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d";
+import { Component, EventBus, JaPNaAEngine2d, Vec2, Vec2M } from "../../japnaaEngine2d/JaPNaAEngine2d";
 import { EditorPlugin } from "../EditorPlugin";
 import { pluginHooks } from "../index";
 import { externallyModifiedError, Project } from "../project/Project";
@@ -8,6 +8,7 @@ import { EditorSaveData } from "./EditorSaveData";
 interface EditorTabState {
     fileName: string,
     ignoreExternallyModified: boolean,
+    cameraState: { position: Vec2, scale: number },
     saveData?: EditorSaveData,
 }
 
@@ -159,7 +160,7 @@ export class EditorContainer extends Component {
         this.onTabInsert.send({ editor: newEditor, tabId, index: newLength - 1, tabState: editorState });
 
         pluginHooks.onEditorLoad(newEditor);
-        this.setActiveEditor(newEditor, tabId);
+        this.setActiveEditor(newEditor, editorState.cameraState, tabId);
     }
 
     public showTab(tabId: number) {
@@ -172,7 +173,7 @@ export class EditorContainer extends Component {
         const editor = this.createEditor();
         editor.deserialize(state.saveData);
 
-        this.setActiveEditor(editor, tabId);
+        this.setActiveEditor(editor, state.cameraState, tabId);
     }
 
     public closeTab(tabId: number) {
@@ -199,11 +200,12 @@ export class EditorContainer extends Component {
         this.onTabClose.send(tabId);
     }
 
-    private async setActiveEditor(editor: Editor, tabId: number) {
+    private async setActiveEditor(editor: Editor, cameraState: EditorTabState['cameraState'], tabId: number) {
         this.removeActiveEditor();
         this.activeTab = { editor, id: tabId };
         this.onTabActiveChange.send(tabId);
         this.engine.world.addElm(editor);
+        this.engine.camera.goto(cameraState.position, cameraState.scale);
         this.engine.ticker.requestTick();
     }
 
@@ -212,6 +214,10 @@ export class EditorContainer extends Component {
 
         const state = this.editorStates.get(this.activeTab.id)!;
         state.saveData = this.activeTab.editor.serialize();
+        state.cameraState = {
+            position: this.engine.camera.rect.topLeft(),
+            scale: this.engine.camera.getScale()
+        };
         this.activeTab.editor.remove();
         this.activeTab = undefined;
     }
@@ -236,7 +242,7 @@ export class EditorContainer extends Component {
         this.onTabInsert.send({ editor: newEditor, tabId: newTabId, index: tabIndex, tabState: editorState });
 
         if (this.activeTab?.id === tabId) {
-            this.setActiveEditor(newEditor, newTabId);
+            this.setActiveEditor(newEditor, tabState.cameraState, newTabId);
         }
     }
 
@@ -247,7 +253,11 @@ export class EditorContainer extends Component {
             const save = await this.project.getFlowSave(fileName);
             newEditor = this.createEditor();
             newEditor.deserialize(save);
-            return [newEditor, { fileName, ignoreExternallyModified: false }, this.nextTabId++];
+            return [newEditor, {
+                fileName,
+                ignoreExternallyModified: false,
+                cameraState: { position: new Vec2M(0, 0), scale: this.engine.camera.getScale() }
+            }, this.nextTabId++];
         } catch (err) {
             alert(`Failed to open the flow '${fileName}'. The file may be corrupted. See console for error details.`);
             console.error(err);
