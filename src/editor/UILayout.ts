@@ -106,7 +106,12 @@ class EditorTab extends Elm<"button"> {
                     closeHandler();
                 })
             )
-            .onActivate(clickHandler);
+            .onActivate(clickHandler)
+            .on("mouseup", ev => {
+                if (ev.button == 1) {
+                    closeHandler();
+                }
+            });
     }
 
     public setActive() {
