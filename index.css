@@ -21,6 +21,10 @@
     padding-right: 0;
 }
 
+.editorTabs.tabs .tab .tabClose:hover {
+    color: #e21d1d;
+}
+
 .editorContainer {
     position: relative;
     width: 100%;

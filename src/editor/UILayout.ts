@@ -101,7 +101,7 @@ class EditorTab extends Elm<"button"> {
         this.class("tab")
             .append(
                 title,
-                new Elm("button").class("tabClose").append('\u2715').onActivate(e => {
+                new Elm("button").class("tabClose").append('\u2a2f').onActivate(e => {
                     e.stopPropagation();
                     closeHandler();
                 })
