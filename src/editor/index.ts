@@ -102,6 +102,10 @@ export const pluginHooks = {
         visualNovelPlugin.analyser.onFlowLoad(editor);
     },
 
+    onEditorUnload(editor: Editor) {
+        visualNovelPlugin.analyser.onFlowUnload(editor);
+    },
+
     setProject(project: Project) {
         visualNovelPlugin.setProject(project);
     },
@@ -140,3 +144,5 @@ editorContainer.registerPlugin(defaultPlugin);
 editorContainer.registerPlugin(visualNovelPlugin);
 
 document.body.removeChild(document.getElementById("noLoadError")!);
+
+console.log(visualNovelPlugin);

@@ -68,6 +68,13 @@ export class VisualNovelAnalyser implements PluginAnalyser {
         }
     }
 
+    public onFlowUnload(editor: Editor): void {
+        this.visitedGroupsSet.clear();
+        for (const group of editor.getGroups()) {
+            this.groupStartContexts.delete(group);
+        }
+    }
+
     private equalContext(a: Context, b: Context) {
         if (a.backgroundSrc && b.backgroundSrc) {
             return a.backgroundSrc === b.backgroundSrc;

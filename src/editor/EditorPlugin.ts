@@ -69,6 +69,7 @@ export interface PluginRenderer {
  */
 export interface PluginAnalyser {
     onFlowLoad(editor: Editor): void;
+    onFlowUnload(editor: Editor): void;
     onActionPerformed(action: ActionInstance): void;
     dispose(): void;
 }

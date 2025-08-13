@@ -159,7 +159,6 @@ export class EditorContainer extends Component {
         const newLength = this.tabIds.push(tabId);
         this.onTabInsert.send({ editor: newEditor, tabId, index: newLength - 1, tabState: editorState });
 
-        pluginHooks.onEditorLoad(newEditor);
         this.setActiveEditor(newEditor, editorState.cameraState, tabId);
     }
 
@@ -194,7 +193,6 @@ export class EditorContainer extends Component {
             }
         }
 
-        // todo: alert plugins about closed editor
         this.editorStates.delete(tabId);
         this.tabIds.splice(tabIndex, 1);
         this.onTabClose.send(tabId);
@@ -202,6 +200,7 @@ export class EditorContainer extends Component {
 
     private async setActiveEditor(editor: Editor, cameraState: EditorTabState['cameraState'], tabId: number) {
         this.removeActiveEditor();
+        pluginHooks.onEditorLoad(editor);
         this.activeTab = { editor, id: tabId };
         this.onTabActiveChange.send(tabId);
         this.engine.world.addElm(editor);
@@ -213,6 +212,7 @@ export class EditorContainer extends Component {
         if (!this.activeTab) { return; }
 
         const state = this.editorStates.get(this.activeTab.id)!;
+        pluginHooks.onEditorUnload(this.activeTab.editor);
         state.saveData = this.activeTab.editor.serialize();
         state.cameraState = {
             position: this.engine.camera.rect.topLeft(),
