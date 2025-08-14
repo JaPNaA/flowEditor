@@ -9,7 +9,8 @@ interface EditorTabState {
     fileName: string,
     ignoreExternallyModified: boolean,
     cameraState: { position: Vec2, scale: number },
-    saveData?: EditorSaveData,
+    dirty: boolean,
+    saveData: EditorSaveData,
 }
 
 /**
@@ -22,7 +23,6 @@ export class EditorContainer extends Component {
 
     public onTabActiveChange = new EventBus<number | null>();
     public onTabInsert = new EventBus<{
-        editor: Editor,
         tabId: number,
         index: number,
         tabState: EditorTabState
@@ -49,9 +49,13 @@ export class EditorContainer extends Component {
 
         console.log(this.engine);
 
-        addEventListener("beforeunload", async () => {
+        addEventListener("beforeunload", ev => {
             if (this.preventSaveOnExit) { return; }
-            await this.saveAll();
+            console.log("trying to save everything...");
+            const { tabsToSave } = this.saveAll();
+            if (tabsToSave > 0) {
+                ev.preventDefault();
+            }
         });
 
         addEventListener("wheel", ev => {
@@ -99,8 +103,7 @@ export class EditorContainer extends Component {
             const activeTab = this.activeTab;
             if (!activeTab || !activeTab.editor.dirty) { return; }
             console.log("autosave");
-            await this.saveAll();
-            activeTab.editor.dirty = false; // todo handle each editor separately
+            await this.saveAll().promise;
         }, 600e3);
 
         pluginHooks.setEngine(this.engine);
@@ -122,7 +125,7 @@ export class EditorContainer extends Component {
     }
 
     public async setProject(project: Project) {
-        await this.saveAll();
+        await this.saveAll().promise;
 
         this.activeTab?.editor.remove();
         this.activeTab = undefined;
@@ -147,27 +150,51 @@ export class EditorContainer extends Component {
             }
         }
 
-        this.openTab(filename);
+        const tabId = await this.openTab(filename);
+        if (tabId !== undefined) {
+            this.showTab(tabId);
+        }
     }
 
-    private async openTab(filename: string) {
-        const tabResult = await this.createEditorAndOpenFile(filename);
+    /**
+     * Creates a tab for a file and inserts the tab into the tab list.
+     * 
+     * If index is not specified, the tab is appended to the end of
+     * the tab list.
+     */
+    private async openTab(filename: string, index?: number) {
+        const tabResult = await this.createTabForFile(filename);
         if (!tabResult) { return; }
-        const [newEditor, editorState, tabId] = tabResult;
+        const [editorState, tabId] = tabResult;
 
         this.editorStates.set(tabId, editorState);
-        const newLength = this.tabIds.push(tabId);
-        this.onTabInsert.send({ editor: newEditor, tabId, index: newLength - 1, tabState: editorState });
+        let insertedIndex = 0;
+        if (index === undefined) {
+            insertedIndex = this.tabIds.push(tabId) - 1;
+        } else {
+            this.tabIds.splice(index, 0, tabId);
+            insertedIndex = index;
+        }
 
-        this.setActiveEditor(newEditor, editorState.cameraState, tabId);
+        this.onTabInsert.send({
+            tabId,
+            index: insertedIndex,
+            tabState: editorState
+        });
+
+        return tabId;
     }
 
+    /**
+     * Shows an open tab.
+     * 
+     * Emits the onTabActiveChange event.
+     */
     public showTab(tabId: number) {
         if (this.activeTab?.id === tabId) { return; }
 
         const state = this.editorStates.get(tabId);
         if (!state) { throw new Error("Unknown tab id"); }
-        if (!state.saveData) { throw new Error("Tab save data not saved"); }
 
         const editor = this.createEditor();
         editor.deserialize(state.saveData);
@@ -175,22 +202,122 @@ export class EditorContainer extends Component {
         this.setActiveEditor(editor, state.cameraState, tabId);
     }
 
+    /**
+     * Closes a tab and switches focus to the left tab. If there are no tabs
+     * to the left, switches focus to the right tab. If there are no tabs to
+     * the right, there will be no tab open.
+     */
     public closeTab(tabId: number) {
-        const tabIndex = this.tabIds.indexOf(tabId);
-        if (tabIndex < 0) { throw new Error("Unknown tab id"); }
-
-        // switch focus to a different tab
         if (this.activeTab && this.activeTab.id === tabId) {
+            const tabIndex = this.tabIds.indexOf(tabId);
+            if (tabIndex < 0) { throw new Error("Unknown tab id"); }
+
             if (tabIndex == 0) {
                 if (this.tabIds.length > 1) {
                     this.showTab(this.tabIds[1]);
-                } else {
-                    this.removeActiveEditor();
-                    this.onTabActiveChange.send(null);
                 }
             } else {
                 this.showTab(this.tabIds[tabIndex - 1]);
             }
+        }
+
+        this.closeTabNoReplacement(tabId);
+    }
+
+    public async reloadTab(tabId: number) {
+        const tabState = this.editorStates.get(tabId);
+        if (!tabState) { throw new Error("Unknown tab"); }
+
+        const tabIndex = this.tabIds.indexOf(tabId);
+        if (tabIndex < 0) { throw new Error("Tab not found in tabs list"); }
+
+        const lastActiveTabId = this.activeTab?.id;
+
+        this.closeTabNoReplacement(tabId);
+
+        const newTabId = await this.openTab(tabState.fileName, tabIndex);
+        if (newTabId !== undefined && lastActiveTabId === tabId) {
+            this.showTab(newTabId);
+        }
+    }
+
+    public registerPlugin(plugin: EditorPlugin) {
+        if (this.activeTab?.editor) {
+            this._addPluginToEditor(this.activeTab.editor, plugin);
+        }
+        this.plugins.push(plugin);
+    }
+
+    public compile(tab: Editor) {
+        return tab.compile();
+    }
+
+    public focus() {
+        this.elm.getHTMLElement().focus();
+    }
+
+    public getSaveDataForTab(tabId: number) {
+        if (this.activeTab?.id === tabId) {
+            return this.activeTab.editor.serialize();
+        }
+
+        const state = this.editorStates.get(tabId);
+        if (!state) { throw new Error("Unknown tabId"); }
+        return state.saveData;
+    }
+
+    public saveAll(): { promise: Promise<unknown>, tabsToSave: number } {
+        const promises: Promise<unknown>[] = [];
+        for (const tab of this.tabIds) {
+            if (this.checkTabDirty(tab)) {
+                promises.push(
+                    this.writeSaveDataForTab(tab, this.getSaveDataForTab(tab))
+                        .then(() => {
+                            this.editorStates.get(tab)!.dirty = false;
+                            if (tab === this.activeTab?.id) {
+                                this.activeTab.editor.dirty = false;
+                            }
+                        })
+                );
+            }
+        }
+        return {
+            promise: Promise.all(promises),
+            tabsToSave: promises.length
+        };
+    }
+
+    public openTextOp(tab: Editor) {
+        return tab.openTextOp();
+    }
+
+    public async writeSaveDataForTab(tabId: number, saveData: any) {
+        const state = this.editorStates.get(tabId);
+        if (!state) { throw new Error("Unknown tab"); }
+        if (!state.fileName) { console.warn("No open file to save to"); return; }
+        const saveStr = saveData ? JSON.stringify(saveData) : "";
+
+        const result = await this.project.writeFlowSave(state.fileName, saveStr);
+        if (result.isError && result.errorType === externallyModifiedError.errorType) {
+            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?")) {
+                return await this.project.writeFlowSave(state.fileName, saveStr, true);
+            }
+        }
+
+        state.ignoreExternallyModified = false;
+    }
+
+    /**
+     * Closes a tab. If the tab is the current active tab, the active editor
+     * is removed.
+     */
+    private closeTabNoReplacement(tabId: number) {
+        const tabIndex = this.tabIds.indexOf(tabId);
+        if (tabIndex < 0) { throw new Error("Unknown tab id"); }
+
+        if (this.activeTab && this.activeTab.id === tabId) {
+            this.removeActiveEditor();
+            this.onTabActiveChange.send(null);
         }
 
         this.editorStates.delete(tabId);
@@ -208,55 +335,39 @@ export class EditorContainer extends Component {
         this.engine.ticker.requestTick();
     }
 
+    /**
+     * Stores the active editor into editorStates and removes the editor from
+     * the world.
+     * 
+     * This method should be the only way to to remove an editor.
+     * 
+     * Callers of this method are expected to emit a tabActiveChange event, which
+     * may be a different tab or null if the editor is not replaced.
+     */
     private removeActiveEditor() {
         if (!this.activeTab) { return; }
 
         const state = this.editorStates.get(this.activeTab.id)!;
         pluginHooks.onEditorUnload(this.activeTab.editor);
         state.saveData = this.activeTab.editor.serialize();
-        state.cameraState = {
-            position: this.engine.camera.rect.topLeft(),
-            scale: this.engine.camera.getScale()
-        };
+        state.cameraState = this.getCurrentCameraState();
+        state.dirty ||= this.activeTab.editor.dirty;
         this.activeTab.editor.remove();
         this.activeTab = undefined;
+        this.engine.ticker.requestTick();
     }
 
-    public async reloadTab(tabId: number) {
-        const tabState = this.editorStates.get(tabId);
-        if (!tabState) { throw new Error("Unknown tab"); }
-
-        const tabResult = await this.createEditorAndOpenFile(tabState.fileName);
-        if (!tabResult) { return; }
-
-        const [newEditor, editorState, newTabId] = tabResult;
-
-        const tabIndex = this.tabIds.indexOf(tabId);
-        if (tabIndex < 0) { throw new Error("Tab not found in tabs list"); }
-
-        this.editorStates.set(newTabId, editorState);
-        this.editorStates.delete(tabId);
-        this.tabIds[tabIndex] = newTabId;
-
-        this.onTabClose.send(tabId);
-        this.onTabInsert.send({ editor: newEditor, tabId: newTabId, index: tabIndex, tabState: editorState });
-
-        if (this.activeTab?.id === tabId) {
-            this.setActiveEditor(newEditor, tabState.cameraState, newTabId);
-        }
-    }
-
-    private async createEditorAndOpenFile(fileName: string): Promise<[Editor, EditorTabState, number] | undefined> {
+    private async createTabForFile(fileName: string): Promise<[EditorTabState, number] | undefined> {
         if (!this.project.isReady()) { await this.project.onReady.promise(); }
-        let newEditor: Editor;
         try {
             const save = await this.project.getFlowSave(fileName);
-            newEditor = this.createEditor();
-            newEditor.deserialize(save);
-            return [newEditor, {
+
+            return [{
                 fileName,
                 ignoreExternallyModified: false,
-                cameraState: { position: new Vec2M(0, 0), scale: this.engine.camera.getScale() }
+                cameraState: { position: new Vec2M(0, 0), scale: this.engine.camera.getScale() },
+                dirty: false,
+                saveData: save
             }, this.nextTabId++];
         } catch (err) {
             alert(`Failed to open the flow '${fileName}'. The file may be corrupted. See console for error details.`);
@@ -264,12 +375,6 @@ export class EditorContainer extends Component {
         }
     }
 
-    public registerPlugin(plugin: EditorPlugin) {
-        if (this.activeTab?.editor) {
-            this._addPluginToEditor(this.activeTab.editor, plugin);
-        }
-        this.plugins.push(plugin);
-    }
 
     private createEditor() {
         const editor = new Editor();
@@ -296,50 +401,23 @@ export class EditorContainer extends Component {
         }
     }
 
-    public compile(tab: Editor) {
-        return tab.compile();
-    }
 
-    public focus() {
-        this.elm.getHTMLElement().focus();
-    }
-
-    public getSaveDataForTab(tabId: number) {
-        if (this.activeTab?.id === tabId) {
-            return this.activeTab.editor.serialize();
-        }
-
+    private checkTabDirty(tabId: number) {
         const state = this.editorStates.get(tabId);
         if (!state) { throw new Error("Unknown tabId"); }
-        if (!state.saveData) { throw new Error("Tab has no associated save data"); }
-        return state.saveData;
-    }
 
-    public async saveAll() {
-        const promises = [];
-        for (const tab of this.tabIds) {
-            promises.push(this.writeSaveDataForTab(tab, this.getSaveDataForTab(tab)));
-        }
-        await Promise.all(promises);
-    }
-
-    public openTextOp(tab: Editor) {
-        return tab.openTextOp();
-    }
-
-    public async writeSaveDataForTab(tabId: number, saveData: any) {
-        const state = this.editorStates.get(tabId);
-        if (!state) { throw new Error("Unknown tab"); }
-        if (!state.fileName) { console.warn("No open file to save to"); return; }
-        const saveStr = saveData ? JSON.stringify(saveData) : "";
-
-        const result = await this.project.writeFlowSave(state.fileName, saveStr);
-        if (result.isError && result.errorType === externallyModifiedError.errorType) {
-            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?")) {
-                return await this.project.writeFlowSave(state.fileName, saveStr, true);
-            }
+        if (this.activeTab?.id === tabId) {
+            return this.activeTab.editor.dirty || state.dirty;
         }
 
-        state.ignoreExternallyModified = false;
+        return state.dirty;
     }
+
+    private getCurrentCameraState(): EditorTabState['cameraState'] {
+        return {
+            position: this.engine.camera.rect.topLeft(),
+            scale: this.engine.camera.getScale()
+        };
+    }
+
 }
