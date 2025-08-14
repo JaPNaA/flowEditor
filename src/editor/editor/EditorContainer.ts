@@ -226,7 +226,14 @@ export class EditorContainer extends Component {
         this.closeTabNoReplacement(tabId);
 
         const newTabId = await this.openTab(tabState.fileName, tabIndex);
-        if (newTabId !== undefined && lastActiveTabId === tabId) {
+
+        if (newTabId === undefined) { return; }
+
+        // keep camera state
+        const newTabState = this.editorStates.get(newTabId)!;
+        newTabState.cameraState = tabState.cameraState;
+
+        if (lastActiveTabId === tabId) {
             this.showTab(newTabId);
         }
     }
