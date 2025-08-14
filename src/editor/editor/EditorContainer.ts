@@ -197,7 +197,9 @@ export class EditorContainer extends Component {
      * to the left, switches focus to the right tab. If there are no tabs to
      * the right, there will be no tab open.
      */
-    public closeTab(tabId: number) {
+    public async closeTab(tabId: number) {
+        await this.saveTab(tabId);
+
         if (this.activeTab && this.activeTab.id === tabId) {
             const tabIndex = this.tabIds.indexOf(tabId);
             if (tabIndex < 0) { throw new Error("Unknown tab id"); }
@@ -267,15 +269,7 @@ export class EditorContainer extends Component {
         const promises: Promise<unknown>[] = [];
         for (const tab of this.tabIds) {
             if (this.checkTabDirty(tab)) {
-                promises.push(
-                    this.writeSaveDataForTab(tab, this.getSaveDataForTab(tab))
-                        .then(() => {
-                            this.editorStates.get(tab)!.dirty = false;
-                            if (tab === this.activeTab?.id) {
-                                this.activeTab.editor.dirty = false;
-                            }
-                        })
-                );
+                promises.push(this.saveTab(tab));
             }
         }
         return {
@@ -296,7 +290,7 @@ export class EditorContainer extends Component {
 
         const result = await this.project.writeFlowSave(state.fileName, saveStr);
         if (result.isError && result.errorType === externallyModifiedError.errorType) {
-            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?")) {
+            if (confirm(`The file '${state.fileName}' was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to overwrite it?`)) {
                 return await this.project.writeFlowSave(state.fileName, saveStr, true);
             }
         }
@@ -408,6 +402,14 @@ export class EditorContainer extends Component {
         return state.dirty;
     }
 
+    private async saveTab(tabId: number) {
+        await this.writeSaveDataForTab(tabId, this.getSaveDataForTab(tabId));
+        this.editorStates.get(tabId)!.dirty = false;
+        if (tabId === this.activeTab?.id) {
+            this.activeTab.editor.dirty = false;
+        }
+    }
+
     private async checkTabExternallyModified(tabId: number) {
         const editorOpenFile = this.editorStates.get(tabId);
         if (!editorOpenFile) { return; }
@@ -416,7 +418,7 @@ export class EditorContainer extends Component {
 
         if (!isLatest && !editorOpenFile.ignoreExternallyModified) {
             editorOpenFile.ignoreExternallyModified = true;
-            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?")) {
+            if (confirm(`The file '${editorOpenFile.fileName}' was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?`)) {
                 this.reloadTab(tabId);
             }
         }
