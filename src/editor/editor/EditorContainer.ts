@@ -81,19 +81,7 @@ export class EditorContainer extends Component {
         addEventListener("focus", () => {
             const activeTab = this.activeTab;
             if (!activeTab) { return; }
-            const editorOpenFile = this.editorStates.get(activeTab.id);
-
-            if (editorOpenFile) {
-                this.project.checkIsLatestFlowSave(editorOpenFile.fileName)
-                    .then(isLatest => {
-                        if (!isLatest && !editorOpenFile.ignoreExternallyModified) {
-                            editorOpenFile.ignoreExternallyModified = true;
-                            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?")) {
-                                this.reloadTab(activeTab.id);
-                            }
-                        }
-                    });
-            }
+            this.checkTabExternallyModified(activeTab.id);
         });
 
         this.elm.attribute("tabindex", "0");
@@ -200,6 +188,8 @@ export class EditorContainer extends Component {
         editor.deserialize(state.saveData);
 
         this.setActiveEditor(editor, state.cameraState, tabId);
+
+        this.checkTabExternallyModified(tabId);
     }
 
     /**
@@ -325,7 +315,7 @@ export class EditorContainer extends Component {
         this.onTabClose.send(tabId);
     }
 
-    private async setActiveEditor(editor: Editor, cameraState: EditorTabState['cameraState'], tabId: number) {
+    private setActiveEditor(editor: Editor, cameraState: EditorTabState['cameraState'], tabId: number) {
         this.removeActiveEditor();
         pluginHooks.onEditorLoad(editor);
         this.activeTab = { editor, id: tabId };
@@ -375,7 +365,6 @@ export class EditorContainer extends Component {
         }
     }
 
-
     private createEditor() {
         const editor = new Editor();
 
@@ -401,7 +390,6 @@ export class EditorContainer extends Component {
         }
     }
 
-
     private checkTabDirty(tabId: number) {
         const state = this.editorStates.get(tabId);
         if (!state) { throw new Error("Unknown tabId"); }
@@ -411,6 +399,20 @@ export class EditorContainer extends Component {
         }
 
         return state.dirty;
+    }
+
+    private async checkTabExternallyModified(tabId: number) {
+        const editorOpenFile = this.editorStates.get(tabId);
+        if (!editorOpenFile) { return; }
+
+        const isLatest = await this.project.checkIsLatestFlowSave(editorOpenFile.fileName);
+
+        if (!isLatest && !editorOpenFile.ignoreExternallyModified) {
+            editorOpenFile.ignoreExternallyModified = true;
+            if (confirm("The file was modified externally (maybe by another FlowEditor tab) since you last opened it. Do you want to reload the editor?")) {
+                this.reloadTab(tabId);
+            }
+        }
     }
 
     private getCurrentCameraState(): EditorTabState['cameraState'] {
