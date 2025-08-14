@@ -51,7 +51,7 @@ class EditorTabs extends Component {
                 this.tabElms.push(tabElm);
                 this.elm.append(tabElm);
             } else {
-                const nextTab = this.tabElms[index - 1];
+                const nextTab = this.tabElms[index];
                 this.tabElms.splice(index, 0, tabElm);
                 this.elm.getHTMLElement().insertBefore(tabElm.getHTMLElement(), nextTab.getHTMLElement());
             }
